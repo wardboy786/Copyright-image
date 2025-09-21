@@ -124,7 +124,7 @@ function ScanHistoryItem({
             {content}
           </div>
         ) : (
-          <Link href={`/scan/${scan.id}`} className="block">
+          <Link href={`/scan?id=${scan.id}`} className="block" scroll={false}>
             {content}
           </Link>
         )}
