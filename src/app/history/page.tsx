@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ScanHistoryList } from '@/components/copyright-sentry/scan-history-list';
 import { useScans } from '@/hooks/use-scans';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,15 @@ export default function HistoryPage() {
   const { scans, isInitialized, isPremium, deleteScans } = useScans();
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [isSelectionMode, setSelectionMode] = useState(false);
+  const [showList, setShowList] = useState(false);
+
+  useEffect(() => {
+    if (isInitialized) {
+      // Delay rendering the list to prevent blocking UI thread on navigation
+      const timer = setTimeout(() => setShowList(true), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isInitialized]);
 
   const toggleSelection = (scanId: string) => {
     setSelection((prev) => {
@@ -81,7 +90,7 @@ export default function HistoryPage() {
       {!isPremium && !isSelectionMode && <AdBanner />}
       <Card>
         <CardContent className="p-4 md:p-6">
-          {!isInitialized ? (
+          {!isInitialized || !showList ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-3">
