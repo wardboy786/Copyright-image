@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Scan, History, Gem, Settings, ShieldCheck } from 'lucide-react';
+import { Scan, History, Gem, Settings, Home } from 'lucide-react';
 import { Header } from './header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,8 @@ import { AdBanner } from '../copyright-sentry/ad-banner';
 import { InterstitialAd } from '../ads/interstitial-ad';
 
 const menuItems = [
-  { href: '/', label: 'Scan', icon: Scan },
+  { href: '/', label: 'Home', icon: Home },
+  { href: '/scan', label: 'Scan', icon: Scan },
   { href: '/history', label: 'History', icon: History },
   { href: '/premium', label: 'Premium', icon: Gem },
   { href: '/settings', label: 'Settings', icon: Settings },
@@ -21,14 +22,14 @@ function BottomNavBar() {
   const pathname = usePathname();
   return (
     <nav className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden">
-      <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
+      <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
         {menuItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
               'inline-flex flex-col items-center justify-center px-5 group transition-colors',
-              (pathname === item.href || (item.href === '/' && pathname.startsWith('/scan'))) 
+              (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))) 
                 ? 'text-primary' 
                 : 'text-muted-foreground hover:text-foreground'
             )}
