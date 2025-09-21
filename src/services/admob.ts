@@ -59,7 +59,6 @@ class AdMobServiceImpl {
     try {
       await AdMob.initialize({
         testingDevices: IS_TESTING_MODE ? ['YOUR_TEST_DEVICE_ID'] : [], // Add your test device ID for development
-        isTesting: IS_TESTING_MODE,
       });
       this.isInitialized = true;
       console.log('AdMob Initialized');
