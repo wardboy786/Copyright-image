@@ -13,6 +13,7 @@
     "export": "next export"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^5.4.0",
     "@genkit-ai/googleai": "^1.14.1",
     "@genkit-ai/next": "^1.14.1",
     "@hookform/resolvers": "^4.1.3",

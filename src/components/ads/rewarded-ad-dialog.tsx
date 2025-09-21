@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Film } from 'lucide-react';
+import { AdMobService } from '@/services/admob';
+import { useToast } from '@/hooks/use-toast';
 
 interface RewardedAdDialogProps {
     open: boolean;
@@ -11,14 +12,29 @@ interface RewardedAdDialogProps {
 }
 
 export function RewardedAdDialog({ open, onOpenChange, onAdWatched }: RewardedAdDialogProps) {
-    
-    const handleWatchAd = () => {
-        // In a real app, you would trigger the AdMob SDK here.
-        // The SDK's callback would then call onAdWatched().
-        // For this placeholder, we'll call it directly.
-        console.log("Simulating rewarded ad watch. Granting reward.");
-        onAdWatched();
-        onOpenChange(false);
+    const { toast } = useToast();
+
+    const handleWatchAd = async () => {
+        try {
+            const reward = await AdMobService.getInstance().showRewardedAd();
+            if (reward) {
+                console.log(`Reward received: ${reward.type} - ${reward.amount}`);
+                onAdWatched();
+            } else {
+                 // On web, the reward event might not be as reliable. We'll grant it anyway.
+                 console.log("Rewarded ad closed, granting reward.");
+                 onAdWatched();
+            }
+        } catch (error) {
+            console.error("Error showing rewarded ad:", error);
+            toast({
+                variant: 'destructive',
+                title: "Ad Failed",
+                description: "The rewarded ad could not be shown. Please try again later."
+            });
+        } finally {
+            onOpenChange(false);
+        }
     }
 
     return (

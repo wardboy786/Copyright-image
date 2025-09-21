@@ -10,10 +10,11 @@ import { Toaster } from '@/components/ui/toaster';
 import { AdBanner } from '../copyright-sentry/ad-banner';
 import { InterstitialAd } from '../ads/interstitial-ad';
 import { SplashScreen } from './splash-screen';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
+import { AdMobService } from '@/services/admob';
 
 
 const menuItems = [
@@ -54,6 +55,13 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const { isInitialized } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    // Initialize AdMob service once the app is ready
+    AdMobService.getInstance().initialize().catch(err => {
+      console.error("Failed to initialize AdMob Service:", err);
+    });
+  }, []);
 
   if (showSplash && !isInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
@@ -101,5 +109,3 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     </ThemeProvider>
   );
 }
-
-    
