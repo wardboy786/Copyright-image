@@ -6,12 +6,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useScans } from '@/hooks/use-scans';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, FileWarning, Loader2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { UploadCloud, Loader2, Info } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 const MAX_FREE_SCANS = 5;
 
@@ -21,7 +23,7 @@ function Loader() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex flex-col items-center justify-center gap-4 text-center p-8"
+      className="flex flex-col items-center justify-center gap-4 text-center p-8 min-h-[450px]"
     >
       <Loader2 className="w-12 h-12 animate-spin text-accent" />
       <p className="font-semibold text-xl text-foreground mt-4">Analyzing Your Image</p>
@@ -32,11 +34,41 @@ function Loader() {
 
 export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanResult) => void; }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [image, setImage] = useState<string | null>(null);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [isUserCreated, setIsUserCreated] = useState(false);
   const { toast } = useToast();
   const { addScan, isLimitReached, isPremium, todaysScanCount, isInitialized } = useScans();
 
+  const handleScan = async () => {
+    if (!image) return;
+
+    setIsLoading(true);
+    const result = await analyzeImageAction({
+      photoDataUri: image,
+      isAiGenerated,
+      isUserCreated
+    });
+    
+    if (result.success && result.data) {
+      const newScan = addScan(image, result.data);
+      onScanComplete(newScan);
+      toast({
+        title: 'Scan Complete!',
+        description: 'Your image has been successfully analyzed.',
+      });
+    } else {
+      toast({
+        title: 'Scan Failed',
+        description: result.error || 'An unknown error occurred.',
+        variant: 'destructive',
+      });
+    }
+    setIsLoading(false);
+  };
+
   const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
+    (acceptedFiles: File[]) => {
       if (isLimitReached) {
         toast({
           title: 'Daily Limit Reached',
@@ -49,58 +81,45 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       const file = acceptedFiles[0];
       if (!file) return;
 
-      setIsLoading(true);
-
       const reader = new FileReader();
-      reader.onload = async (event) => {
+      reader.onload = (event) => {
         const photoDataUri = event.target?.result as string;
-        if (photoDataUri) {
-          const result = await analyzeImageAction(photoDataUri);
-          if (result.success && result.data) {
-            const newScan = addScan(photoDataUri, result.data);
-            onScanComplete(newScan);
-            toast({
-              title: 'Scan Complete!',
-              description: 'Your image has been successfully analyzed.',
-            });
-          } else {
-            toast({
-              title: 'Scan Failed',
-              description: result.error || 'An unknown error occurred.',
-              variant: 'destructive',
-            });
-          }
-        }
-        setIsLoading(false);
+        setImage(photoDataUri);
       };
       reader.readAsDataURL(file);
     },
-    [addScan, onScanComplete, toast, isLimitReached]
+    [isLimitReached, toast]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [] },
     multiple: false,
-    disabled: isLoading || isLimitReached,
+    disabled: isLoading || isLimitReached || !!image,
   });
+  
+  const reset = () => {
+      setImage(null);
+      setIsAiGenerated(false);
+      setIsUserCreated(false);
+  }
 
   const progressValue = (todaysScanCount / MAX_FREE_SCANS) * 100;
-
+  
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-2xl shadow-primary/5">
       <CardContent className="p-0">
         <AnimatePresence mode="wait">
           {isLoading ? (
             <Loader key="loader" />
-          ) : (
-            <motion.div key="uploader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          ) : !image ? (
+             <motion.div key="uploader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div
                 {...getRootProps()}
                 className={cn(
                   'w-full rounded-t-lg transition-colors flex flex-col items-center justify-center p-8 sm:p-12 text-center cursor-pointer min-h-[300px] border-4 border-dashed border-border/50',
                   isDragActive ? 'bg-primary/10 border-accent/50' : 'hover:bg-primary/5',
-                  (isLoading || isLimitReached) && 'cursor-not-allowed opacity-60'
+                  (isLimitReached || !!image) && 'cursor-not-allowed opacity-60'
                 )}
               >
                 <input {...getInputProps()} />
@@ -132,6 +151,40 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                   )}
                 </div>
               )}
+            </motion.div>
+          ) : (
+            <motion.div key="context-form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                <CardHeader>
+                    <CardTitle>Provide Context</CardTitle>
+                    <CardDescription>Answering these questions helps us provide a more accurate analysis.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                     <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div>
+                          <Label htmlFor="ai-generated" className="font-semibold">Is this image AI-generated?</Label>
+                        </div>
+                        <Switch
+                          id="ai-generated"
+                          checked={isAiGenerated}
+                          onCheckedChange={setIsAiGenerated}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div>
+                          <Label htmlFor="user-created" className="font-semibold">Did you create this image?</Label>
+                           <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Info className="w-4 h-4"/>Includes generating it with AI prompts.</p>
+                        </div>
+                        <Switch
+                          id="user-created"
+                          checked={isUserCreated}
+                          onCheckedChange={setIsUserCreated}
+                        />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" onClick={reset}>Cancel</Button>
+                        <Button onClick={handleScan}>Start Scan</Button>
+                      </div>
+                </CardContent>
             </motion.div>
           )}
         </AnimatePresence>

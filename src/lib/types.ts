@@ -1,4 +1,4 @@
-import { type AnalyzeImageForCopyrightOutput } from "@/ai/flows/analyze-image-for-copyright";
+import { type AnalyzeImageForCopyrightInput, type AnalyzeImageForCopyrightOutput } from "@/ai/flows/analyze-image-for-copyright";
 
 export type OverallAssessment = 'Safe to use' | 'Moderate' | 'Copyright Detected';
 
@@ -9,4 +9,4 @@ export interface ScanResult {
   analysis: AnalyzeImageForCopyrightOutput;
 }
 
-export type { AnalyzeImageForCopyrightOutput };
+export type { AnalyzeImageForCopyrightInput, AnalyzeImageForCopyrightOutput };

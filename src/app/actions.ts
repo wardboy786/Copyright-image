@@ -1,10 +1,10 @@
 'use server';
 
-import { analyzeImageForCopyright, type AnalyzeImageForCopyrightOutput } from '@/ai/flows/analyze-image-for-copyright';
+import { analyzeImageForCopyright, type AnalyzeImageForCopyrightInput, type AnalyzeImageForCopyrightOutput } from '@/ai/flows/analyze-image-for-copyright';
 
-export async function analyzeImageAction(photoDataUri: string): Promise<{ success: true, data: AnalyzeImageForCopyrightOutput } | { success: false, error: string }> {
+export async function analyzeImageAction(input: AnalyzeImageForCopyrightInput): Promise<{ success: true, data: AnalyzeImageForCopyrightOutput } | { success: false, error: string }> {
   try {
-    const result = await analyzeImageForCopyright({ photoDataUri });
+    const result = await analyzeImageForCopyright(input);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error in analyzeImageAction:', error);
