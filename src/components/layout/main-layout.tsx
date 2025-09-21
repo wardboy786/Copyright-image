@@ -1,12 +1,13 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Scan, History, Gem, Settings } from 'lucide-react';
+import { Scan, History, Gem, Settings, ShieldCheck } from 'lucide-react';
 import { Header } from './header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AppProvider } from '@/context/app-provider';
 import { Toaster } from '@/components/ui/toaster';
+import { DailyLimitIndicator } from '../copyright-sentry/daily-limit-indicator';
 
 const menuItems = [
   { href: '/', label: 'Scan', icon: Scan },
@@ -27,7 +28,7 @@ function BottomNavBar() {
             className={cn(
               'inline-flex flex-col items-center justify-center px-5 group transition-colors',
               (pathname === item.href || (item.href === '/' && pathname.startsWith('/scan'))) 
-                ? 'text-accent' 
+                ? 'text-primary' 
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -40,28 +41,35 @@ function BottomNavBar() {
   );
 }
 
-function DesktopHeader() {
+function SidebarNav() {
     const pathname = usePathname();
     return (
-        <header className="hidden md:flex items-center gap-8 border-b bg-background/80 backdrop-blur-sm px-6 h-16 sticky top-0 z-50">
-             <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
-                Copyright Sentry
-            </Link>
-            <nav className="flex items-center gap-5 text-sm font-medium text-muted-foreground ml-auto">
+        <aside className="hidden lg:flex flex-col w-64 border-r">
+             <div className="flex items-center gap-2 font-semibold text-lg h-16 border-b px-6">
+                <ShieldCheck className="h-6 w-6 text-primary"/>
+                <span>Copyright Sentry</span>
+            </div>
+            <nav className="flex flex-col gap-1 p-4 text-sm font-medium">
                  {menuItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'transition-colors hover:text-foreground',
-                       (pathname === item.href || (item.href === '/' && pathname.startsWith('/scan'))) ? 'text-foreground font-semibold' : 'text-muted-foreground'
+                      'flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-muted',
+                       (pathname === item.href || (item.href === '/' && pathname.startsWith('/scan'))) 
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                        : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
+                    <item.icon className="w-4 h-4" />
                     {item.label}
                   </Link>
                 ))}
             </nav>
-        </header>
+            <div className="mt-auto">
+                <DailyLimitIndicator />
+            </div>
+        </aside>
     )
 }
 
@@ -70,10 +78,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AppProvider>
-      <div className="flex flex-col min-h-screen w-full bg-background">
-        <Header />
-        <DesktopHeader />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">{children}</main>
+      <div className="flex min-h-screen w-full bg-background">
+        <SidebarNav />
+        <div className="flex flex-col flex-1">
+          <Header />
+          <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">{children}</main>
+        </div>
         {isMobile && <BottomNavBar />}
         <Toaster />
       </div>

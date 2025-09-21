@@ -4,34 +4,49 @@ import { useScans } from '@/hooks/use-scans';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
 
 const MAX_FREE_SCANS = 5;
 
 export function DailyLimitIndicator() {
   const { todaysScanCount, isPremium, isInitialized } = useScans();
 
-  if (isPremium || !isInitialized) {
+  if (isPremium) {
     return null;
   }
   
   if (!isInitialized) {
-      return <Skeleton className="h-2 w-full" />;
+      return (
+          <div className="p-4 space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-2 w-full" />
+            <Skeleton className="h-3 w-1/4" />
+          </div>
+      )
   }
 
-  const scansRemaining = MAX_FREE_SCANS - todaysScanCount;
   const progressValue = (todaysScanCount / MAX_FREE_SCANS) * 100;
 
   return (
-    <div className="w-full px-6 pb-4 text-xs text-muted-foreground">
-        <Progress value={progressValue} className="h-2 mb-2"/>
-        <div className="flex justify-between items-center">
-            <span>
-                Daily Scans: {todaysScanCount} / {MAX_FREE_SCANS}
-            </span>
-            <Link href="/premium" className="text-primary hover:underline">
-                Upgrade
-            </Link>
-        </div>
+    <div className="p-4">
+        <Card className="bg-muted/50 border-dashed">
+            <CardHeader className="p-4">
+                <CardTitle className="text-base">Free Scans Used</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+                <div className="flex justify-between items-center mb-2 text-xs">
+                    <span className="font-medium text-muted-foreground">Daily Limit</span>
+                    <span className="font-bold">{todaysScanCount} / {MAX_FREE_SCANS}</span>
+                </div>
+                <Progress value={progressValue} className="h-2 mb-4"/>
+                <Button size="sm" className="w-full" asChild>
+                    <Link href="/premium">
+                        Upgrade to Premium
+                    </Link>
+                </Button>
+            </CardContent>
+        </Card>
     </div>
   );
 }

@@ -30,7 +30,17 @@ export default function Home() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <ImageUploader onScanComplete={handleScanComplete} />
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+                <div className="hidden lg:block space-y-4">
+                    <h1 className="text-4xl font-bold tracking-tighter">Copyright Sentry</h1>
+                    <p className="text-muted-foreground text-lg">
+                        Your AI-powered guardian against image copyright infringement. Upload an image to get a detailed analysis of potential copyright risks.
+                    </p>
+                </div>
+                <div>
+                    <ImageUploader onScanComplete={handleScanComplete} />
+                </div>
+            </div>
             {!isPremium && <AdBanner className="mt-8" />}
           </motion.div>
         ) : (
@@ -41,7 +51,7 @@ export default function Home() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <h1 className="text-3xl font-bold tracking-tight mb-6">Scan Result</h1>
+            <h1 className="text-3xl font-bold tracking-tight mb-6 text-center lg:text-left">Scan Result</h1>
             <ScanResults scan={latestScan} onScanAnother={handleScanAnother} />
           </motion.div>
         )}

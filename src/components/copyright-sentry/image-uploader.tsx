@@ -25,7 +25,7 @@ function Loader() {
       exit={{ opacity: 0 }}
       className="flex flex-col items-center justify-center gap-4 text-center p-8 min-h-[450px]"
     >
-      <Loader2 className="w-12 h-12 animate-spin text-accent" />
+      <Loader2 className="w-12 h-12 animate-spin text-primary" />
       <p className="font-semibold text-xl text-foreground mt-4">Analyzing Your Image</p>
       <p className="text-muted-foreground">This may take a few moments. We're checking for copyright details...</p>
     </motion.div>
@@ -107,25 +107,29 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const progressValue = (todaysScanCount / MAX_FREE_SCANS) * 100;
   
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-2xl shadow-primary/5">
+    <Card className="w-full max-w-2xl mx-auto shadow-xl shadow-primary/10">
       <CardContent className="p-0">
         <AnimatePresence mode="wait">
           {isLoading ? (
             <Loader key="loader" />
           ) : !image ? (
              <motion.div key="uploader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <CardHeader className="text-center lg:hidden">
+                    <CardTitle className="text-3xl font-bold tracking-tighter">Scan an Image</CardTitle>
+                    <CardDescription>Upload an image to get a detailed analysis.</CardDescription>
+                </CardHeader>
               <div
                 {...getRootProps()}
                 className={cn(
-                  'w-full rounded-t-lg transition-colors flex flex-col items-center justify-center p-8 sm:p-12 text-center cursor-pointer min-h-[300px] border-4 border-dashed border-border/50',
-                  isDragActive ? 'bg-primary/10 border-accent/50' : 'hover:bg-primary/5',
+                  'w-full rounded-t-lg transition-colors flex flex-col items-center justify-center p-8 sm:p-12 text-center cursor-pointer min-h-[300px] border-4 border-dashed',
+                  isDragActive ? 'bg-primary/10 border-primary' : 'border-border/50 hover:bg-muted/50 hover:border-muted-foreground/20',
                   (isLimitReached || !!image) && 'cursor-not-allowed opacity-60'
                 )}
               >
                 <input {...getInputProps()} />
                 <div className="flex flex-col items-center gap-4">
-                  <div className="bg-accent/10 p-4 rounded-full border border-accent/20">
-                    <UploadCloud className="w-10 h-10 text-accent" />
+                  <div className="bg-primary/10 p-4 rounded-full border-8 border-background">
+                    <UploadCloud className="w-10 h-10 text-primary" />
                   </div>
                   <p className="font-semibold text-xl md:text-2xl mt-4">
                     {isDragActive ? 'Drop the image here' : 'Drag & drop an image'}
