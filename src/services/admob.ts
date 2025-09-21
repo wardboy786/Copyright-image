@@ -17,6 +17,7 @@ const IS_TESTING_MODE = process.env.NODE_ENV === 'development';
 let AdMob: typeof import('@capacitor-community/admob').AdMob;
 let BannerAdSize: typeof import('@capacitor-community/admob').BannerAdSize;
 let BannerAdPosition: typeof import('@capacitor-community/admob').BannerAdPosition;
+let RewardAdPluginEvents: typeof import('@capacitor-community/admob').RewardAdPluginEvents;
 
 
 try {
@@ -25,6 +26,7 @@ try {
     AdMob = admobModule.AdMob;
     BannerAdSize = admobModule.BannerAdSize;
     BannerAdPosition = admobModule.BannerAdPosition;
+    RewardAdPluginEvents = admobModule.RewardAdPluginEvents;
   }
 } catch (e) {
   console.warn('@capacitor-community/admob not available. Ads will not be shown.');
@@ -56,7 +58,6 @@ class AdMobServiceImpl {
     }
     try {
       await AdMob.initialize({
-        requestTrackingAuthorization: true,
         testingDevices: IS_TESTING_MODE ? ['YOUR_TEST_DEVICE_ID'] : [], // Add your test device ID for development
         isTesting: IS_TESTING_MODE,
       });
@@ -111,11 +112,11 @@ class AdMobServiceImpl {
       });
 
       return new Promise(async (resolve, reject) => {
-        const loadedListener = await AdMob.addListener('rewardedVideoAdLoaded', () => {
+        const loadedListener = await AdMob.addListener(RewardAdPluginEvents.Loaded, () => {
             console.log('Rewarded video ad is loaded and ready to be displayed.');
         });
         
-        const rewardListener = await AdMob.addListener('rewardedVideoAdRewarded', (reward: RewardItem) => {
+        const rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: RewardItem) => {
             console.log('Rewarded video ad reward:', reward);
             resolve(reward);
             // Clean up listeners
@@ -124,7 +125,7 @@ class AdMobServiceImpl {
             failListener.remove();
         });
 
-        const failListener = await AdMob.addListener('rewardedVideoAdFailedToLoad', (error: any) => {
+        const failListener = await AdMob.addListener(RewardAdPluginEvents.FailedToLoad, (error: any) => {
             console.error('Rewarded video ad failed to load:', error);
             reject(new Error('Failed to load rewarded ad.'));
              // Clean up listeners
