@@ -25,31 +25,34 @@ export function ScanHistoryList({ scans }: ScanHistoryListProps) {
 
   return (
     <ul className="space-y-3">
-      {scans.map((scan) => (
-        <li key={scan.id}>
-          <Link href={`/scan/${scan.id}`} className="block">
-            <Card className="p-3 hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-4">
-                <Image
-                  src={scan.image}
-                  alt="Scan thumbnail"
-                  width={48}
-                  height={48}
-                  className="rounded-md object-cover w-12 h-12 bg-card-foreground/5"
-                />
-                <div className="flex-1">
-                  <p className="font-medium text-sm truncate">
-                    {scan.analysis.breakdown.length > 0 ? `${scan.analysis.breakdown.length} element(s) found` : 'No elements found'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(scan.timestamp), { addSuffix: true })}
-                  </p>
+      {scans.map((scan) => {
+        const breakdown = scan.analysis?.breakdown || [];
+        return (
+          <li key={scan.id}>
+            <Link href={`/scan/${scan.id}`} className="block">
+              <Card className="p-3 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <Image
+                    src={scan.image}
+                    alt="Scan thumbnail"
+                    width={48}
+                    height={48}
+                    className="rounded-md object-cover w-12 h-12 bg-card-foreground/5"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm truncate">
+                      {breakdown.length > 0 ? `${breakdown.length} element(s) found` : 'No elements found'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(scan.timestamp), { addSuffix: true })}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          </Link>
-        </li>
-      ))}
+              </Card>
+            </Link>
+          </li>
+        );
+      })}
     </ul>
   );
 }
