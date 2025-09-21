@@ -8,14 +8,12 @@ import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { UploadCloud, FileWarning, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { DailyLimitIndicator } from './daily-limit-indicator';
+import { Progress } from '@/components/ui/progress';
 import { AnimatePresence, motion } from 'framer-motion';
+import Link from 'next/link';
 
-interface ImageUploaderProps {
-  onScanComplete: (scan: ScanResult) => void;
-}
+const MAX_FREE_SCANS = 5;
 
 function Loader() {
   return (
@@ -23,23 +21,23 @@ function Loader() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex flex-col items-center justify-center gap-4 text-center"
+      className="flex flex-col items-center justify-center gap-4 text-center p-8"
     >
-      <Loader2 className="w-16 h-16 animate-spin text-primary" />
-      <p className="font-semibold text-lg text-foreground">Analyzing Image...</p>
-      <p className="text-muted-foreground">This may take a few moments.</p>
+      <Loader2 className="w-12 h-12 animate-spin text-accent" />
+      <p className="font-semibold text-xl text-foreground mt-4">Analyzing Your Image</p>
+      <p className="text-muted-foreground">This may take a few moments. We're checking for copyright details...</p>
     </motion.div>
   );
 }
 
-export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
+export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanResult) => void; }) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { addScan, isLimitReached, isPremium } = useScans();
+  const { addScan, isLimitReached, isPremium, todaysScanCount, isInitialized } = useScans();
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      if (limitReached) {
+      if (isLimitReached) {
         toast({
           title: 'Daily Limit Reached',
           description: 'Upgrade to Premium for unlimited scans.',
@@ -62,7 +60,7 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
             const newScan = addScan(photoDataUri, result.data);
             onScanComplete(newScan);
             toast({
-              title: 'Scan Complete',
+              title: 'Scan Complete!',
               description: 'Your image has been successfully analyzed.',
             });
           } else {
@@ -77,68 +75,67 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
       };
       reader.readAsDataURL(file);
     },
-    [addScan, onScanComplete, toast, isLimitReached, isPremium]
+    [addScan, onScanComplete, toast, isLimitReached]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [] },
     multiple: false,
-    disabled: isLoading || (!isPremium && isLimitReached),
+    disabled: isLoading || isLimitReached,
   });
-  
-  const limitReached = !isPremium && isLimitReached;
+
+  const progressValue = (todaysScanCount / MAX_FREE_SCANS) * 100;
 
   return (
-    <Card className="relative overflow-hidden border-2 border-dashed border-border hover:border-primary/50 transition-colors duration-300">
-      <CardContent className="relative z-10 p-6 flex items-center justify-center min-h-[350px]">
-        <div
-          {...getRootProps()}
-          className={cn(
-            'w-full h-full rounded-lg transition-colors flex flex-col items-center justify-center p-8 text-center cursor-pointer',
-            isDragActive && 'bg-primary/10',
-            (isLoading || limitReached) && 'cursor-not-allowed'
+    <Card className="w-full max-w-2xl mx-auto shadow-2xl shadow-primary/5">
+      <CardContent className="p-0">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <Loader key="loader" />
+          ) : (
+            <motion.div key="uploader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div
+                {...getRootProps()}
+                className={cn(
+                  'w-full rounded-t-lg transition-colors flex flex-col items-center justify-center p-8 sm:p-12 text-center cursor-pointer min-h-[300px] border-4 border-dashed border-border/50',
+                  isDragActive ? 'bg-primary/10 border-accent/50' : 'hover:bg-primary/5',
+                  (isLoading || isLimitReached) && 'cursor-not-allowed opacity-60'
+                )}
+              >
+                <input {...getInputProps()} />
+                <div className="flex flex-col items-center gap-4">
+                  <div className="bg-accent/10 p-4 rounded-full border border-accent/20">
+                    <UploadCloud className="w-10 h-10 text-accent" />
+                  </div>
+                  <p className="font-semibold text-xl md:text-2xl mt-4">
+                    {isDragActive ? 'Drop the image here' : 'Drag & drop an image'}
+                  </p>
+                  <p className="text-muted-foreground text-sm">or click to select a file</p>
+                  <p className="text-xs text-muted-foreground/70 mt-4">Supports: PNG, JPG, GIF, SVG</p>
+                </div>
+              </div>
+              {!isPremium && isInitialized && (
+                <div className="p-4 border-t">
+                  <div className="flex justify-between items-center mb-2 text-xs">
+                    <span className="font-medium text-muted-foreground">Daily Free Scans</span>
+                    <span className="font-bold">{todaysScanCount} / {MAX_FREE_SCANS}</span>
+                  </div>
+                  <Progress value={progressValue} className="h-2" />
+                  {isLimitReached && (
+                     <div className="text-center mt-3">
+                        <p className="text-sm text-destructive font-semibold">Daily limit reached.</p>
+                         <Button variant="link" asChild className="h-auto p-0 text-sm">
+                            <Link href="/premium">Upgrade to Premium</Link>
+                         </Button>
+                     </div>
+                  )}
+                </div>
+              )}
+            </motion.div>
           )}
-        >
-          <input {...getInputProps()} />
-          <AnimatePresence mode="wait">
-            {isLoading ? (
-              <Loader key="loader" />
-            ) : limitReached ? (
-              <motion.div
-                key="limit"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center gap-4"
-              >
-                <FileWarning className="w-12 h-12 text-destructive mb-4" />
-                <p className="font-semibold text-lg">Daily Limit Reached</p>
-                <p className="text-muted-foreground">
-                  Upgrade to Premium for unlimited scans.
-                </p>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="uploader"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center gap-4"
-              >
-                <UploadCloud className="w-12 h-12 text-primary mb-4" />
-                <p className="font-semibold text-lg">
-                  {isDragActive ? 'Drop the image here' : 'Drag & drop an image'}
-                </p>
-                <p className="text-muted-foreground">or</p>
-                <Button variant="outline" className="mt-4" disabled={isLoading || limitReached}>
-                  Select Image
-                </Button>
-                <p className="text-xs text-muted-foreground mt-4">Supports: PNG, JPG, GIF, SVG</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        </AnimatePresence>
       </CardContent>
-      {!isPremium && <DailyLimitIndicator />}
     </Card>
   );
 }

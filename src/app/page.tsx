@@ -41,7 +41,7 @@ export default function Home() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <h2 className="text-2xl font-bold mb-4">Scan Result</h2>
+            <h1 className="text-3xl font-bold tracking-tight mb-6">Scan Result</h1>
             <ScanResults scan={latestScan} onScanAnother={handleScanAnother} />
           </motion.div>
         )}
