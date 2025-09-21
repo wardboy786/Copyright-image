@@ -7,8 +7,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarInset,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -16,7 +16,12 @@ import { Home, History, Star, Settings, ShieldCheck, PanelLeft } from 'lucide-re
 import { Header } from './header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -48,58 +53,67 @@ function BottomNavBar() {
   );
 }
 
-export function MainLayout({ children }: { children: React.ReactNode }) {
+function DesktopSidebar() {
   const pathname = usePathname();
+  const { state } = useSidebar();
+
+  return (
+     <Sidebar className="hidden border-r bg-muted/40 md:block" collapsible="icon">
+        <SidebarHeader className="p-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 font-semibold">
+            <ShieldCheck className="h-6 w-6 text-primary" />
+            <span className={cn('font-semibold', state === 'collapsed' && 'hidden')}>Copyright Sentry</span>
+          </Link>
+          <SidebarMenuButton
+            className={cn(state === 'collapsed' && 'hidden')}
+            variant="ghost"
+            size="icon"
+          >
+            <PanelLeft />
+          </SidebarMenuButton>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            {menuItems.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href}
+                    >
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span className={cn(state === 'collapsed' && 'hidden')}>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" align="center">
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
+  )
+}
+
+
+export function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <Sidebar
-          className="hidden border-r bg-muted/40 md:block"
-          collapsible="icon"
-        >
-          <SidebarHeader className="p-4 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
-              <ShieldCheck className="h-6 w-6 text-primary" />
-              <span>Copyright Sentry</span>
-            </Link>
-             <SidebarMenuButton
-              className="group-data-[collapsible=icon]:hidden"
-              variant="ghost"
-              size="icon"
-            >
-              <PanelLeft />
-            </SidebarMenuButton>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.href}
-                    tooltip={item.label}
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
-
+        <DesktopSidebar />
         <div className="flex flex-col flex-1">
           <Header />
-          <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
-            {children}
-          </main>
+          <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">{children}</main>
         </div>
       </div>
-       {isMobile && <BottomNavBar />}
+      {isMobile && <BottomNavBar />}
     </SidebarProvider>
   );
 }
