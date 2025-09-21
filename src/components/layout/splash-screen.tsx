@@ -38,7 +38,7 @@ const textVariants = {
 export function SplashScreen({ onAnimationComplete }: { onAnimationComplete: () => void }) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      onAnimationComplete();
+      onAnimationAnimationComplete();
     }, 2000); // Total splash screen time before starting fade-out
 
     return () => clearTimeout(timer);
@@ -53,7 +53,7 @@ export function SplashScreen({ onAnimationComplete }: { onAnimationComplete: () 
         className="fixed inset-0 z-[101] flex flex-col items-center justify-center bg-background"
       >
         <motion.div variants={logoVariants} initial="initial" animate="animate">
-          <Image src="/images/logo.svg" alt="ImageRights AI Logo" width={96} height={96} className="w-24 h-24 text-primary" />
+          <Image src="/images/logo.svg" alt="ImageRights AI Logo" width={96} height={96} className="w-24 h-24 text-primary dark:brightness-0 dark:invert" />
         </motion.div>
         <motion.h1
           variants={textVariants}
