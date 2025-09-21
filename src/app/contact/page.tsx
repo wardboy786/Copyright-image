@@ -15,10 +15,10 @@ export default function ContactPage() {
             For support, feedback, or inquiries, please contact us at:
           </p>
           <p className="font-semibold text-foreground text-lg">
-            contact@imagerights-ai.com
+            ecoliwears@gmail.com
           </p>
           <p>
-            (Note: This is a fictional contact for this demo application.)
+            We typically respond within 24-48 business hours.
           </p>
         </CardContent>
       </Card>
