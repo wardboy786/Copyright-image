@@ -103,6 +103,7 @@ function ScanHistoryItem({
         width={48}
         height={48}
         className="rounded-md object-cover w-12 h-12 bg-card-foreground/5"
+        loading="lazy"
       />
       <div className="flex-1">
         <p className="font-medium text-sm truncate">
