@@ -15,10 +15,16 @@ const IS_TESTING_MODE = process.env.NODE_ENV === 'development';
 
 // --- AdMob Service ---
 let AdMob: typeof import('@capacitor-community/admob').AdMob;
+let BannerAdSize: typeof import('@capacitor-community/admob').BannerAdSize;
+let BannerAdPosition: typeof import('@capacitor-community/admob').BannerAdPosition;
+
 
 try {
   if (typeof window !== 'undefined') {
-    AdMob = require('@capacitor-community/admob').AdMob;
+    const admobModule = require('@capacitor-community/admob');
+    AdMob = admobModule.AdMob;
+    BannerAdSize = admobModule.BannerAdSize;
+    BannerAdPosition = admobModule.BannerAdPosition;
   }
 } catch (e) {
   console.warn('@capacitor-community/admob not available. Ads will not be shown.');
@@ -66,8 +72,8 @@ class AdMobServiceImpl {
     try {
       await AdMob.showBanner({
         adId: IS_TESTING_MODE ? TEST_BANNER_ID : LIVE_BANNER_ID,
-        adSize: 'ADAPTIVE_BANNER',
-        position: 'BOTTOM_CENTER',
+        adSize: BannerAdSize.ADAPTIVE_BANNER,
+        position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
       });
     } catch (e) {
@@ -100,31 +106,30 @@ class AdMobServiceImpl {
   async showRewardedAd(): Promise<RewardItem | null> {
     if (!this.isAvailable() || !this.isInitialized) return null;
     try {
-      const result = await AdMob.prepareRewardVideoAd({
+      await AdMob.prepareRewardVideoAd({
         adId: IS_TESTING_MODE ? TEST_REWARDED_ID : LIVE_REWARDED_ID,
       });
-      console.log('Reward ad preparation result:', result);
 
-      return new Promise((resolve, reject) => {
-        const rewardListener = AdMob.addListener('onRewardedVideoAdLoaded', (info: any) => {
+      return new Promise(async (resolve, reject) => {
+        const loadedListener = await AdMob.addListener('rewardedVideoAdLoaded', () => {
             console.log('Rewarded video ad is loaded and ready to be displayed.');
         });
         
-        const rewardGrantedListener = AdMob.addListener('onRewardedVideoAdRewarded', (reward: RewardItem) => {
+        const rewardListener = await AdMob.addListener('rewardedVideoAdRewarded', (reward: RewardItem) => {
             console.log('Rewarded video ad reward:', reward);
             resolve(reward);
             // Clean up listeners
+            loadedListener.remove();
             rewardListener.remove();
-            rewardGrantedListener.remove();
             failListener.remove();
         });
 
-        const failListener = AdMob.addListener('onRewardedVideoAdFailedToLoad', (error: any) => {
+        const failListener = await AdMob.addListener('rewardedVideoAdFailedToLoad', (error: any) => {
             console.error('Rewarded video ad failed to load:', error);
             reject(new Error('Failed to load rewarded ad.'));
              // Clean up listeners
+            loadedListener.remove();
             rewardListener.remove();
-            rewardGrantedListener.remove();
             failListener.remove();
         });
         
