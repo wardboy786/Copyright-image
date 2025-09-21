@@ -12,10 +12,11 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, History, Star, Settings, ShieldCheck } from 'lucide-react';
+import { Home, History, Star, Settings, ShieldCheck, PanelLeft } from 'lucide-react';
 import { Header } from './header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -53,13 +54,23 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      {!isMobile && (
-        <Sidebar>
-          <SidebarHeader className="p-4">
-            <Link href="/" className="flex items-center gap-2">
-              <ShieldCheck className="w-8 h-8 text-primary" />
-              <span className="text-xl font-semibold">Copyright Sentry</span>
+      <div className="flex min-h-screen w-full">
+        <Sidebar
+          className="hidden border-r bg-muted/40 md:block"
+          collapsible="icon"
+        >
+          <SidebarHeader className="p-4 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2 font-semibold">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+              <span>Copyright Sentry</span>
             </Link>
+             <SidebarMenuButton
+              className="group-data-[collapsible=icon]:hidden"
+              variant="ghost"
+              size="icon"
+            >
+              <PanelLeft />
+            </SidebarMenuButton>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
@@ -79,18 +90,16 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               ))}
             </SidebarMenu>
           </SidebarContent>
-          <SidebarFooter className="p-4 text-xs text-muted-foreground">
-            © 2024 Copyright Sentry
-          </SidebarFooter>
         </Sidebar>
-      )}
 
-      <SidebarInset>
-        <Header />
-        <div className="p-4 md:p-6 lg:p-8 pb-20 md:pb-8">{children}</div>
-      </SidebarInset>
-
-      {isMobile && <BottomNavBar />}
+        <div className="flex flex-col flex-1">
+          <Header />
+          <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
+            {children}
+          </main>
+        </div>
+      </div>
+       {isMobile && <BottomNavBar />}
     </SidebarProvider>
   );
 }
