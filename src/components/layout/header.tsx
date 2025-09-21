@@ -1,6 +1,6 @@
 'use client';
 import { usePathname } from 'next/navigation';
-import { ShieldCheck, ScanLine } from 'lucide-react';
+import { ShieldCheck, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useAppContext } from '@/hooks/use-app-context';
 import { MAX_FREE_SCANS } from '@/hooks/use-scans';
@@ -15,7 +15,7 @@ function DailyLimitCounter() {
 
     return (
         <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-            <ScanLine className="w-5 h-5"/>
+            <Zap className="w-5 h-5"/>
             <AnimatePresence mode="wait" initial={false}>
                 <motion.span
                     key={todaysScanCount}
