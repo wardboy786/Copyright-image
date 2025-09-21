@@ -9,7 +9,7 @@ import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, Rotate
 
 interface ScanResultsProps {
   scan: ScanResult;
-  onScanAnother: () => void;
+  onScanAnother?: () => void;
 }
 
 const getAssessmentConfig = (assessment: OverallAssessment) => {
@@ -57,54 +57,55 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
 
   return (
     <div className="space-y-6">
+        <Card>
+            <CardHeader>
+                <div className="aspect-square relative rounded-lg overflow-hidden border max-w-sm mx-auto">
+                    <Image
+                    src={scan.image}
+                    alt="Scanned image"
+                    fill
+                    className="object-contain"
+                    />
+                </div>
+            </CardHeader>
+            <CardContent>
+                <CardDescription className="text-center">
+                    Scanned on {format(new Date(scan.timestamp), "PPP 'at' p")}
+                </CardDescription>
+            </CardContent>
+        </Card>
+
         <Card className={cn("border-2", assessmentConfig.borderColor)}>
-            <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-4">
+            <CardHeader className={cn("flex flex-row items-center gap-4 space-y-0", assessmentConfig.bgColor)}>
                  <assessmentConfig.Icon className={cn("w-8 h-8", assessmentConfig.color)} />
                  <div>
                     <CardTitle className={cn("text-2xl", assessmentConfig.color)}>{assessmentConfig.title}</CardTitle>
-                    <CardDescription>
-                        Scanned on {format(new Date(scan.timestamp), "PPP 'at' p")}
-                    </CardDescription>
                  </div>
             </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-1">
-                        <div className="aspect-square relative rounded-lg overflow-hidden border">
-                            <Image
-                            src={scan.image}
-                            alt="Scanned image"
-                            fill
-                            className="object-contain"
-                            />
+            <CardContent className="pt-6">
+                 {scan.analysis.breakdown.length > 0 ? (
+                     <div className="space-y-4">
+                        <h3 className="font-semibold text-lg">Analysis Breakdown</h3>
+                        <ul className="space-y-4">
+                        {scan.analysis.breakdown.map((element, index) => (
+                            <li key={index} className="flex gap-4">
+                                <FileText className="w-5 h-5 mt-1 text-muted-foreground flex-shrink-0" />
+                                <div>
+                                    <p className="font-semibold">{element.name}</p>
+                                    <p className="text-sm text-muted-foreground">{element.explanation}</p>
+                                </div>
+                            </li>
+                        ))}
+                        </ul>
+                     </div>
+                 ) : (
+                     <div className="flex items-center justify-center rounded-md min-h-[100px]">
+                        <div className="text-center p-4">
+                        <p className="font-semibold">No Copyrighted Elements Detected</p>
+                        <p className="text-sm text-muted-foreground">Our scan did not find any potential copyright infringements in this image.</p>
                         </div>
                     </div>
-                    <div className="md:col-span-2 space-y-4">
-                         {scan.analysis.breakdown.length > 0 ? (
-                             <div className="space-y-3">
-                                <h3 className="font-semibold text-lg">Analysis Breakdown</h3>
-                                <ul className="space-y-3">
-                                {scan.analysis.breakdown.map((element, index) => (
-                                    <li key={index} className="flex gap-3 p-3 bg-card rounded-md border">
-                                        <FileText className="w-5 h-5 mt-1 text-muted-foreground flex-shrink-0" />
-                                        <div>
-                                            <p className="font-semibold">{element.name}</p>
-                                            <p className="text-sm text-muted-foreground">{element.explanation}</p>
-                                        </div>
-                                    </li>
-                                ))}
-                                </ul>
-                             </div>
-                         ) : (
-                             <div className="flex items-center justify-center h-full rounded-md border border-dashed">
-                                <div className="text-center p-8">
-                                <p className="font-semibold">No Copyrighted Elements Detected</p>
-                                <p className="text-sm text-muted-foreground">Our scan did not find any potential copyright infringements in this image.</p>
-                                </div>
-                            </div>
-                         )}
-                    </div>
-                </div>
+                 )}
             </CardContent>
         </Card>
 
@@ -143,12 +144,14 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
             </CardContent>
         </Card>
 
-        <div className="flex justify-center">
-            <Button size="lg" onClick={onScanAnother}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Scan Another Image
-            </Button>
-        </div>
+        {onScanAnother && (
+            <div className="flex justify-center">
+                <Button size="lg" onClick={onScanAnother}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Scan Another Image
+                </Button>
+            </div>
+        )}
     </div>
   );
 }

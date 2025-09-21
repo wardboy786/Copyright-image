@@ -26,8 +26,9 @@ export default function ScanDetailPage() {
   if (!isInitialized || scan === undefined) {
     return (
       <div className="space-y-6">
+        <Skeleton className="h-64 w-full" />
         <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
@@ -44,6 +45,7 @@ export default function ScanDetailPage() {
 
   return (
     <div className="space-y-6">
+       <h2 className="text-2xl font-bold">Scan Result</h2>
       {!isPremium && <AdBanner />}
       <ScanResults scan={scan} />
     </div>
