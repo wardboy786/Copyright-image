@@ -1,8 +1,8 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck } from 'lucide-react';
 import { useEffect } from 'react';
+import Image from 'next/image';
 
 const splashVariants = {
   initial: { opacity: 1 },
@@ -53,7 +53,7 @@ export function SplashScreen({ onAnimationComplete }: { onAnimationComplete: () 
         className="fixed inset-0 z-[101] flex flex-col items-center justify-center bg-background"
       >
         <motion.div variants={logoVariants} initial="initial" animate="animate">
-          <ShieldCheck className="w-24 h-24 text-primary" />
+          <Image src="/images/logo.svg" alt="ImageRights AI Logo" width={96} height={96} className="w-24 h-24 text-primary" />
         </motion.div>
         <motion.h1
           variants={textVariants}

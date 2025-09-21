@@ -1,12 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldCheck } from 'lucide-react';
+import Image from 'next/image';
 
 export default function AboutPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <Card>
         <CardHeader className="text-center">
-          <ShieldCheck className="w-16 h-16 text-primary mx-auto mb-4" />
+          <div className="flex justify-center mb-4">
+            <Image src="/images/logo.svg" alt="ImageRights AI Logo" width={64} height={64} className="w-16 h-16 text-primary"/>
+          </div>
           <CardTitle className="text-3xl">About ImageRights AI</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground space-y-4 text-center">
