@@ -6,19 +6,6 @@ import { useAppContext } from '@/hooks/use-app-context';
 import { MAX_FREE_SCANS } from '@/hooks/use-scans';
 import { AnimatePresence, motion } from 'framer-motion';
 
-const getPageTitle = (pathname: string) => {
-  if (pathname === '/') return 'Home';
-  if (pathname.startsWith('/scan')) return 'Scan Image';
-  if (pathname.startsWith('/history')) return 'Scan History';
-  if (pathname.startsWith('/premium')) return 'Go Premium';
-  if (pathname.startsWith('/settings')) return 'Settings';
-  if (pathname.startsWith('/about')) return 'About Us';
-  if (pathname.startsWith('/contact')) return 'Contact Us';
-  if (pathname.startsWith('/privacy')) return 'Privacy Policy';
-  if (pathname.startsWith('/terms')) return 'Terms of Use';
-  return 'ImageRights AI';
-};
-
 function DailyLimitCounter() {
     const { isInitialized, isPremium, todaysScanCount } = useAppContext();
 
@@ -47,21 +34,19 @@ function DailyLimitCounter() {
 
 export function Header() {
   const pathname = usePathname();
-  const title = getPageTitle(pathname);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
-      <Link href="/" className="flex items-center gap-2 font-semibold text-md w-24">
+      <Link href="/" className="flex items-center gap-2 font-semibold text-md">
         <ShieldCheck className="w-6 h-6 text-primary"/>
-        <span className="sr-only">ImageRights AI</span>
+        <span className="font-bold hidden sm:inline-block">ImageRights AI</span>
       </Link>
 
       <div className="flex-1 flex justify-center">
-        {pathname !== '/' && <h1 className="text-lg font-semibold sm:text-xl">{title}</h1>}
       </div>
 
-      <div className="w-24 flex justify-end">
-          {(pathname === '/scan') && <DailyLimitCounter />}
+      <div className="flex items-center justify-end w-24">
+          {(pathname.startsWith('/scan')) && <DailyLimitCounter />}
       </div>
     </header>
   );

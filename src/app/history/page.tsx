@@ -9,9 +9,21 @@ import { Trash2, X, CheckCheck } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function HistoryPage() {
-  const { scans, isInitialized, deleteScans } = useAppContext();
+  const { scans: allScans, isInitialized, deleteScans } = useAppContext();
+  const [displayedScans, setDisplayedScans] = useState<typeof allScans>([]);
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [isSelectionMode, setSelectionMode] = useState(false);
+
+  useEffect(() => {
+    // Delay rendering the list to prevent UI freezing on initial load
+    if (isInitialized) {
+      const timer = setTimeout(() => {
+        setDisplayedScans(allScans);
+      }, 50); // Small delay to allow navigation to complete
+      return () => clearTimeout(timer);
+    }
+  }, [allScans, isInitialized]);
+
 
   const toggleSelection = (scanId: string) => {
     setSelection((prev) => {
@@ -26,10 +38,10 @@ export default function HistoryPage() {
   };
 
   const handleSelectAll = () => {
-    if (selection.size === scans.length) {
+    if (selection.size === displayedScans.length) {
       setSelection(new Set());
     } else {
-      setSelection(new Set(scans.map((s) => s.id)));
+      setSelection(new Set(displayedScans.map((s) => s.id)));
     }
   };
 
@@ -79,7 +91,7 @@ export default function HistoryPage() {
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          {!isInitialized ? (
+          {!isInitialized || displayedScans.length !== allScans.length ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-3">
@@ -93,7 +105,7 @@ export default function HistoryPage() {
             </div>
           ) : (
             <ScanHistoryList
-              scans={scans}
+              scans={displayedScans}
               selection={selection}
               isSelectionMode={isSelectionMode}
               onToggleSelection={toggleSelection}
