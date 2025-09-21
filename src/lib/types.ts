@@ -1,15 +1,12 @@
-export type SafetyScore = 'Safe to use' | 'Moderate' | 'Do not use';
+import { type AnalyzeImageForCopyrightOutput } from "@/ai/flows/analyze-image-for-copyright";
 
-export interface DetectedElement {
-  name: string;
-  type: string;
-  safetyScore: SafetyScore;
-  confidence: number;
-}
+export type OverallAssessment = 'Safe to use' | 'Moderate' | 'Copyright Detected';
 
 export interface ScanResult {
   id: string;
   timestamp: string;
   image: string; // data URI of the uploaded image
-  elements: DetectedElement[];
+  analysis: AnalyzeImageForCopyrightOutput;
 }
+
+export type { AnalyzeImageForCopyrightOutput };

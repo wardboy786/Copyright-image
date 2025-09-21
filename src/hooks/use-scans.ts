@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { type ScanResult, type DetectedElement } from '@/lib/types';
+import { type ScanResult, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 import { format } from 'date-fns';
 
 const MAX_FREE_SCANS = 5;
@@ -10,7 +10,7 @@ const PREMIUM_STORAGE_KEY = 'copyright-sentry-premium';
 
 export interface UseScansReturn {
   scans: ScanResult[];
-  addScan: (imageData: string, analysisResult: { elements: DetectedElement[] }) => ScanResult;
+  addScan: (imageData: string, analysisResult: AnalyzeImageForCopyrightOutput) => ScanResult;
   getScanById: (id: string) => ScanResult | undefined;
   todaysScanCount: number;
   isLimitReached: boolean;
@@ -58,12 +58,12 @@ export function useScans(): UseScansReturn {
     }
   }, []);
 
-  const addScan = useCallback((imageData: string, analysisResult: { elements: DetectedElement[] }): ScanResult => {
+  const addScan = useCallback((imageData: string, analysisResult: AnalyzeImageForCopyrightOutput): ScanResult => {
     const newScan: ScanResult = {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
       image: imageData,
-      elements: analysisResult.elements,
+      analysis: analysisResult,
     };
     const updatedScans = [newScan, ...scans];
     saveScans(updatedScans);

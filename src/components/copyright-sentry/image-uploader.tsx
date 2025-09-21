@@ -10,7 +10,7 @@ import { Loader2, UploadCloud, FileWarning } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import placeholderImages from '@/lib/placeholder-images.json';
+import { DailyLimitIndicator } from './daily-limit-indicator';
 
 interface ImageUploaderProps {
   onScanComplete: (scan: ScanResult) => void;
@@ -19,11 +19,11 @@ interface ImageUploaderProps {
 export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { addScan, isLimitReached, isInitialized, isPremium } = useScans();
+  const { addScan, isLimitReached, isPremium } = useScans();
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      if (isLimitReached) {
+      if (!isPremium && isLimitReached) {
         toast({
           title: 'Daily Limit Reached',
           description: 'Upgrade to Premium for unlimited scans.',
@@ -61,15 +61,17 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
       };
       reader.readAsDataURL(file);
     },
-    [addScan, onScanComplete, toast, isLimitReached]
+    [addScan, onScanComplete, toast, isLimitReached, isPremium]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [] },
     multiple: false,
-    disabled: isLoading || isLimitReached,
+    disabled: isLoading || (!isPremium && isLimitReached),
   });
+  
+  const limitReached = !isPremium && isLimitReached;
 
   return (
     <Card className="relative overflow-hidden">
@@ -80,13 +82,13 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
         className="object-cover opacity-10"
         data-ai-hint="abstract technology"
       />
-      <CardContent className={cn('relative z-10 p-6 flex items-center justify-center min-h-[300px]', (isLoading || isLimitReached) && 'pointer-events-none')}>
+      <CardContent className={cn('relative z-10 p-6 flex items-center justify-center min-h-[300px]', (isLoading || limitReached) && 'pointer-events-none')}>
         <div
           {...getRootProps()}
           className={cn(
             'w-full h-full border-2 border-dashed rounded-lg transition-colors flex flex-col items-center justify-center p-8 text-center cursor-pointer',
             isDragActive ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50',
-            (isLoading || isLimitReached) && 'cursor-not-allowed opacity-50'
+            (isLoading || limitReached) && 'cursor-not-allowed opacity-50'
           )}
         >
           <input {...getInputProps()} />
@@ -96,12 +98,12 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
               <p className="font-semibold text-lg">Analyzing Image...</p>
               <p className="text-muted-foreground">This may take a few moments.</p>
             </>
-          ) : isLimitReached ? (
+          ) : limitReached ? (
             <>
                <FileWarning className="w-12 h-12 text-destructive mb-4" />
               <p className="font-semibold text-lg">Daily Limit Reached</p>
               <p className="text-muted-foreground">
-                {!isPremium ? 'Upgrade to Premium for unlimited scans.' : ''}
+                Upgrade to Premium for unlimited scans.
               </p>
             </>
           ) : (
@@ -111,7 +113,7 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
                 {isDragActive ? 'Drop the image here' : 'Drag & drop an image here'}
               </p>
               <p className="text-muted-foreground">or</p>
-              <Button variant="outline" className="mt-4" disabled={isLoading || isLimitReached}>
+              <Button variant="outline" className="mt-4" disabled={isLoading || limitReached}>
                 Select Image
               </Button>
                <p className="text-xs text-muted-foreground mt-4">Supports: PNG, JPG, GIF, SVG</p>
@@ -119,6 +121,7 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
           )}
         </div>
       </CardContent>
+       {!isPremium && <DailyLimitIndicator />}
     </Card>
   );
 }
