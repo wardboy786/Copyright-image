@@ -38,7 +38,7 @@ const textVariants = {
 export function SplashScreen({ onAnimationComplete }: { onAnimationComplete: () => void }) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      onAnimationAnimationComplete();
+      onAnimationComplete();
     }, 2000); // Total splash screen time before starting fade-out
 
     return () => clearTimeout(timer);
