@@ -9,6 +9,9 @@ import { AppProvider } from '@/context/app-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { AdBanner } from '../copyright-sentry/ad-banner';
 import { InterstitialAd } from '../ads/interstitial-ad';
+import { SplashScreen } from './splash-screen';
+import { useState, useEffect } from 'react';
+import { useAppContext } from '@/hooks/use-app-context';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -43,12 +46,23 @@ function BottomNavBar() {
   );
 }
 
-export function MainLayout({ children }: { children: React.ReactNode }) {
+
+function AppContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
+  const { isInitialized } = useAppContext();
+  const [showSplash, setShowSplash] = useState(true);
+
+  if (!isInitialized) {
+    return <SplashScreen onAnimationComplete={() => {}} />;
+  }
 
   return (
-    <AppProvider>
-      <div className="flex min-h-screen w-full bg-background">
+    <>
+      <AnimatePresence>
+        {showSplash && <SplashScreen onAnimationComplete={() => setShowSplash(false)} />}
+      </AnimatePresence>
+
+      <div className={cn('flex min-h-screen w-full bg-background', showSplash && 'opacity-0')}>
         <div className="flex flex-col flex-1">
           <Header />
           <main className="flex-1 p-4 md:p-6 lg:p-8 pb-32 md:pb-8">
@@ -64,6 +78,16 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         {isMobile && <BottomNavBar />}
         <Toaster />
       </div>
+    </>
+  );
+}
+
+
+export function MainLayout({ children }: { children: React.ReactNode }) {
+
+  return (
+    <AppProvider>
+      <AppContent>{children}</AppContent>
     </AppProvider>
   );
 }
