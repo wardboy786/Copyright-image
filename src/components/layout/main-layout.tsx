@@ -10,8 +10,9 @@ import { Toaster } from '@/components/ui/toaster';
 import { AdBanner } from '../copyright-sentry/ad-banner';
 import { InterstitialAd } from '../ads/interstitial-ad';
 import { SplashScreen } from './splash-screen';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
+import { AnimatePresence } from 'framer-motion';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
