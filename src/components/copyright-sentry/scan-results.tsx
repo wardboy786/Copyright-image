@@ -5,11 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw, Share2, Download } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw, Share2, Download, Copy } from 'lucide-react';
 import { AdBanner } from './ad-banner';
 import { useAppContext } from '@/hooks/use-app-context';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
 
 interface ScanResultsProps {
   scan: ScanResult;
@@ -66,11 +69,78 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
   const assessmentConfig = getAssessmentConfig(scan.analysis.overallAssessment);
 
   const handleExport = () => {
-    toast({
-      title: "Export Feature (Coming Soon)",
-      description: "PDF and CSV exports will be available for premium users."
-    });
+    try {
+      const doc = new jsPDF();
+
+      // Title
+      doc.setFontSize(18);
+      doc.text('ImageRights AI Scan Report', 14, 22);
+
+      // Date
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Scan Date: ${format(new Date(scan.timestamp), 'PPP, p')}`, 14, 30);
+
+      // Image
+      // We need to handle potential CORS issues if the image is not a data URI
+      // For this app, it's always a data URI.
+      try {
+        doc.addImage(scan.image, 'JPEG', 14, 40, 180, 100, undefined, 'FAST');
+      } catch (e) {
+        console.error("Error adding image to PDF:", e);
+        doc.text("Could not render image.", 14, 80);
+      }
+      
+
+      // Assessment
+      doc.setFontSize(14);
+      doc.setTextColor(40);
+      doc.text('Overall Assessment:', 14, 150);
+      doc.setFontSize(14);
+      doc.text(scan.analysis.overallAssessment, 55, 150);
+
+
+      // Breakdown Table
+      if (scan.analysis.breakdown.length > 0) {
+        (doc as any).autoTable({
+          startY: 160,
+          head: [['Element', 'Explanation']],
+          body: scan.analysis.breakdown.map(item => [item.name, item.explanation]),
+          theme: 'striped',
+          headStyles: { fillColor: [41, 128, 185] },
+        });
+      } else {
+        doc.text("No specific copyright elements were detected.", 14, 165);
+      }
+
+      // Disclaimer
+      const disclaimerY = (doc as any).lastAutoTable.finalY ? (doc as any).lastAutoTable.finalY + 15 : 180;
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      const disclaimerText = doc.splitTextToSize(
+        "Disclaimer: This analysis is AI-generated and for informational purposes only. It is not legal advice. Please double-verify the results before using the image, especially for commercial purposes.",
+        180
+      );
+      doc.text(disclaimerText, 14, disclaimerY);
+
+
+      doc.save(`ImageRights_AI_Scan_${scan.id.substring(0, 8)}.pdf`);
+      
+      toast({
+        title: "Export Successful",
+        description: "Your scan report has been downloaded as a PDF.",
+      });
+
+    } catch (error) {
+       console.error("Failed to generate PDF:", error);
+       toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: "An unexpected error occurred while generating the PDF.",
+      });
+    }
   };
+
 
   const handleShare = async () => {
     const shareData = {
@@ -83,10 +153,21 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
         await navigator.share(shareData);
       } catch (error) {
         console.error('Error sharing:', error);
-        toast({ variant: 'destructive', title: "Sharing Failed", description: "Could not share the results."});
+        // Don't show an error toast if user cancels share
+        if ((error as Error).name !== 'AbortError') {
+            toast({ variant: 'destructive', title: "Sharing Failed", description: "Could not share the results."});
+        }
       }
+    } else if (navigator.clipboard) {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            toast({ title: "Link Copied", description: "Scan result link copied to your clipboard." });
+        } catch (error) {
+            console.error('Error copying to clipboard:', error);
+            toast({ variant: 'destructive', title: "Copy Failed", description: "Could not copy the link."});
+        }
     } else {
-        toast({ title: "Sharing Not Supported", description: "Your browser does not support the Web Share API."});
+        toast({ title: "Sharing Not Supported", description: "Your browser does not support sharing or copying to clipboard."});
     }
   };
 
@@ -142,10 +223,17 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
                 <Download className="w-4 h-4 mr-2" />
                 Export as PDF
             </Button>
-            <Button variant="outline" className="w-full" onClick={handleShare}>
-                <Share2 className="w-4 h-4 mr-2" />
-                Share Results
-            </Button>
+            {navigator.share ? (
+                <Button variant="outline" className="w-full" onClick={handleShare}>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share Results
+                </Button>
+            ) : (
+                <Button variant="outline" className="w-full" onClick={handleShare}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Link
+                </Button>
+            )}
         </CardFooter>
       </Card>
 
@@ -217,5 +305,3 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
     </div>
   );
 }
-
-    
