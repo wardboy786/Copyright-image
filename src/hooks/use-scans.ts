@@ -22,7 +22,7 @@ export interface UseScansReturn {
 
 export function useScans(): UseScansReturn {
   const [scans, setScans] = useState<ScanResult[]>([]);
-  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [isPremium, setIsPremium] = useState<boolean>(true); // Default to premium
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   useEffect(() => {
@@ -32,8 +32,9 @@ export function useScans(): UseScansReturn {
         if (storedScans) {
           setScans(JSON.parse(storedScans));
         }
+        // We check if a value is explicitly saved in localStorage, otherwise we keep the default.
         const storedPremium = localStorage.getItem(PREMIUM_STORAGE_KEY);
-        if (storedPremium) {
+        if (storedPremium !== null) {
           setIsPremium(JSON.parse(storedPremium));
         }
       } catch (error) {
