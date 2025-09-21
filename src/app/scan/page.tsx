@@ -4,7 +4,6 @@ import { ImageUploader } from '@/components/copyright-sentry/image-uploader';
 import { ScanResults } from '@/components/copyright-sentry/scan-results';
 import { type ScanResult } from '@/lib/types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShieldCheck } from 'lucide-react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
@@ -49,15 +48,6 @@ export default function ScanPage() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="text-center mb-8 pt-4">
-              <div className="flex justify-center items-center mb-4">
-                <ShieldCheck className="w-16 h-16 text-primary" />
-              </div>
-              <h1 className="text-4xl font-bold tracking-tighter">Scan an Image</h1>
-              <p className="text-muted-foreground text-lg mt-2 max-w-md mx-auto">
-                Upload an image to check for potential copyright infringements.
-              </p>
-            </div>
             <ImageUploader onScanComplete={handleScanComplete} />
           </motion.div>
         ) : (
