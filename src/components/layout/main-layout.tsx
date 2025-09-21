@@ -69,7 +69,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
       <div className="flex flex-col min-h-screen w-full">
-        {isMobile ? <Header /> : <DesktopHeader />}
+        <Header />
+        <DesktopHeader />
         <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">{children}</main>
         {isMobile && <BottomNavBar />}
       </div>
