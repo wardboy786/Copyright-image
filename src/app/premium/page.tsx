@@ -33,7 +33,7 @@ export default function PremiumPage() {
         </CardContent>
         <CardFooter>
           <Button className="w-full" size="lg">
-            Subscribe with Google Play
+            Subscribe to Premium
           </Button>
         </CardFooter>
       </Card>
