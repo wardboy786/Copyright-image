@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useScans } from '@/hooks/use-scans';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, UploadCloud, FileWarning } from 'lucide-react';
+import { UploadCloud, FileWarning } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,16 @@ interface ImageUploaderProps {
   onScanComplete: (scan: ScanResult) => void;
 }
 
+function Loader() {
+    return (
+        <div className="flex flex-col items-center justify-center gap-4">
+             <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
+             <p className="font-semibold text-lg text-foreground">Analyzing Image...</p>
+             <p className="text-muted-foreground">This may take a few moments.</p>
+        </div>
+    )
+}
+
 export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -23,7 +33,7 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      if (!isPremium && isLimitReached) {
+      if (limitReached) {
         toast({
           title: 'Daily Limit Reached',
           description: 'Upgrade to Premium for unlimited scans.',
@@ -93,11 +103,7 @@ export function ImageUploader({ onScanComplete }: ImageUploaderProps) {
         >
           <input {...getInputProps()} />
           {isLoading ? (
-            <>
-              <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-              <p className="font-semibold text-lg">Analyzing Image...</p>
-              <p className="text-muted-foreground">This may take a few moments.</p>
-            </>
+            <Loader />
           ) : limitReached ? (
             <>
                <FileWarning className="w-12 h-12 text-destructive mb-4" />

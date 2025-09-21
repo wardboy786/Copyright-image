@@ -1,9 +1,10 @@
 import { Card } from '@/components/ui/card';
 import { Megaphone } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export function AdBanner() {
+export function AdBanner({ className }: { className?: string }) {
   return (
-    <Card className="bg-muted/50">
+    <Card className={cn("bg-muted/50", className)}>
       <div className="p-4 flex items-center justify-center gap-4">
         <Megaphone className="w-6 h-6 text-muted-foreground" />
         <div className="text-center">
