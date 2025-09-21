@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw } from 'lucide-react';
+import { AdBanner } from './ad-banner';
+import { useAppContext } from '@/hooks/use-app-context';
 
 interface ScanResultsProps {
   scan: ScanResult;
@@ -54,6 +56,7 @@ const getAssessmentConfig = (assessment: OverallAssessment) => {
 };
 
 export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
+  const { isPremium } = useAppContext();
   if (!scan) return null;
 
   const assessmentConfig = getAssessmentConfig(scan.analysis.overallAssessment);
@@ -72,6 +75,8 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
           </div>
         </CardContent>
       </Card>
+
+      {!isPremium && <AdBanner />}
 
       <Card className={cn("border-2 shadow-lg", assessmentConfig.borderColor, assessmentConfig.bgColor)}>
         <CardHeader className="flex flex-col items-center text-center gap-3 p-6">

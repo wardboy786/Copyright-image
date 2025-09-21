@@ -1,9 +1,7 @@
 'use client';
 
-import { createContext, type ReactNode } from 'react';
-import { useScans, type UseScansReturn } from '@/hooks/use-scans';
-
-export const AppContext = createContext<UseScansReturn | null>(null);
+import { AppContext } from '@/hooks/use-app-context';
+import { useScans } from '@/hooks/use-scans';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const scansData = useScans();

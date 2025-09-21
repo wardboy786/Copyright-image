@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Copyright Sentry',
+  title: 'ImageRights AI',
   description: 'AI-Powered Copyright Analysis for Images',
 };
 

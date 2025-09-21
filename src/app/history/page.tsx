@@ -1,16 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { ScanHistoryList } from '@/components/copyright-sentry/scan-history-list';
-import { useScans } from '@/hooks/use-scans';
+import { useAppContext } from '@/hooks/use-app-context';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AdBanner } from '@/components/copyright-sentry/ad-banner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, X, CheckCheck } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function HistoryPage() {
-  const { scans, isInitialized, isPremium, deleteScans } = useScans();
+  const { scans, isInitialized, deleteScans } = useAppContext();
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [isSelectionMode, setSelectionMode] = useState(false);
 
@@ -78,7 +77,6 @@ export default function HistoryPage() {
         )}
       </AnimatePresence>
 
-      {!isPremium && !isSelectionMode && <AdBanner />}
       <Card>
         <CardContent className="p-4 md:p-6">
           {!isInitialized ? (

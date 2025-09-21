@@ -15,7 +15,7 @@ export default function PremiumPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl">Go Premium</CardTitle>
-          <CardDescription>Unlock the full power of Copyright Sentry.</CardDescription>
+          <CardDescription>Unlock the full power of ImageRights AI.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center">
@@ -33,7 +33,7 @@ export default function PremiumPage() {
         </CardContent>
         <CardFooter>
           <Button className="w-full" size="lg">
-            Subscribe Now
+            Subscribe with Google Play
           </Button>
         </CardFooter>
       </Card>

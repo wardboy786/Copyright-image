@@ -3,19 +3,16 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { analyzeImageAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { useScans } from '@/hooks/use-scans';
+import { useAppContext } from '@/hooks/use-app-context';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, Loader2, Info } from 'lucide-react';
+import { UploadCloud, Loader2, Info, Film } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Progress } from '@/components/ui/progress';
 import { AnimatePresence, motion } from 'framer-motion';
-import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-
-const MAX_FREE_SCANS = 5;
+import { RewardedAdDialog } from '../ads/rewarded-ad-dialog';
 
 function Loader() {
   return (
@@ -37,11 +34,22 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const [image, setImage] = useState<string | null>(null);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [isUserCreated, setIsUserCreated] = useState(false);
+  const [showRewardedAd, setShowRewardedAd] = useState(false);
+  
   const { toast } = useToast();
-  const { addScan, isLimitReached, isPremium, todaysScanCount, isInitialized } = useScans();
+  const { addScan, isLimitReached, addFreeScan } = useAppContext();
 
-  const handleScan = async () => {
+  const handleScan = async (isFreeScan: boolean = false) => {
     if (!image) return;
+
+    if (isLimitReached && !isFreeScan) {
+      toast({
+          title: 'Daily Limit Reached',
+          description: 'Watch an ad to get one more scan.',
+          variant: 'destructive',
+        });
+      return;
+    }
 
     setIsLoading(true);
     const result = await analyzeImageAction({
@@ -67,19 +75,23 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     setIsLoading(false);
   };
 
+  const handleRewardedAdComplete = () => {
+    addFreeScan();
+    handleScan(true);
+  };
+
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (!file) return;
+
       if (isLimitReached) {
         toast({
           title: 'Daily Limit Reached',
-          description: 'Upgrade to Premium for unlimited scans.',
-          variant: 'destructive',
-        });
-        return;
+          description: 'Watch an ad for one more scan.',
+          variant: 'destructive'
+        })
       }
-
-      const file = acceptedFiles[0];
-      if (!file) return;
 
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -95,7 +107,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [] },
     multiple: false,
-    disabled: isLoading || isLimitReached || !!image,
+    disabled: isLoading || !!image,
   });
   
   const reset = () => {
@@ -103,8 +115,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       setIsAiGenerated(false);
       setIsUserCreated(false);
   }
-
-  const progressValue = (todaysScanCount / MAX_FREE_SCANS) * 100;
   
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-xl shadow-primary/10">
@@ -134,23 +144,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                   <p className="text-xs text-muted-foreground/70 mt-4">Supports: PNG, JPG, GIF, SVG</p>
                 </div>
               </div>
-              {!isPremium && isInitialized && (
-                <div className="p-4 border-t">
-                  <div className="flex justify-between items-center mb-2 text-xs">
-                    <span className="font-medium text-muted-foreground">Daily Free Scans</span>
-                    <span className="font-bold">{todaysScanCount} / {MAX_FREE_SCANS}</span>
-                  </div>
-                  <Progress value={progressValue} className="h-2" />
-                  {isLimitReached && (
-                     <div className="text-center mt-3">
-                        <p className="text-sm text-destructive font-semibold">Daily limit reached.</p>
-                         <Button variant="link" asChild className="h-auto p-0 text-sm">
-                            <Link href="/premium">Upgrade to Premium</Link>
-                         </Button>
-                     </div>
-                  )}
-                </div>
-              )}
             </motion.div>
           ) : (
             <motion.div key="context-form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -180,15 +173,31 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                           onCheckedChange={setIsUserCreated}
                         />
                       </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" onClick={reset}>Cancel</Button>
-                        <Button onClick={handleScan}>Start Scan</Button>
-                      </div>
+
+                      {isLimitReached ? (
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" onClick={reset}>Cancel</Button>
+                            <Button onClick={() => setShowRewardedAd(true)}>
+                                <Film className="mr-2 h-4 w-4" />
+                                Watch Ad to Scan
+                            </Button>
+                          </div>
+                      ) : (
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" onClick={reset}>Cancel</Button>
+                            <Button onClick={() => handleScan()}>Start Scan</Button>
+                          </div>
+                      )}
                 </CardContent>
             </motion.div>
           )}
         </AnimatePresence>
       </CardContent>
+      <RewardedAdDialog 
+        open={showRewardedAd}
+        onOpenChange={setShowRewardedAd}
+        onAdWatched={handleRewardedAdComplete}
+      />
     </Card>
   );
 }

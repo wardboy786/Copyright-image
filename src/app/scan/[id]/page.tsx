@@ -1,17 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useScans } from '@/hooks/use-scans';
+import { useAppContext } from '@/hooks/use-app-context';
 import { type ScanResult } from '@/lib/types';
 import { ScanResults } from '@/components/copyright-sentry/scan-results';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { AdBanner } from '@/components/copyright-sentry/ad-banner';
 
 export default function ScanDetailPage() {
   const params = useParams();
-  const { getScanById, isInitialized, isPremium } = useScans();
+  const { getScanById, isInitialized } = useAppContext();
   const [scan, setScan] = useState<ScanResult | null | undefined>(undefined);
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -46,7 +45,6 @@ export default function ScanDetailPage() {
   return (
     <div className="space-y-6">
        <h2 className="text-2xl font-bold">Scan Result</h2>
-      {!isPremium && <AdBanner />}
       <ScanResults scan={scan} />
     </div>
   );

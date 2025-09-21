@@ -1,5 +1,5 @@
 'use client';
-import { useScans } from '@/hooks/use-scans';
+import { useAppContext } from '@/hooks/use-app-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -16,10 +16,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ChevronRight, Info, FileText, Mail } from 'lucide-react';
+import Link from 'next/link';
+
+const complianceLinks = [
+  { href: '/about', label: 'About Us', icon: Info },
+  { href: '/contact', label: 'Contact Us', icon: Mail },
+  { href: '/privacy', label: 'Privacy Policy', icon: FileText },
+  { href: '/terms', label: 'Terms of Use', icon: FileText },
+];
 
 export default function SettingsPage() {
-  const { isPremium, setPremiumStatus, clearHistory, isInitialized } = useScans();
+  const { isPremium, setPremiumStatus, clearHistory, isInitialized } = useAppContext();
   const { toast } = useToast();
 
   const handleClearHistory = () => {
@@ -84,6 +92,30 @@ export default function SettingsPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+            <CardTitle>Legal</CardTitle>
+            <CardDescription>Information about our policies and terms.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+            <ul className="divide-y">
+                {complianceLinks.map(link => (
+                    <li key={link.href}>
+                        <Link href={link.href}>
+                            <div className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-md">
+                                <div className="flex items-center gap-3">
+                                    <link.icon className="w-5 h-5 text-muted-foreground" />
+                                    <span className="font-medium">{link.label}</span>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                        </Link>
+                    </li>
+                ))}
+            </ul>
         </CardContent>
       </Card>
     </div>

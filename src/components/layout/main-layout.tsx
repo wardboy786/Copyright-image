@@ -7,6 +7,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AppProvider } from '@/context/app-provider';
 import { Toaster } from '@/components/ui/toaster';
+import { AdBanner } from '../copyright-sentry/ad-banner';
+import { InterstitialAd } from '../ads/interstitial-ad';
 
 const menuItems = [
   { href: '/', label: 'Scan', icon: Scan },
@@ -48,7 +50,15 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen w-full bg-background">
         <div className="flex flex-col flex-1">
           <Header />
-          <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">{children}</main>
+          <main className="flex-1 p-4 md:p-6 lg:p-8 pb-32 md:pb-8">
+            <InterstitialAd />
+            {children}
+          </main>
+          {isMobile && (
+              <div className="fixed bottom-16 left-0 w-full z-40">
+                  <AdBanner />
+              </div>
+          )}
         </div>
         {isMobile && <BottomNavBar />}
         <Toaster />

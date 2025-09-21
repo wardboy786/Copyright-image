@@ -1,16 +1,15 @@
 'use client';
 
-import { useScans } from '@/hooks/use-scans';
+import { useAppContext } from '@/hooks/use-app-context';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-
-const MAX_FREE_SCANS = 5;
+import { MAX_FREE_SCANS } from '@/hooks/use-scans';
 
 export function DailyLimitIndicator() {
-  const { todaysScanCount, isPremium, isInitialized } = useScans();
+  const { todaysScanCount, isPremium, isInitialized } = useAppContext();
 
   if (isPremium) {
     return null;

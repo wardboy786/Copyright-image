@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { type ScanResult, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 import { format } from 'date-fns';
 
-const MAX_FREE_SCANS = 5;
-const SCANS_STORAGE_KEY = 'copyright-sentry-scans';
-const PREMIUM_STORAGE_KEY = 'copyright-sentry-premium';
+export const MAX_FREE_SCANS = 5;
+const SCANS_STORAGE_KEY = 'imagerights-ai-scans';
+const PREMIUM_STORAGE_KEY = 'imagerights-ai-premium';
 
 export interface UseScansReturn {
   scans: ScanResult[];
@@ -19,6 +19,8 @@ export interface UseScansReturn {
   isInitialized: boolean;
   clearHistory: () => void;
   deleteScans: (ids: string[]) => void;
+  addFreeScan: () => void;
+  scansToday: ScanResult[];
 }
 
 export function useScans(): UseScansReturn {
@@ -33,7 +35,6 @@ export function useScans(): UseScansReturn {
         if (storedScans) {
           setScans(JSON.parse(storedScans));
         }
-        // We check if a value is explicitly saved in localStorage, otherwise we keep the default.
         const storedPremium = localStorage.getItem(PREMIUM_STORAGE_KEY);
         if (storedPremium !== null) {
           setIsPremium(JSON.parse(storedPremium));
@@ -72,15 +73,27 @@ export function useScans(): UseScansReturn {
     return newScan;
   }, [scans, saveScans]);
 
+  const addFreeScan = useCallback(() => {
+    // This is a placeholder to simulate getting an extra scan.
+    // In a real app, you would likely decrement a temporary counter
+    // that is reset daily. For this simulation, we don't need to
+    // add a full scan object. We just need to manage the count,
+    // which the UI will handle by simulating a scan.
+    console.log("Free scan added after watching ad.");
+  }, []);
+
+
   const getScanById = useCallback((id: string): ScanResult | undefined => {
     return scans.find(scan => scan.id === id);
   }, [scans]);
 
-  const todaysScanCount = useMemo(() => {
-    if (!isInitialized) return 0;
+  const scansToday = useMemo(() => {
+    if (!isInitialized) return [];
     const today = format(new Date(), 'yyyy-MM-dd');
-    return scans.filter(scan => format(new Date(scan.timestamp), 'yyyy-MM-dd') === today).length;
+    return scans.filter(scan => format(new Date(scan.timestamp), 'yyyy-MM-dd') === today);
   }, [scans, isInitialized]);
+
+  const todaysScanCount = scansToday.length;
 
   const isLimitReached = useMemo(() => {
     if (!isInitialized) return false;
@@ -97,7 +110,6 @@ export function useScans(): UseScansReturn {
     saveScans(updatedScans);
   }, [scans, saveScans]);
 
-
   return { 
     scans, 
     addScan, 
@@ -108,6 +120,8 @@ export function useScans(): UseScansReturn {
     setPremiumStatus,
     isInitialized,
     clearHistory,
-    deleteScans
+    deleteScans,
+    addFreeScan,
+    scansToday,
   };
 }
