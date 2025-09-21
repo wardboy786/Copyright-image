@@ -40,7 +40,7 @@ export function Header() {
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
       <Link href="/" className="flex items-center gap-2 font-semibold text-md">
         <Image src="/images/logo.svg" alt="ImageRights AI Logo" width={32} height={32} className="w-8 h-8 text-primary dark:brightness-0 dark:invert"/>
-        <span className="font-bold hidden sm:inline-block text-foreground">ImageRights AI</span>
+        <span className="font-bold text-foreground">ImageRights AI</span>
       </Link>
 
       <div className="flex-1 flex justify-center">
