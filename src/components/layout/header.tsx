@@ -1,10 +1,11 @@
 'use client';
 import { usePathname } from 'next/navigation';
-import { ShieldCheck, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useAppContext } from '@/hooks/use-app-context';
 import { MAX_FREE_SCANS } from '@/hooks/use-scans';
 import { AnimatePresence, motion } from 'framer-motion';
+import Image from 'next/image';
 
 function DailyLimitCounter() {
     const { isInitialized, isPremium, todaysScanCount } = useAppContext();
@@ -38,7 +39,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
       <Link href="/" className="flex items-center gap-2 font-semibold text-md">
-        <ShieldCheck className="w-6 h-6 text-primary"/>
+        <Image src="/images/logo.svg" alt="ImageRights AI Logo" width={24} height={24} className="w-6 h-6 text-primary"/>
         <span className="font-bold hidden sm:inline-block">ImageRights AI</span>
       </Link>
 
