@@ -18,6 +18,7 @@ export interface UseScansReturn {
   setPremiumStatus: (status: boolean) => void;
   isInitialized: boolean;
   clearHistory: () => void;
+  deleteScans: (ids: string[]) => void;
 }
 
 export function useScans(): UseScansReturn {
@@ -89,6 +90,13 @@ export function useScans(): UseScansReturn {
   const clearHistory = useCallback(() => {
     saveScans([]);
   }, [saveScans]);
+  
+  const deleteScans = useCallback((ids: string[]) => {
+    const idsToDelete = new Set(ids);
+    const updatedScans = scans.filter(scan => !idsToDelete.has(scan.id));
+    saveScans(updatedScans);
+  }, [scans, saveScans]);
+
 
   return { 
     scans, 
@@ -99,6 +107,7 @@ export function useScans(): UseScansReturn {
     isPremium, 
     setPremiumStatus,
     isInitialized,
-    clearHistory
+    clearHistory,
+    deleteScans
   };
 }
