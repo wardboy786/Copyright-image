@@ -34,6 +34,7 @@ const AnalyzeImageForCopyrightOutputSchema = z.object({
           .describe(
             'A brief explanation of why this element was flagged and its copyright status.'
           ),
+        box: z.array(z.number()).length(4).optional().describe('Bounding box of the detected element as [x_min, y_min, x_max, y_max] in relative coordinates (0-1).')
       })
     )
     .describe(
@@ -78,6 +79,7 @@ const prompt = ai.definePrompt({
   2.  Provide a 'breakdown' of all detected elements. This should be a prioritized list, with the most critical copyright risks first. For each element:
       - 'name': The name of the element (e.g., "Nike Swoosh logo", "Naruto Uzumaki character", "Unique art style similar to Van Gogh").
       - 'explanation': A clear, concise explanation of the copyright issue. If the user created the image but it contains a copyrighted element, you MUST explain this nuance (e.g., "This image contains the Lamborghini logo. Even if AI-generated, using a protected brand logo is a copyright violation.").
+      - 'box': A bounding box array [x_min, y_min, x_max, y_max] representing the location of the detected element in relative coordinates (0 to 1). For example, [0.1, 0.1, 0.3, 0.3] would be a box in the top-left. If the element is abstract (like an art style), you do not need to provide a box.
 
   3.  If applicable, provide 'ownerDetails' for high-profile copyrighted elements, listing the element and the likely owner.
 
@@ -120,3 +122,5 @@ const analyzeImageForCopyrightFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

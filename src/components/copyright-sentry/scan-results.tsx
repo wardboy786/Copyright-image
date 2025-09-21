@@ -1,13 +1,15 @@
 'use client';
 import { type ScanResult, type OverallAssessment } from '@/lib/types';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw, Share2, Download } from 'lucide-react';
 import { AdBanner } from './ad-banner';
 import { useAppContext } from '@/hooks/use-app-context';
+import { useToast } from '@/hooks/use-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface ScanResultsProps {
   scan: ScanResult;
@@ -57,25 +59,74 @@ const getAssessmentConfig = (assessment: OverallAssessment) => {
 
 export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
   const { isPremium } = useAppContext();
+  const { toast } = useToast();
+
   if (!scan) return null;
 
   const assessmentConfig = getAssessmentConfig(scan.analysis.overallAssessment);
+
+  const handleExport = () => {
+    toast({
+      title: "Export Feature (Coming Soon)",
+      description: "PDF and CSV exports will be available for premium users."
+    });
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'ImageRights AI Scan Result',
+      text: `My image scan result: ${scan.analysis.overallAssessment}. Analysis found ${scan.analysis.breakdown.length} potential issue(s).`,
+      url: window.location.href,
+    };
+    if (navigator.share && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch (error) {
+        console.error('Error sharing:', error);
+        toast({ variant: 'destructive', title: "Sharing Failed", description: "Could not share the results."});
+      }
+    } else {
+        toast({ title: "Sharing Not Supported", description: "Your browser does not support the Web Share API."});
+    }
+  };
+
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <Card className="overflow-hidden shadow-lg">
         <CardContent className="p-4 md:p-6">
-          <div className="aspect-video relative rounded-lg overflow-hidden border-2 border-border">
+          <div className="aspect-video relative rounded-lg overflow-hidden border-2 border-border bg-card">
             <Image
               src={scan.image}
               alt="Scanned image"
               fill
               className="object-contain"
             />
+            <AnimatePresence>
+                {scan.analysis.breakdown.map((item, index) => {
+                    if (!item.box) return null;
+
+                    return (
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.2 + index * 0.1 }}
+                            className="absolute border-2 border-red-400 bg-red-400/20"
+                            style={{
+                                left: `${item.box[0] * 100}%`,
+                                top: `${item.box[1] * 100}%`,
+                                width: `${(item.box[2] - item.box[0]) * 100}%`,
+                                height: `${(item.box[3] - item.box[1]) * 100}%`,
+                            }}
+                        />
+                    );
+                })}
+            </AnimatePresence>
           </div>
         </CardContent>
       </Card>
-
+      
       {!isPremium && <AdBanner />}
 
       <Card className={cn("border-2 shadow-lg", assessmentConfig.borderColor, assessmentConfig.bgColor)}>
@@ -86,6 +137,16 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
             <CardDescription className="text-sm text-foreground/80 mt-1">{assessmentConfig.description}</CardDescription>
           </div>
         </CardHeader>
+        <CardFooter className="flex-col sm:flex-row gap-2 px-6 pb-6">
+            <Button variant="outline" className="w-full" onClick={handleExport}>
+                <Download className="w-4 h-4 mr-2" />
+                Export as PDF
+            </Button>
+            <Button variant="outline" className="w-full" onClick={handleShare}>
+                <Share2 className="w-4 h-4 mr-2" />
+                Share Results
+            </Button>
+        </CardFooter>
       </Card>
 
       {scan.analysis.breakdown.length > 0 && (
@@ -156,3 +217,5 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
     </div>
   );
 }
+
+    

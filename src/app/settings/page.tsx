@@ -16,8 +16,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, ChevronRight, Info, FileText, Mail } from 'lucide-react';
+import { Trash2, ChevronRight, Info, FileText, Mail, Sun, Moon, Laptop } from 'lucide-react';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 const complianceLinks = [
   { href: '/about', label: 'About Us', icon: Info },
@@ -29,6 +32,7 @@ const complianceLinks = [
 export default function SettingsPage() {
   const { isPremium, setPremiumStatus, clearHistory, isInitialized } = useAppContext();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
 
   const handleClearHistory = () => {
     clearHistory();
@@ -40,6 +44,31 @@ export default function SettingsPage() {
 
   return (
     <div className="grid gap-6 max-w-2xl mx-auto">
+      <Card>
+        <CardHeader>
+            <CardTitle>Display Settings</CardTitle>
+            <CardDescription>Customize the app's appearance.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="flex items-center justify-between">
+                <Label htmlFor="theme-selector" className="font-semibold">Appearance</Label>
+                <Tabs value={theme} onValueChange={setTheme} className="w-auto">
+                    <TabsList>
+                        <TabsTrigger value="light" aria-label="Light mode">
+                            <Sun className="h-5 w-5" />
+                        </TabsTrigger>
+                        <TabsTrigger value="dark" aria-label="Dark mode">
+                            <Moon className="h-5 w-5" />
+                        </TabsTrigger>
+                        <TabsTrigger value="system" aria-label="System preference">
+                            <Laptop className="h-5 w-5" />
+                        </TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Account Settings</CardTitle>
@@ -121,3 +150,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

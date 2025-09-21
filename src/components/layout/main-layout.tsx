@@ -13,6 +13,8 @@ import { SplashScreen } from './splash-screen';
 import { useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
+import { ThemeProvider } from 'next-themes';
+
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -53,17 +55,17 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const { isInitialized } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
 
-  if (!isInitialized) {
-    return <SplashScreen onAnimationComplete={() => {}} />;
+  if (showSplash && !isInitialized) {
+    return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
   }
 
   return (
     <>
       <AnimatePresence>
-        {showSplash && <SplashScreen onAnimationComplete={() => setShowSplash(false)} />}
+        {showSplash && isInitialized && <SplashScreen onAnimationComplete={() => setShowSplash(false)} />}
       </AnimatePresence>
 
-      <div className={cn('flex min-h-screen w-full bg-background', showSplash && 'opacity-0')}>
+      <div className={cn('flex min-h-screen w-full bg-background', !isInitialized && 'opacity-0')}>
         <div className="flex flex-col flex-1">
           <Header />
           <main className="flex-1 p-4 md:p-6 lg:p-8 pb-32 md:pb-8">
@@ -87,8 +89,17 @@ function AppContent({ children }: { children: React.ReactNode }) {
 export function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
-    <AppProvider>
-      <AppContent>{children}</AppContent>
-    </AppProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <AppProvider>
+        <AppContent>{children}</AppContent>
+      </AppProvider>
+    </ThemeProvider>
   );
 }
+
+    

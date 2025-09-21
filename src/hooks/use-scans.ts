@@ -28,23 +28,32 @@ export function useScans(): UseScansReturn {
   const [isPremium, setIsPremium] = useState<boolean>(true); // Default to premium
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
+  // Load from local storage on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const storedScans = localStorage.getItem(SCANS_STORAGE_KEY);
-        if (storedScans) {
-          setScans(JSON.parse(storedScans));
-        }
-        const storedPremium = localStorage.getItem(PREMIUM_STORAGE_KEY);
-        if (storedPremium !== null) {
-          setIsPremium(JSON.parse(storedPremium));
-        }
-      } catch (error) {
-        console.error("Failed to parse data from localStorage", error);
-      } finally {
-        setIsInitialized(true);
+    if (typeof window === 'undefined') return;
+
+    let storedScans: ScanResult[] = [];
+    let storedPremium = true;
+
+    try {
+      const scansItem = localStorage.getItem(SCANS_STORAGE_KEY);
+      if (scansItem) {
+        storedScans = JSON.parse(scansItem);
       }
+      const premiumItem = localStorage.getItem(PREMIUM_STORAGE_KEY);
+       if (premiumItem !== null) {
+        storedPremium = JSON.parse(premiumItem);
+      }
+    } catch (error) {
+      console.error("Failed to parse data from localStorage", error);
+      // Clear corrupted data
+      localStorage.removeItem(SCANS_STORAGE_KEY);
+      localStorage.removeItem(PREMIUM_STORAGE_KEY);
     }
+    
+    setScans(storedScans);
+    setIsPremium(storedPremium);
+    setIsInitialized(true);
   }, []);
 
   const saveScans = useCallback((newScans: ScanResult[]) => {
@@ -125,3 +134,5 @@ export function useScans(): UseScansReturn {
     scansToday,
   };
 }
+
+    
