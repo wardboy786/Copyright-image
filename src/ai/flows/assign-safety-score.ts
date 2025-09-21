@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * @fileOverview An AI agent for assigning safety scores to detected elements in an image.
  *

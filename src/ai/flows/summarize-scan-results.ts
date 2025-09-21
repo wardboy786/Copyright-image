@@ -1,10 +1,9 @@
-'use server';
 /**
  * @fileOverview Summarizes the scan results of an image, highlighting key copyright concerns and providing an overview of the overall risk level.
  *
  * - summarizeScanResults - A function that takes scan results as input and returns a summary of copyright concerns and overall risk level.
- * - SummarizeScanResultsInput - The input type for the summarizeScanResults function.
- * - SummarizeScanResultsOutput - The return type for the summarizeScanResults function.
+ * - SummarizeScanResultsInput - The input type for the summarizeScanresults function.
+ * - SummarizeScanResultsOutput - The return type for the summarizeScanresults function.
  */
 
 import {ai} from '@/ai/genkit';

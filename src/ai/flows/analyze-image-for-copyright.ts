@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview AI-powered copyright analysis flow for images.
  *
@@ -122,5 +121,3 @@ const analyzeImageForCopyrightFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
