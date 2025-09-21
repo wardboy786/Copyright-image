@@ -114,10 +114,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
             <Loader key="loader" />
           ) : !image ? (
              <motion.div key="uploader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <CardHeader className="text-center lg:hidden">
-                    <CardTitle className="text-3xl font-bold tracking-tighter">Scan an Image</CardTitle>
-                    <CardDescription>Upload an image to get a detailed analysis.</CardDescription>
-                </CardHeader>
               <div
                 {...getRootProps()}
                 className={cn(
