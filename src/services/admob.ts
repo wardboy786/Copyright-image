@@ -57,9 +57,9 @@ class AdMobServiceImpl {
       return;
     }
     try {
-      await AdMob.initialize({
-        testingDevices: IS_TESTING_MODE ? ['YOUR_ADVERTISING_ID_HERE'] : [], // Add your test device ID for development
-      });
+      // Add your test device ID for development
+      const testingDevices = IS_TESTING_MODE ? ['YOUR_ADVERTISING_ID_HERE'] : [];
+      await AdMob.initialize({ testingDevices });
       this.isInitialized = true;
       console.log('AdMob Initialized');
     } catch (e) {
@@ -69,9 +69,15 @@ class AdMobServiceImpl {
 
   async showBanner(): Promise<void> {
     if (!this.isAvailable() || !this.isInitialized) return;
+    
+    const adId = IS_TESTING_MODE ? TEST_BANNER_ID : LIVE_BANNER_ID;
+
+    // ADD THIS LINE FOR DEBUGGING
+    alert("Trying to show banner with Ad ID: " + adId);
+
     try {
       await AdMob.showBanner({
-        adId: IS_TESTING_MODE ? TEST_BANNER_ID : LIVE_BANNER_ID,
+        adId: adId,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
