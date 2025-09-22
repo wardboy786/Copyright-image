@@ -5,7 +5,6 @@ import { Scan, History, Gem, Settings, Home } from 'lucide-react';
 import { Header } from './header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { AppProvider } from '@/context/app-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { AdBanner } from '../copyright-sentry/ad-banner';
 import { InterstitialAd } from '../ads/interstitial-ad';
@@ -36,8 +35,8 @@ function BottomNavBar() {
             href={item.href}
             className={cn(
               'inline-flex flex-col items-center justify-center px-5 group transition-colors',
-              (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))) 
-                ? 'text-primary' 
+              (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)))
+                ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -105,9 +104,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <AppProvider>
-        <AppContent>{children}</AppContent>
-      </AppProvider>
+      <AppContent>{children}</AppContent>
     </ThemeProvider>
   );
 }
