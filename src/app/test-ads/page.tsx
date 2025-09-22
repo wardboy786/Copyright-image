@@ -8,17 +8,21 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function TestAdsPage() {
   const [status, setStatus] = useState('Not initialized');
-  // Get the singleton instance of the service
-  const adMobService = AdMobService.getInstance();
+  // Use a state to hold the service instance to ensure it's client-side
+  const [adMobService, setAdMobService] = useState<AdMobService | null>(null);
 
   useEffect(() => {
+    // Instantiate the service only on the client
+    const serviceInstance = AdMobService.getInstance();
+    setAdMobService(serviceInstance);
+    
     // Initialize AdMob when the component mounts
-    initializeAdMob();
+    initializeAdMob(serviceInstance);
   }, []);
 
-  const initializeAdMob = async () => {
+  const initializeAdMob = async (service: AdMobService) => {
     setStatus('Initializing AdMob...');
-    await adMobService.initialize();
+    await service.initialize();
     setStatus('AdMob initialized - Ready to test ads');
   };
 
@@ -66,19 +70,19 @@ export default function TestAdsPage() {
       
       <Card>
         <CardContent className="p-4 space-y-3">
-            <Button onClick={testBanner} className="w-full">
+            <Button onClick={testBanner} className="w-full" disabled={!adMobService}>
               Show Banner Ad
             </Button>
 
-            <Button onClick={hideBanner} className="w-full" variant="secondary">
+            <Button onClick={hideBanner} className="w-full" variant="secondary" disabled={!adMobService}>
               Hide Banner Ad
             </Button>
 
-            <Button onClick={testInterstitial} className="w-full">
+            <Button onClick={testInterstitial} className="w-full" disabled={!adMobService}>
               Show Interstitial Ad
             </Button>
 
-            <Button onClick={testRewarded} className="w-full">
+            <Button onClick={testRewarded} className="w-full" disabled={!adMobService}>
               Show Rewarded Ad
             </Button>
         </CardContent>
