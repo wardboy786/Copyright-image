@@ -120,11 +120,7 @@ class AdMobServiceImpl {
     console.log(`Preparing rewarded ad with ID: ${this.TEST_REWARDED_ID}`);
 
     return new Promise(async (resolve) => {
-        const { AdMob } = await import('@capacitor-community/admob');
-        // The events are dynamically imported, so we need to get their string values
-        const RewardedAdPluginEvents = {
-            Rewarded: 'rewardedVideoAdRewarded'
-        };
+        const { AdMob, RewardedAdPluginEvents } = await import('@capacitor-community/admob');
 
         try {
             const rewardListener = await AdMob.addListener(RewardedAdPluginEvents.Rewarded, (reward: RewardItem) => {

@@ -8,48 +8,39 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function TestAdsPage() {
   const [status, setStatus] = useState('Not initialized');
-  // Use a state to hold the service instance to ensure it's client-side
-  const [adMobService, setAdMobService] = useState<typeof AdMobService | null>(null);
 
   useEffect(() => {
-    // Instantiate the service only on the client
-    setAdMobService(AdMobService);
-    
     // Initialize AdMob when the component mounts
-    initializeAdMob(AdMobService);
+    initializeAdMob();
   }, []);
 
-  const initializeAdMob = async (service: typeof AdMobService) => {
+  const initializeAdMob = async () => {
     setStatus('Initializing AdMob...');
-    await service.initialize();
+    await AdMobService.initialize();
     setStatus('AdMob initialized - Ready to test ads');
   };
 
   const testBanner = async () => {
-    if (!adMobService) return;
     setStatus('Showing banner ad...');
-    await adMobService.showBanner();
+    await AdMobService.showBanner();
     setStatus('Banner ad shown (check bottom of screen)');
   };
 
   const hideBanner = async () => {
-    if (!adMobService) return;
     setStatus('Hiding banner ad...');
-    await adMobService.hideBanner();
+    await AdMobService.hideBanner();
     setStatus('Banner ad hidden');
   };
 
   const testInterstitial = async () => {
-    if (!adMobService) return;
     setStatus('Showing interstitial ad...');
-    await adMobService.showInterstitialAd();
+    await AdMobService.showInterstitialAd();
     setStatus('Interstitial ad shown');
   };
 
   const testRewarded = async () => {
-    if (!adMobService) return;
     setStatus('Showing rewarded ad...');
-    const reward = await adMobService.showRewardedAd();
+    const reward = await AdMobService.showRewardedAd();
     setStatus(`Rewarded ad completed. Reward: ${reward ? 'YES - ' + reward.amount + ' ' + reward.type : 'NO'}`);
   };
 
@@ -69,19 +60,19 @@ export default function TestAdsPage() {
       
       <Card>
         <CardContent className="p-4 space-y-3">
-            <Button onClick={testBanner} className="w-full" disabled={!adMobService}>
+            <Button onClick={testBanner} className="w-full">
               Show Banner Ad
             </Button>
 
-            <Button onClick={hideBanner} className="w-full" variant="secondary" disabled={!adMobService}>
+            <Button onClick={hideBanner} className="w-full" variant="secondary">
               Hide Banner Ad
             </Button>
 
-            <Button onClick={testInterstitial} className="w-full" disabled={!adMobService}>
+            <Button onClick={testInterstitial} className="w-full">
               Show Interstitial Ad
             </Button>
 
-            <Button onClick={testRewarded} className="w-full" disabled={!adMobService}>
+            <Button onClick={testRewarded} className="w-full">
               Show Rewarded Ad
             </Button>
         </CardContent>
@@ -90,7 +81,7 @@ export default function TestAdsPage() {
       <Card className="bg-amber-500/10 border-amber-500/20">
         <CardHeader>
             <CardTitle className="text-amber-400 text-lg">What to look for:</CardTitle>
-        </CardHeader>
+        </Header>
         <CardContent>
             <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
               <li>A "Test Ad" label on all advertisements.</li>
