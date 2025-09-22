@@ -104,42 +104,44 @@ class AdMobServiceImpl {
   }
 
   async showRewardedAd(): Promise<RewardItem | null> {
-    if (!this.isAvailable() || !this.isInitialized) return null;
-    try {
-      await AdMob.prepareRewardVideoAd({
-        adId: IS_TESTING_MODE ? TEST_REWARDED_ID : LIVE_REWARDED_ID,
-      });
-
-      return new Promise(async (resolve, reject) => {
-        const loadedListener = await AdMob.addListener(RewardAdPluginEvents.Loaded, () => {
-            console.log('Rewarded video ad is loaded and ready to be displayed.');
-        });
-        
-        const rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: RewardItem) => {
-            console.log('Rewarded video ad reward:', reward);
-            resolve(reward);
-            // Clean up listeners
-            loadedListener.remove();
-            rewardListener.remove();
-            failListener.remove();
-        });
-
-        const failListener = await AdMob.addListener(RewardAdPluginEvents.FailedToLoad, (error: any) => {
-            console.error('Rewarded video ad failed to load:', error);
-            reject(new Error('Failed to load rewarded ad.'));
-             // Clean up listeners
-            loadedListener.remove();
-            rewardListener.remove();
-            failListener.remove();
-        });
-        
-        AdMob.showRewardVideoAd().catch(reject);
-      });
-      
-    } catch (e) {
-      console.error('Failed to show rewarded ad', e);
+    if (!this.isAvailable() || !this.isInitialized) {
+      console.error('AdMob not available or not initialized.');
       return null;
     }
+
+    return new Promise(async (resolve) => {
+      let rewardListener: any;
+      let failListener: any;
+
+      const cleanup = () => {
+        rewardListener?.remove();
+        failListener?.remove();
+      };
+      
+      try {
+        rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: RewardItem) => {
+          console.log('Rewarded video ad reward:', reward);
+          cleanup();
+          resolve(reward);
+        });
+
+        failListener = await AdMob.addListener(RewardAdPluginEvents.FailedToLoad, (error: any) => {
+          console.error('Rewarded video ad failed to load:', error);
+          cleanup();
+          resolve(null); // Resolve with null on failure
+        });
+        
+        await AdMob.prepareRewardVideoAd({
+            adId: IS_TESTING_MODE ? TEST_REWARDED_ID : LIVE_REWARDED_ID,
+        });
+        await AdMob.showRewardVideoAd();
+
+      } catch (e) {
+        console.error('Failed to prepare or show rewarded ad', e);
+        cleanup();
+        resolve(null);
+      }
+    });
   }
 }
 

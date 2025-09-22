@@ -57,10 +57,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // Initialize AdMob service once the app is ready
-    AdMobService.getInstance().initialize().catch(err => {
-      console.error("Failed to initialize AdMob Service:", err);
-    });
+    // Initialize AdMob service once the app is ready and on the client
+    if (typeof window !== 'undefined') {
+        AdMobService.getInstance().initialize().catch(err => {
+            console.error("Failed to initialize AdMob Service:", err);
+        });
+    }
   }, []);
 
   if (showSplash && !isInitialized) {
