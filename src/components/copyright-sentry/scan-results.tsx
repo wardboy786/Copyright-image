@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw, Share2, Download, Copy } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw, Download } from 'lucide-react';
 import { AdBanner } from './ad-banner';
 import { useAppContext } from '@/hooks/use-app-context';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 
 interface ScanResultsProps {
@@ -71,6 +71,7 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
   const handleExport = () => {
     try {
       const doc = new jsPDF();
+      let finalY = 0;
 
       // Title
       doc.setFontSize(18);
@@ -82,39 +83,41 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
       doc.text(`Scan Date: ${format(new Date(scan.timestamp), 'PPP, p')}`, 14, 30);
 
       // Image
-      // We need to handle potential CORS issues if the image is not a data URI
-      // For this app, it's always a data URI.
       try {
         doc.addImage(scan.image, 'JPEG', 14, 40, 180, 100, undefined, 'FAST');
+        finalY = 150;
       } catch (e) {
         console.error("Error adding image to PDF:", e);
         doc.text("Could not render image.", 14, 80);
+        finalY = 90;
       }
       
 
       // Assessment
       doc.setFontSize(14);
       doc.setTextColor(40);
-      doc.text('Overall Assessment:', 14, 150);
+      doc.text('Overall Assessment:', 14, finalY);
       doc.setFontSize(14);
-      doc.text(scan.analysis.overallAssessment, 55, 150);
-
+      doc.text(scan.analysis.overallAssessment, 55, finalY);
+      finalY += 10;
 
       // Breakdown Table
       if (scan.analysis.breakdown.length > 0) {
-        (doc as any).autoTable({
-          startY: 160,
+        autoTable(doc, {
+          startY: finalY,
           head: [['Element', 'Explanation']],
           body: scan.analysis.breakdown.map(item => [item.name, item.explanation]),
           theme: 'striped',
           headStyles: { fillColor: [41, 128, 185] },
         });
+        finalY = (doc as any).lastAutoTable.finalY;
       } else {
-        doc.text("No specific copyright elements were detected.", 14, 165);
+        doc.text("No specific copyright elements were detected.", 14, finalY + 5);
+        finalY += 10;
       }
 
       // Disclaimer
-      const disclaimerY = (doc as any).lastAutoTable.finalY ? (doc as any).lastAutoTable.finalY + 15 : 180;
+      const disclaimerY = finalY + 15;
       doc.setFontSize(10);
       doc.setTextColor(150);
       const disclaimerText = doc.splitTextToSize(
@@ -140,37 +143,6 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
       });
     }
   };
-
-
-  const handleShare = async () => {
-    const shareData = {
-      title: 'ImageRights AI Scan Result',
-      text: `My image scan result: ${scan.analysis.overallAssessment}. Analysis found ${scan.analysis.breakdown.length} potential issue(s).`,
-      url: window.location.href,
-    };
-    if (navigator.share && navigator.canShare(shareData)) {
-      try {
-        await navigator.share(shareData);
-      } catch (error) {
-        console.error('Error sharing:', error);
-        // Don't show an error toast if user cancels share
-        if ((error as Error).name !== 'AbortError') {
-            toast({ variant: 'destructive', title: "Sharing Failed", description: "Could not share the results."});
-        }
-      }
-    } else if (navigator.clipboard) {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            toast({ title: "Link Copied", description: "Scan result link copied to your clipboard." });
-        } catch (error) {
-            console.error('Error copying to clipboard:', error);
-            toast({ variant: 'destructive', title: "Copy Failed", description: "Could not copy the link."});
-        }
-    } else {
-        toast({ title: "Sharing Not Supported", description: "Your browser does not support sharing or copying to clipboard."});
-    }
-  };
-
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -218,22 +190,11 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
             <CardDescription className="text-sm text-foreground/80 mt-1">{assessmentConfig.description}</CardDescription>
           </div>
         </CardHeader>
-        <CardFooter className="flex-col sm:flex-row gap-2 px-6 pb-6">
+        <CardFooter className="px-6 pb-6">
             <Button variant="outline" className="w-full" onClick={handleExport}>
                 <Download className="w-4 h-4 mr-2" />
                 Export as PDF
             </Button>
-            {navigator.share ? (
-                <Button variant="outline" className="w-full" onClick={handleShare}>
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share Results
-                </Button>
-            ) : (
-                <Button variant="outline" className="w-full" onClick={handleShare}>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy Link
-                </Button>
-            )}
         </CardFooter>
       </Card>
 
