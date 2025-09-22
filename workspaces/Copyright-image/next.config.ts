@@ -18,16 +18,15 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
+        protocol: 'https'
+        ,
         hostname: 'picsum.photos',
         port: '',
         pathname: '/**',
       },
     ],
   },
-  experimental: {
-    serverActions: false,
-  },
+  serverActions: false,
   typescript: {
     ignoreBuildErrors: true,
   },

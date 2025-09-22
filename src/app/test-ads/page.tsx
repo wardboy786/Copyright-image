@@ -81,7 +81,7 @@ export default function TestAdsPage() {
       <Card className="bg-amber-500/10 border-amber-500/20">
         <CardHeader>
             <CardTitle className="text-amber-400 text-lg">What to look for:</CardTitle>
-        </Header>
+        </CardHeader>
         <CardContent>
             <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
               <li>A "Test Ad" label on all advertisements.</li>
