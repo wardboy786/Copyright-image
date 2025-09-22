@@ -8,18 +8,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function TestAdsPage() {
   const [status, setStatus] = useState('Not initialized');
-  const [adMobService, setAdMobService] = useState<AdMobService | null>(null);
+  // Get the singleton instance of the service
+  const adMobService = AdMobService.getInstance();
 
   useEffect(() => {
-    // Dynamically instantiate the service only on the client-side
-    const service = AdMobService.getInstance();
-    setAdMobService(service);
-    initializeAdMob(service);
+    // Initialize AdMob when the component mounts
+    initializeAdMob();
   }, []);
 
-  const initializeAdMob = async (service: AdMobService) => {
+  const initializeAdMob = async () => {
     setStatus('Initializing AdMob...');
-    await service.initialize();
+    await adMobService.initialize();
     setStatus('AdMob initialized - Ready to test ads');
   };
 
@@ -93,7 +92,7 @@ export default function TestAdsPage() {
             <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
               <li>A "Test Ad" label on all advertisements.</li>
               <li>Generic content (e.g., puzzles, simple games), not real brand ads.</li>
-              <li>Successful console logs for each ad action.</li>
+              <li>Successful console logs for each ad action in your device's logcat.</li>
             </ul>
         </CardContent>
       </Card>

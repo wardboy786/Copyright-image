@@ -1,17 +1,9 @@
 // --- AdMob Configuration ---
-// LIVE Ad Unit IDs:
-const LIVE_BANNER_ID = 'ca-app-pub-8270549953677995/1980800386';
-const LIVE_INTERSTITIAL_ID = 'ca-app-pub-8270549953677995/7853385011';
-const LIVE_REWARDED_ID = 'ca-app-pub-8270549953677995/7112028608';
-
 // IMPORTANT: For development, always use AdMob's official test ad units.
 // Using live ads during development is against AdMob policy.
 const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
 const TEST_INTERSTITIAL_ID = 'ca-app-pub-3940256099942544/1033173712';
 const TEST_REWARDED_ID = 'ca-app-pub-3940256099942544/5224354917';
-
-// Set to true to use test ads, false for live ads.
-const IS_TESTING_MODE = process.env.NODE_ENV === 'development';
 
 // --- AdMob Service ---
 let AdMob: typeof import('@capacitor-community/admob').AdMob;
@@ -54,12 +46,14 @@ class AdMobServiceImpl {
 
   async initialize(): Promise<void> {
     if (!this.isAvailable() || this.isInitialized) {
+      if(this.isInitialized) console.log('AdMob already initialized.');
       return;
     }
     try {
       // Add your test device ID for development
-      const testingDevices = IS_TESTING_MODE ? ['YOUR_ADVERTISING_ID_HERE'] : [];
-      await AdMob.initialize({ testingDevices });
+      // Find your ID in your device's logs after running the app once.
+      const testingDevices = ['YOUR_ADVERTISING_ID_HERE'];
+      await AdMob.initialize({ testingDevices, requestTrackingAuthorization: true });
       this.isInitialized = true;
       console.log('AdMob Initialized');
     } catch (e) {
@@ -70,10 +64,8 @@ class AdMobServiceImpl {
   async showBanner(): Promise<void> {
     if (!this.isAvailable() || !this.isInitialized) return;
     
-    const adId = IS_TESTING_MODE ? TEST_BANNER_ID : LIVE_BANNER_ID;
-
-    // ADD THIS LINE FOR DEBUGGING
-    alert("Trying to show banner with Ad ID: " + adId);
+    const adId = TEST_BANNER_ID;
+    console.log(`Attempting to show banner with Ad ID: ${adId}`);
 
     try {
       await AdMob.showBanner({
@@ -82,6 +74,7 @@ class AdMobServiceImpl {
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
       });
+      console.log('Banner ad shown successfully.');
     } catch (e) {
       console.error('Failed to show banner ad', e);
     }
@@ -91,6 +84,7 @@ class AdMobServiceImpl {
     if (!this.isAvailable()) return;
     try {
       await AdMob.hideBanner();
+      console.log('Banner ad hidden.');
     } catch (e) {
       // Don't throw error if hiding fails (e.g., already hidden)
       console.warn('Failed to hide banner ad', e);
@@ -99,11 +93,14 @@ class AdMobServiceImpl {
 
   async showInterstitialAd(): Promise<void> {
     if (!this.isAvailable() || !this.isInitialized) return;
+    const adId = TEST_INTERSTITIAL_ID;
+    console.log(`Preparing interstitial ad with ID: ${adId}`);
     try {
       await AdMob.prepareInterstitial({
-        adId: IS_TESTING_MODE ? TEST_INTERSTITIAL_ID : LIVE_INTERSTITIAL_ID,
+        adId,
       });
       await AdMob.showInterstitial();
+      console.log('Interstitial ad shown successfully.');
     } catch (e) {
       console.error('Failed to show interstitial ad', e);
     }
@@ -114,6 +111,8 @@ class AdMobServiceImpl {
       console.error('AdMob not available or not initialized.');
       return null;
     }
+    const adId = TEST_REWARDED_ID;
+    console.log(`Preparing rewarded ad with ID: ${adId}`);
 
     return new Promise(async (resolve) => {
       let rewardListener: any;
@@ -126,7 +125,7 @@ class AdMobServiceImpl {
       
       try {
         rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: RewardItem) => {
-          console.log('Rewarded video ad reward:', reward);
+          console.log('Rewarded video ad reward received:', reward);
           cleanup();
           resolve(reward);
         });
@@ -138,10 +137,10 @@ class AdMobServiceImpl {
         });
         
         await AdMob.prepareRewardVideoAd({
-            adId: IS_TESTING_MODE ? TEST_REWARDED_ID : LIVE_REWARDED_ID,
+            adId,
         });
         await AdMob.showRewardVideoAd();
-
+        console.log('showRewardVideoAd called.');
       } catch (e) {
         console.error('Failed to prepare or show rewarded ad', e);
         cleanup();
