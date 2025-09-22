@@ -1,4 +1,3 @@
-
 // --- AdMob Configuration ---
 // IMPORTANT: For development, always use AdMob's official test ad units.
 // Using live ads during development is against AdMob policy.

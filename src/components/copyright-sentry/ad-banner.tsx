@@ -10,18 +10,18 @@ export function AdBanner({ className }: { className?: string }) {
 
   useEffect(() => {
     if (!isPremium) {
-      AdMobService.getInstance().showBanner().catch(err => {
+      AdMobService.showBanner().catch(err => {
         console.error("Error showing banner:", err);
       });
     } else {
-      AdMobService.getInstance().hideBanner().catch(err => {
+      AdMobService.hideBanner().catch(err => {
         console.error("Error hiding banner:", err);
       });
     }
     
     // Cleanup on component unmount
     return () => {
-      AdMobService.getInstance().hideBanner().catch(err => {
+      AdMobService.hideBanner().catch(err => {
           console.error("Error hiding banner on cleanup:", err);
       });
     };

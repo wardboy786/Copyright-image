@@ -23,7 +23,7 @@ export function InterstitialAd() {
 
     // On route change, decide if we should show an ad
     if (Math.random() < AD_DISPLAY_CHANCE) {
-      AdMobService.getInstance().showInterstitialAd().catch(err => {
+      AdMobService.showInterstitialAd().catch(err => {
         console.error("Error showing interstitial ad:", err);
       });
     }

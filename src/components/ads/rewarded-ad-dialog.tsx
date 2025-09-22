@@ -16,7 +16,7 @@ export function RewardedAdDialog({ open, onOpenChange, onAdWatched }: RewardedAd
 
     const handleWatchAd = async () => {
         try {
-            const reward = await AdMobService.getInstance().showRewardedAd();
+            const reward = await AdMobService.showRewardedAd();
             if (reward) {
                 console.log(`Reward received: ${reward.type} - ${reward.amount}`);
                 onAdWatched();

@@ -59,7 +59,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Initialize AdMob service once the app is ready and on the client
     if (typeof window !== 'undefined') {
-        AdMobService.getInstance().initialize().catch(err => {
+        AdMobService.initialize().catch(err => {
             console.error("Failed to initialize AdMob Service:", err);
         });
     }

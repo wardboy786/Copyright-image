@@ -9,18 +9,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 export default function TestAdsPage() {
   const [status, setStatus] = useState('Not initialized');
   // Use a state to hold the service instance to ensure it's client-side
-  const [adMobService, setAdMobService] = useState<AdMobService | null>(null);
+  const [adMobService, setAdMobService] = useState<typeof AdMobService | null>(null);
 
   useEffect(() => {
     // Instantiate the service only on the client
-    const serviceInstance = AdMobService.getInstance();
-    setAdMobService(serviceInstance);
+    setAdMobService(AdMobService);
     
     // Initialize AdMob when the component mounts
-    initializeAdMob(serviceInstance);
+    initializeAdMob(AdMobService);
   }, []);
 
-  const initializeAdMob = async (service: AdMobService) => {
+  const initializeAdMob = async (service: typeof AdMobService) => {
     setStatus('Initializing AdMob...');
     await service.initialize();
     setStatus('AdMob initialized - Ready to test ads');
