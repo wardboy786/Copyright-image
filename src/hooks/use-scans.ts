@@ -19,7 +19,6 @@ export interface UseScansReturn {
   isInitialized: boolean;
   clearHistory: () => void;
   deleteScans: (ids: string[]) => void;
-  addFreeScan: () => void;
   scansToday: ScanResult[];
 }
 
@@ -82,16 +81,6 @@ export function useScans(): UseScansReturn {
     return newScan;
   }, [scans, saveScans]);
 
-  const addFreeScan = useCallback(() => {
-    // This is a placeholder to simulate getting an extra scan.
-    // In a real app, you would likely decrement a temporary counter
-    // that is reset daily. For this simulation, we don't need to
-    // add a full scan object. We just need to manage the count,
-    // which the UI will handle by simulating a scan.
-    console.log("Free scan added after watching ad.");
-  }, []);
-
-
   const getScanById = useCallback((id: string): ScanResult | undefined => {
     return scans.find(scan => scan.id === id);
   }, [scans]);
@@ -130,9 +119,6 @@ export function useScans(): UseScansReturn {
     isInitialized,
     clearHistory,
     deleteScans,
-    addFreeScan,
     scansToday,
   };
 }
-
-    

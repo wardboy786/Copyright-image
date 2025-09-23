@@ -38,7 +38,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const [showRewardedAd, setShowRewardedAd] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached, addFreeScan } = useAppContext();
+  const { addScan, isLimitReached } = useAppContext();
 
   const handleScan = async (isFreeScan: boolean = false) => {
     if (!image) return;
@@ -77,7 +77,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   };
 
   const handleRewardedAdComplete = () => {
-    addFreeScan();
+    // A scan is initiated, and we consider this the "free" one.
     handleScan(true);
   };
 

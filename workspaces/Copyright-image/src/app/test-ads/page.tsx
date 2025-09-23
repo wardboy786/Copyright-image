@@ -8,45 +8,39 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function TestAdsPage() {
   const [status, setStatus] = useState('Not initialized');
-  const [adMobService, setAdMobService] = useState<AdMobService | null>(null);
 
   useEffect(() => {
-    const service = AdMobService.getInstance();
-    setAdMobService(service);
-    initializeAdMob(service);
+    // Initialize AdMob when the component mounts
+    const initializeAdMob = async () => {
+        setStatus('Initializing AdMob...');
+        await AdMobService.initialize();
+        setStatus('AdMob initialized - Ready to test ads');
+    };
+    initializeAdMob();
   }, []);
 
-  const initializeAdMob = async (service: AdMobService) => {
-    setStatus('Initializing AdMob...');
-    await service.initialize();
-    setStatus('AdMob initialized - Ready to test ads');
-  };
 
   const testBanner = async () => {
-    if (!adMobService) return;
     setStatus('Showing banner ad...');
-    await adMobService.showBanner();
+    await AdMobService.showBanner();
     setStatus('Banner ad shown (check bottom of screen)');
   };
 
   const hideBanner = async () => {
-    if (!adMobService) return;
     setStatus('Hiding banner ad...');
-    await adMobService.hideBanner();
+    await AdMobService.hideBanner();
     setStatus('Banner ad hidden');
   };
 
   const testInterstitial = async () => {
-    if (!adMobService) return;
     setStatus('Showing interstitial ad...');
-    await adMobService.showInterstitialAd();
+    await AdMobService.showInterstitialAd();
     setStatus('Interstitial ad shown');
   };
 
   const testRewarded = async () => {
-    if (!adMobService) return;
     setStatus('Showing rewarded ad...');
-    const reward = await adMobService.showRewardedAd();
+    const reward = await AdMobService.showRewardedAd();
     setStatus(`Rewarded ad completed. Reward: ${reward ? 'YES - ' + reward.amount + ' ' + reward.type : 'NO'}`);
   };
 

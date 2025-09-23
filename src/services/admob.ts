@@ -123,7 +123,7 @@ class AdMobServiceImpl {
         const { AdMob, RewardedAdPluginEvents } = await import('@capacitor-community/admob');
 
         try {
-            const rewardListener = await AdMob.addListener(RewardedAdPluginEvents.Rewarded, (reward: RewardItem) => {
+            const rewardListener = AdMob.addListener(RewardedAdPluginEvents.Rewarded, (reward: RewardItem) => {
                 console.log('Rewarded video ad reward received:', reward);
                 rewardListener.remove();
                 resolve(reward);
