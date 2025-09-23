@@ -103,7 +103,9 @@ const prompt = ai.definePrompt({
 
   Now, analyze the following image based on the user's context and provide your expert assessment in the required JSON format.
 
-  Image to be analyzed is provided in the input.
+  {{#if image}}
+    Image to be analyzed: {{media data=image contentType=mimeType}}
+  {{/if}}
     `,
 });
 
@@ -114,13 +116,7 @@ const analyzeImageForCopyrightFlow = ai.defineFlow(
     outputSchema: AnalyzeImageForCopyrightOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt({
-      ...input,
-      prompt: [
-        { media: { data: input.image, contentType: input.mimeType } },
-        ...(prompt.config.prompt as any[]),
-      ],
-    });
+    const { output } = await prompt(input);
     return output!;
   }
 );
