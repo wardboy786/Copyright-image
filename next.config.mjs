@@ -4,8 +4,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Required for Capacitor to work with static exports
-  trailingSlash: true,
 };
 
 export default nextConfig;
