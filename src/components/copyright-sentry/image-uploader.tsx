@@ -59,7 +59,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       isUserCreated
     });
     
-    if (result.success && result.data) {
+    if (result.success) {
       const newScan = addScan(image, result.data);
       onScanComplete(newScan);
       toast({
