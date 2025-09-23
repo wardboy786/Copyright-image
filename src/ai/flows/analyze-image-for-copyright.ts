@@ -8,7 +8,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { mediaPart } from 'genkit';
 
 const AnalyzeImageForCopyrightInputSchema = z.object({
   image: z.custom<Buffer>().describe('An image to analyze, as a Buffer.'),
@@ -118,9 +117,7 @@ const analyzeImageForCopyrightFlow = ai.defineFlow(
     const { output } = await prompt({
       ...input,
       prompt: [
-        mediaPart({
-          media: { data: input.image, contentType: input.mimeType },
-        }),
+        { media: { data: input.image, contentType: input.mimeType } },
         ...(prompt.config.prompt as any[]),
       ],
     });
