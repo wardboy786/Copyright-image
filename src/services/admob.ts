@@ -4,6 +4,21 @@
 // Using live ads during development is against AdMob policy.
 // This service is designed to be client-side only.
 
+// A memoized loader to ensure the AdMob module is imported only once.
+const getAdMob = (() => {
+  let admobInstance: any = null;
+  return async () => {
+    if (admobInstance) return admobInstance;
+    if (typeof window !== 'undefined' && (window as any).Capacitor?.isPluginAvailable('AdMob')) {
+      const admobModule = await import('@capacitor-community/admob');
+      admobInstance = admobModule;
+      return admobInstance;
+    }
+    return null;
+  };
+})();
+
+// Define types dynamically to avoid server-side build issues
 type AdMobPlugin = import('@capacitor-community/admob').AdMobPlugin;
 type BannerAdSize = import('@capacitor-community/admob').BannerAdSize;
 type BannerAdPosition = import('@capacitor-community/admob').BannerAdPosition;
@@ -11,16 +26,10 @@ type RewardItem = import('@capacitor-community/admob').RewardItem;
 type BannerAdPluginEvents = import('@capacitor-community/admob').BannerAdPluginEvents;
 type RewardAdPluginEvents = import('@capacitor-community/admob').RewardAdPluginEvents;
 
+
 class AdMobServiceImpl {
   private static instance: AdMobServiceImpl;
   private isInitialized = false;
-  private admob: AdMobPlugin | null = null;
-  private enums: {
-    BannerAdSize?: typeof BannerAdSize;
-    BannerAdPosition?: typeof BannerAdPosition;
-    BannerAdPluginEvents?: typeof BannerAdPluginEvents;
-    RewardAdPluginEvents?: typeof RewardAdPluginEvents;
-  } = {};
 
   // Ad Unit IDs
   private readonly TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
@@ -34,62 +43,49 @@ class AdMobServiceImpl {
     return AdMobServiceImpl.instance;
   }
 
-  private isAvailable(): boolean {
-    return typeof window !== 'undefined' && (window as any).Capacitor?.isPluginAvailable('AdMob');
-  }
-
-  private async loadAdMobModule() {
-    if (this.admob) return this.admob;
-
-    if (this.isAvailable()) {
-      const admobModule = await import('@capacitor-community/admob');
-      this.admob = admobModule.AdMob;
-      this.enums = {
+  private async getPlugin(): Promise<{ AdMob: AdMobPlugin; BannerAdSize: typeof BannerAdSize, BannerAdPosition: typeof BannerAdPosition, BannerAdPluginEvents: typeof BannerAdPluginEvents, RewardAdPluginEvents: typeof RewardAdPluginEvents } | null> {
+    const admobModule = await getAdMob();
+    if (admobModule) {
+      return { 
+        AdMob: admobModule.AdMob, 
         BannerAdSize: admobModule.BannerAdSize,
         BannerAdPosition: admobModule.BannerAdPosition,
         BannerAdPluginEvents: admobModule.BannerAdPluginEvents,
         RewardAdPluginEvents: admobModule.RewardAdPluginEvents,
       };
-      return this.admob;
     }
     return null;
   }
 
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      console.log('AdMob already initialized.');
       return;
     }
     
-    const AdMob = await this.loadAdMobModule();
-    if (!AdMob) return;
+    const plugin = await this.getPlugin();
+    if (!plugin) return;
 
     try {
       const testingDevices = ['YOUR_ADVERTISING_ID_HERE'];
       
-      await AdMob.initialize({
+      await plugin.AdMob.initialize({
         testingDevices,
       });
 
       this.isInitialized = true;
-      console.log('AdMob Initialized');
     } catch (e) {
       console.error('AdMob initialization failed', e);
     }
   }
 
   async showBanner(): Promise<void> {
-    const AdMob = await this.loadAdMobModule();
-    const { BannerAdPluginEvents, BannerAdSize, BannerAdPosition } = this.enums;
-
-    if (!AdMob || !this.isInitialized || !BannerAdPluginEvents || !BannerAdSize || !BannerAdPosition) return;
+    const plugin = await this.getPlugin();
+    if (!plugin || !this.isInitialized) return;
+    
+    const { AdMob, BannerAdPluginEvents, BannerAdSize, BannerAdPosition } = plugin;
     
     AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => {
-      console.error('ADMOB FAILED TO LOAD:', error);
-    });
-
-    AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
-      console.log('Ad loaded successfully');
+      console.error('ADMOB BANNER FAILED TO LOAD:', error);
     });
 
     try {
@@ -105,52 +101,46 @@ class AdMobServiceImpl {
   }
 
   async hideBanner(): Promise<void> {
-    const AdMob = await this.loadAdMobModule();
-    if (!AdMob) return;
+    const plugin = await this.getPlugin();
+    if (!plugin?.AdMob) return;
     try {
-      await AdMob.hideBanner();
-      console.log('Banner ad hidden.');
+      await plugin.AdMob.hideBanner();
     } catch (e) {
-      console.warn('Failed to hide banner ad', e);
+      // Errors can happen if no banner is shown, so we can warn instead of error.
+      console.warn('Could not hide banner ad', e);
     }
   }
 
   async showInterstitialAd(): Promise<void> {
-    const AdMob = await this.loadAdMobModule();
-    if (!AdMob || !this.isInitialized) return;
+    const plugin = await this.getPlugin();
+    if (!plugin || !this.isInitialized) return;
     
-    console.log(`Preparing interstitial ad with ID: ${this.TEST_INTERSTITIAL_ID}`);
     try {
-      await AdMob.prepareInterstitial({
+      await plugin.AdMob.prepareInterstitial({
         adId: this.TEST_INTERSTITIAL_ID,
       });
-      await AdMob.showInterstitial();
-      console.log('Interstitial ad shown successfully.');
+      await plugin.AdMob.showInterstitial();
     } catch (e) {
       console.error('Failed to show interstitial ad', e);
     }
   }
 
   async showRewardedAd(): Promise<RewardItem | null> {
-    const AdMob = await this.loadAdMobModule();
-    const { RewardAdPluginEvents } = this.enums;
-
-    if (!AdMob || !this.isInitialized || !RewardAdPluginEvents) {
-      console.error('AdMob not initialized or unavailable.');
+    const plugin = await this.getPlugin();
+    if (!plugin || !this.isInitialized) {
       return null;
     }
     
-    console.log(`Preparing rewarded ad with ID: ${this.TEST_REWARDED_ID}`);
+    const { AdMob, RewardAdPluginEvents } = plugin;
 
     return new Promise(async (resolve) => {
         const rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: RewardItem) => {
-            console.log('Rewarded video ad reward received:', reward);
             rewardListener.remove();
+            closeListener.remove();
             resolve(reward);
         });
         
         const closeListener = await AdMob.addListener(RewardAdPluginEvents.Dismissed, () => {
-            console.log('Rewarded video ad dismissed by user.');
             rewardListener.remove();
             closeListener.remove();
             resolve(null);
@@ -161,7 +151,6 @@ class AdMobServiceImpl {
                 adId: this.TEST_REWARDED_ID,
             });
             await AdMob.showRewardVideoAd();
-            console.log('showRewardVideoAd called.');
         } catch (e) {
             console.error('Failed to prepare or show rewarded ad', e);
             rewardListener.remove();
@@ -172,5 +161,4 @@ class AdMobServiceImpl {
   }
 }
 
-// Export a single instance of the service
 export const AdMobService = AdMobServiceImpl.getInstance();
