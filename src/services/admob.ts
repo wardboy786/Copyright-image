@@ -52,19 +52,13 @@ class AdMobServiceImpl {
 
   async showBanner(): Promise<void> {
     if (!this.isAvailable() || !this.isInitialized) {
-        if (typeof alert !== 'undefined') {
-          // This alert is for debugging purposes on the device.
-          // alert("AdMob not available or not initialized. Cannot show banner.");
-        }
         return;
     }
 
     const { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents } = await import('@capacitor-community/admob');
     
     AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => {
-      if (typeof alert !== 'undefined') {
-        alert('ADMOB FAILED TO LOAD:\n\n' + JSON.stringify(error, null, 2));
-      }
+      console.error('ADMOB FAILED TO LOAD:', error);
     });
 
     AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
@@ -79,9 +73,7 @@ class AdMobServiceImpl {
         margin: 0,
       });
     } catch (e) {
-       if (typeof alert !== 'undefined') {
-        alert('Error trying to SHOW banner:\n\n' + JSON.stringify(e, null, 2));
-      }
+       console.error('Error trying to SHOW banner:', e);
     }
   }
 

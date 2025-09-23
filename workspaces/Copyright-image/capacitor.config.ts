@@ -5,8 +5,6 @@ const config: CapacitorConfig = {
   appName: 'ImageRightsAI',
   webDir: 'out',
   server: {
-    // This is removed to rely on environment variables for the API URL,
-    // which is a more flexible and standard approach.
     cleartext: true
   },
   plugins: {
