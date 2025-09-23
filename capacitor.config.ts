@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
-// IMPORTANT: Set this to your live Vercel deployment URL.
-const LIVE_URL = 'https://your-app.vercel.app';
+// IMPORTANT: This is your live Vercel deployment URL.
+const LIVE_URL = 'https://copyright-image.vercel.app';
 
 const config: CapacitorConfig = {
   appId: 'com.imagerightsai.app',
