@@ -59,20 +59,22 @@ class AdMobServiceImpl {
   async showBanner(): Promise<void> {
     const admob = await this.getAdMob();
     if (!admob || !this.isInitialized) return;
+    
+    const { BannerAdPluginEvents, BannerAdSize, BannerAdPosition } = admob;
 
-    admob.AdMob.addListener(admob.BannerAdPluginEvents.FailedToLoad, (error: any) => {
+    admob.AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => {
       console.error('ADMOB FAILED TO LOAD:', error);
     });
 
-    admob.AdMob.addListener(admob.BannerAdPluginEvents.Loaded, () => {
+    admob.AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       console.log('Ad loaded successfully');
     });
 
     try {
       await admob.AdMob.showBanner({
         adId: this.TEST_BANNER_ID,
-        adSize: admob.BannerAdSize.ADAPTIVE_BANNER,
-        position: admob.BannerAdPosition.BOTTOM_CENTER,
+        adSize: BannerAdSize.ADAPTIVE_BANNER,
+        position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
       });
     } catch (e) {
@@ -110,20 +112,22 @@ class AdMobServiceImpl {
   async showRewardedAd(): Promise<any | null> {
     const admob = await this.getAdMob();
     if (!admob || !this.isInitialized) {
-      console.error('AdMob not initialized.');
+      console.error('AdMob not initialized or unavailable.');
       return null;
     }
+    
+    const { RewardAdPluginEvents } = admob;
     
     console.log(`Preparing rewarded ad with ID: ${this.TEST_REWARDED_ID}`);
 
     return new Promise(async (resolve) => {
-        try {
-            const rewardListener = admob.AdMob.addListener(admob.RewardAdPluginEvents.Rewarded, (reward: import('@capacitor-community/admob').RewardItem) => {
-                console.log('Rewarded video ad reward received:', reward);
-                rewardListener.remove();
-                resolve(reward);
-            });
+        const rewardListener = admob.AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: import('@capacitor-community/admob').RewardItem) => {
+            console.log('Rewarded video ad reward received:', reward);
+            rewardListener.remove();
+            resolve(reward);
+        });
 
+        try {
             await admob.AdMob.prepareRewardVideoAd({
                 adId: this.TEST_REWARDED_ID,
             });
