@@ -3,7 +3,7 @@
  * This route handler replaces the Vercel Serverless Function.
  */
 import { NextResponse } from 'next/server';
-import { analyzeImageForCopyright, AnalyzeImageForCopyrightInput, AnalyzeImageForCopyrightOutput } from '@/ai/flows/analyze-image-for-copyright';
+import { analyzeImageForCopyright, AnalyzeImageForCopyrightInput } from '@/ai/flows/analyze-image-for-copyright';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +11,8 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-// This function handles preflight requests for CORS
+// This function handles preflight requests for CORS.
+// It's required for the browser to allow the 'POST' request from a different origin.
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
