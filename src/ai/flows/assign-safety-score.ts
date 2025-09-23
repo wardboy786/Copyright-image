@@ -19,7 +19,7 @@ const AssignSafetyScoreInputSchema = z.object({
 });
 export type AssignSafetyScoreInput = z.infer<typeof AssignSafetyScoreInputSchema>;
 
-const SafetyScoreSchema = z.enum(['Safe', 'Moderate', 'DoNotUse']).describe('The safety score for the element.');
+const SafetyScoreSchema = z.string().describe('The safety score for the element. Can be "Safe", "Moderate", or "DoNotUse".');
 
 const AssignSafetyScoreOutputSchema = z.object({
   scoredElements: z.array(
