@@ -11,6 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+// The raw input from our API route
 const AnalyzeImageForCopyrightInputSchema = z.object({
   image: z.custom<Buffer>().describe('An image to analyze, as a Buffer.'),
   mimeType: z.string().describe('The MIME type of the image (e.g., "image/jpeg").'),
@@ -18,6 +19,15 @@ const AnalyzeImageForCopyrightInputSchema = z.object({
   isUserCreated: z.boolean().describe('Whether the user claims they created this image themselves.'),
 });
 export type AnalyzeImageForCopyrightInput = z.infer<typeof AnalyzeImageForCopyrightInputSchema>;
+
+
+// The schema the Genkit prompt expects, with a data URI
+const PromptInputSchema = z.object({
+    imageUri: z.string().describe("A photo of the image to analyze, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
+    isAiGenerated: z.boolean(),
+    isUserCreated: z.boolean(),
+});
+
 
 const AnalyzeImageForCopyrightOutputSchema = z.object({
   overallAssessment: z
@@ -60,7 +70,7 @@ export async function analyzeImageForCopyright(input: AnalyzeImageForCopyrightIn
 
 const prompt = ai.definePrompt({
   name: 'analyzeImageForCopyrightPrompt',
-  input: {schema: AnalyzeImageForCopyrightInputSchema },
+  input: {schema: PromptInputSchema },
   output: {schema: AnalyzeImageForCopyrightOutputSchema},
   prompt: `You are the world's most skilled and professional AI copyright image checker. Your analysis is incredibly detailed, accurate, and you never miss any potential copyright infringement, no matter how minor. You have a deep understanding of international copyright law, trademarks, and intellectual property. You can identify logos, brands, specific art styles, characters from any media (anime, cartoons, movies), watermarks, and even protected car designs. You do not make false positive claims; your analysis is precise.
 
@@ -105,9 +115,7 @@ const prompt = ai.definePrompt({
 
   Now, analyze the following image based on the user's context and provide your expert assessment in the required JSON format.
 
-  {{#if image}}
-    Image to be analyzed: {{media data=image contentType=mimeType}}
-  {{/if}}
+  Image to be analyzed: {{media url=imageUri}}
     `,
 });
 
@@ -118,7 +126,14 @@ const analyzeImageForCopyrightFlow = ai.defineFlow(
     outputSchema: AnalyzeImageForCopyrightOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    // Convert the Buffer to a data URI string for the prompt
+    const imageUri = `data:${input.mimeType};base64,${input.image.toString('base64')}`;
+
+    const { output } = await prompt({
+        imageUri: imageUri,
+        isAiGenerated: input.isAiGenerated,
+        isUserCreated: input.isUserCreated,
+    });
     return output!;
   }
 );
