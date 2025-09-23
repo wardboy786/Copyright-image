@@ -4,10 +4,23 @@
 // Using live ads during development is against AdMob policy.
 // This service is designed to be client-side only.
 
-// This service is now designed to be entirely dynamic to avoid server-side build issues.
+type AdMobPlugin = import('@capacitor-community/admob').AdMobPlugin;
+type BannerAdSize = import('@capacitor-community/admob').BannerAdSize;
+type BannerAdPosition = import('@capacitor-community/admob').BannerAdPosition;
+type RewardItem = import('@capacitor-community/admob').RewardItem;
+type BannerAdPluginEvents = import('@capacitor-community/admob').BannerAdPluginEvents;
+type RewardAdPluginEvents = import('@capacitor-community/admob').RewardAdPluginEvents;
+
 class AdMobServiceImpl {
   private static instance: AdMobServiceImpl;
   private isInitialized = false;
+  private admob: AdMobPlugin | null = null;
+  private enums: {
+    BannerAdSize?: typeof BannerAdSize;
+    BannerAdPosition?: typeof BannerAdPosition;
+    BannerAdPluginEvents?: typeof BannerAdPluginEvents;
+    RewardAdPluginEvents?: typeof RewardAdPluginEvents;
+  } = {};
 
   // Ad Unit IDs
   private readonly TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
@@ -25,12 +38,21 @@ class AdMobServiceImpl {
     return typeof window !== 'undefined' && (window as any).Capacitor?.isPluginAvailable('AdMob');
   }
 
-  private async getAdMob() {
-    if (!this.isAvailable()) {
-      return null;
+  private async loadAdMobModule() {
+    if (this.admob) return this.admob;
+
+    if (this.isAvailable()) {
+      const admobModule = await import('@capacitor-community/admob');
+      this.admob = admobModule.AdMob;
+      this.enums = {
+        BannerAdSize: admobModule.BannerAdSize,
+        BannerAdPosition: admobModule.BannerAdPosition,
+        BannerAdPluginEvents: admobModule.BannerAdPluginEvents,
+        RewardAdPluginEvents: admobModule.RewardAdPluginEvents,
+      };
+      return this.admob;
     }
-    // Dynamically import everything at once
-    return await import('@capacitor-community/admob');
+    return null;
   }
 
   async initialize(): Promise<void> {
@@ -39,13 +61,13 @@ class AdMobServiceImpl {
       return;
     }
     
-    const admob = await this.getAdMob();
-    if (!admob) return;
+    const AdMob = await this.loadAdMobModule();
+    if (!AdMob) return;
 
     try {
       const testingDevices = ['YOUR_ADVERTISING_ID_HERE'];
       
-      await admob.AdMob.initialize({
+      await AdMob.initialize({
         testingDevices,
       });
 
@@ -57,21 +79,21 @@ class AdMobServiceImpl {
   }
 
   async showBanner(): Promise<void> {
-    const admob = await this.getAdMob();
-    if (!admob || !this.isInitialized) return;
-    
-    const { BannerAdPluginEvents, BannerAdSize, BannerAdPosition } = admob;
+    const AdMob = await this.loadAdMobModule();
+    const { BannerAdPluginEvents, BannerAdSize, BannerAdPosition } = this.enums;
 
-    admob.AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => {
+    if (!AdMob || !this.isInitialized || !BannerAdPluginEvents || !BannerAdSize || !BannerAdPosition) return;
+    
+    AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => {
       console.error('ADMOB FAILED TO LOAD:', error);
     });
 
-    admob.AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
+    AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       console.log('Ad loaded successfully');
     });
 
     try {
-      await admob.AdMob.showBanner({
+      await AdMob.showBanner({
         adId: this.TEST_BANNER_ID,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
@@ -83,10 +105,10 @@ class AdMobServiceImpl {
   }
 
   async hideBanner(): Promise<void> {
-    const admob = await this.getAdMob();
-    if (!admob) return;
+    const AdMob = await this.loadAdMobModule();
+    if (!AdMob) return;
     try {
-      await admob.AdMob.hideBanner();
+      await AdMob.hideBanner();
       console.log('Banner ad hidden.');
     } catch (e) {
       console.warn('Failed to hide banner ad', e);
@@ -94,47 +116,56 @@ class AdMobServiceImpl {
   }
 
   async showInterstitialAd(): Promise<void> {
-    const admob = await this.getAdMob();
-    if (!admob || !this.isInitialized) return;
+    const AdMob = await this.loadAdMobModule();
+    if (!AdMob || !this.isInitialized) return;
     
     console.log(`Preparing interstitial ad with ID: ${this.TEST_INTERSTITIAL_ID}`);
     try {
-      await admob.AdMob.prepareInterstitial({
+      await AdMob.prepareInterstitial({
         adId: this.TEST_INTERSTITIAL_ID,
       });
-      await admob.AdMob.showInterstitial();
+      await AdMob.showInterstitial();
       console.log('Interstitial ad shown successfully.');
     } catch (e) {
       console.error('Failed to show interstitial ad', e);
     }
   }
 
-  async showRewardedAd(): Promise<any | null> {
-    const admob = await this.getAdMob();
-    if (!admob || !this.isInitialized) {
+  async showRewardedAd(): Promise<RewardItem | null> {
+    const AdMob = await this.loadAdMobModule();
+    const { RewardAdPluginEvents } = this.enums;
+
+    if (!AdMob || !this.isInitialized || !RewardAdPluginEvents) {
       console.error('AdMob not initialized or unavailable.');
       return null;
     }
     
-    const { RewardAdPluginEvents } = admob;
-    
     console.log(`Preparing rewarded ad with ID: ${this.TEST_REWARDED_ID}`);
 
     return new Promise(async (resolve) => {
-        const rewardListener = admob.AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: import('@capacitor-community/admob').RewardItem) => {
+        const rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: RewardItem) => {
             console.log('Rewarded video ad reward received:', reward);
             rewardListener.remove();
             resolve(reward);
         });
+        
+        const closeListener = await AdMob.addListener(RewardAdPluginEvents.Dismissed, () => {
+            console.log('Rewarded video ad dismissed by user.');
+            rewardListener.remove();
+            closeListener.remove();
+            resolve(null);
+        });
 
         try {
-            await admob.AdMob.prepareRewardVideoAd({
+            await AdMob.prepareRewardVideoAd({
                 adId: this.TEST_REWARDED_ID,
             });
-            await admob.AdMob.showRewardVideoAd();
+            await AdMob.showRewardVideoAd();
             console.log('showRewardVideoAd called.');
         } catch (e) {
             console.error('Failed to prepare or show rewarded ad', e);
+            rewardListener.remove();
+            closeListener.remove();
             resolve(null);
         }
     });
