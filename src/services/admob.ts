@@ -1,7 +1,7 @@
 // --- AdMob Configuration ---
 // IMPORTANT: For development, always use AdMob's official test ad units.
 // Using live ads during development is against AdMob policy.
-// Do not add any imports from '@capacitor-community/admob' at the top level.
+import { BannerAdPluginEvents, RewardedAdPluginEvents, type RewardItem } from '@capacitor-community/admob';
 
 class AdMobServiceImpl {
   private static instance: AdMobServiceImpl;
@@ -51,19 +51,19 @@ class AdMobServiceImpl {
 
     const { AdMob } = await import('@capacitor-community/admob');
     
-    AdMob.addListener(AdMob.BannerAdPluginEvents.FailedToLoad, (error: any) => {
+    AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => {
       console.error('ADMOB FAILED TO LOAD:', error);
     });
 
-    AdMob.addListener(AdMob.BannerAdPluginEvents.Loaded, () => {
+    AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       console.log('Ad loaded successfully');
     });
 
     try {
       await AdMob.showBanner({
         adId: this.TEST_BANNER_ID,
-        adSize: AdMob.BannerAdSize.ADAPTIVE_BANNER,
-        position: AdMob.BannerAdPosition.BOTTOM_CENTER,
+        adSize: 'ADAPTIVE_BANNER',
+        position: 'BOTTOM_CENTER',
         margin: 0,
       });
     } catch (e) {
@@ -98,7 +98,7 @@ class AdMobServiceImpl {
     }
   }
 
-  async showRewardedAd(): Promise<import('@capacitor-community/admob').RewardItem | null> {
+  async showRewardedAd(): Promise<RewardItem | null> {
     if (!this.isAvailable() || !this.isInitialized) {
       console.error('AdMob not available or not initialized.');
       return null;
@@ -109,7 +109,7 @@ class AdMobServiceImpl {
         const { AdMob } = await import('@capacitor-community/admob');
 
         try {
-            const rewardListener = AdMob.addListener(AdMob.RewardedAdPluginEvents.Rewarded, (reward) => {
+            const rewardListener = AdMob.addListener(RewardedAdPluginEvents.Rewarded, (reward: RewardItem) => {
                 console.log('Rewarded video ad reward received:', reward);
                 rewardListener.remove();
                 resolve(reward);
