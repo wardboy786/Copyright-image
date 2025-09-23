@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { RewardedAdDialog } from '../ads/rewarded-ad-dialog';
+import { RewardedAdDialog } from '@/components/copyright-sentry/rewarded-ad-dialog';
 import Image from 'next/image';
 
 function Loader() {
