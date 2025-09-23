@@ -3,11 +3,13 @@ import { type AnalyzeImageForCopyrightInput as GenkitAnalyzeImageForCopyrightInp
 export type OverallAssessment = 'Safe to use' | 'Moderate' | 'Copyright Detected';
 
 // Extend the Genkit output type to ensure it includes the optional box property
-export interface AnalysisBreakdownItem extends GenkitAnalyzeImageForCopyrightOutput['breakdown'][0] {
+export interface AnalysisBreakdownItem {
+    name: string;
+    explanation: string;
     box?: number[];
 }
 
-export interface AnalyzeImageForCopyrightOutput extends GenkitAnalyzeImageForCopyrightOutput {
+export interface AnalyzeImageForCopyrightOutput extends Omit<GenkitAnalyzeImageForCopyrightOutput, 'breakdown'> {
     breakdown: AnalysisBreakdownItem[];
 }
 
@@ -20,5 +22,3 @@ export interface ScanResult {
   image: string; // data URI of the uploaded image
   analysis: AnalyzeImageForCopyrightOutput;
 }
-
-    

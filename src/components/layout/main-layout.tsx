@@ -7,13 +7,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { AdBanner } from '../copyright-sentry/ad-banner';
-import { InterstitialAd } from '../ads/interstitial-ad';
 import { SplashScreen } from './splash-screen';
 import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
 import { AdMobService } from '@/services/admob';
+import { InterstitialAd } from '../copyright-sentry/interstitial-ad';
 
 
 const menuItems = [
