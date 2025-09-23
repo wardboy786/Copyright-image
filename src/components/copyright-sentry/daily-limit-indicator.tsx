@@ -12,7 +12,14 @@ export function DailyLimitIndicator() {
   const { todaysScanCount, isPremium, isInitialized } = useAppContext();
 
   if (isPremium) {
-    return null;
+    return (
+        <Card className="bg-green-500/10 border-dashed border-green-500/30">
+            <CardHeader className="p-4 text-center">
+                <CardTitle className="text-base text-green-400">Premium Account</CardTitle>
+                <CardDescription>You have unlimited scans.</CardDescription>
+            </CardHeader>
+        </Card>
+    );
   }
   
   if (!isInitialized) {
@@ -31,7 +38,7 @@ export function DailyLimitIndicator() {
     <div className="p-4">
         <Card className="bg-muted/50 border-dashed">
             <CardHeader className="p-4">
-                <CardTitle className="text-base">Free Scans Used</CardTitle>
+                <CardTitle className="text-base">Free Scans Used Today</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
                 <div className="flex justify-between items-center mb-2 text-xs">

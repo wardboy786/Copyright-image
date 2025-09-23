@@ -11,7 +11,9 @@ import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
+import dynamic from 'next/dynamic';
 
+const AdmobController = dynamic(() => import('@/components/layout/admob-controller').then(mod => mod.AdmobController), { ssr: false });
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -49,20 +51,21 @@ function BottomNavBar() {
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
-  const { isInitialized } = useAppContext();
+  const { isInitialized: isAppContextInitialized } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
-
-  if (showSplash && !isInitialized) {
+  
+  if (showSplash && !isAppContextInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
   }
 
   return (
     <>
       <AnimatePresence>
-        {showSplash && isInitialized && <SplashScreen onAnimationComplete={() => setShowSplash(false)} />}
+        {showSplash && isAppContextInitialized && <SplashScreen onAnimationComplete={() => setShowSplash(false)} />}
       </AnimatePresence>
 
-      <div className={cn('flex min-h-screen w-full bg-background', !isInitialized && 'opacity-0')}>
+      <div className={cn('flex min-h-screen w-full bg-background', !isAppContextInitialized && 'opacity-0')}>
+        <AdmobController />
         <div className="flex flex-col flex-1">
           <Header />
           <main className="flex-1 p-4 md:p-6 lg:p-8 pb-32 md:pb-8">
