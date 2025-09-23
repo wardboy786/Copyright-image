@@ -1,10 +1,12 @@
 'use client';
 import { type AnalyzeImageForCopyrightInput, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 
+// Use the public environment variable for the API URL, defaulting to /api for local dev
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export async function analyzeImageAction(input: AnalyzeImageForCopyrightInput): Promise<{ success: true, data: AnalyzeImageForCopyrightOutput } | { success: false, error: string }> {
   try {
+    // Construct the full URL for the API endpoint
     const response = await fetch(`${API_BASE}/analyze`, {
         method: 'POST',
         headers: {
