@@ -74,7 +74,7 @@ export function useScans(): UseScansReturn {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
       image: imageData,
-      analysis: analysisResult as AnalyzeImageForCopyrightOutput,
+      analysis: analysisResult,
     };
     const updatedScans = [newScan, ...scans];
     saveScans(updatedScans);
