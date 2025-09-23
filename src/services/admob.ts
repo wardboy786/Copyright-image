@@ -1,7 +1,6 @@
 // --- AdMob Configuration ---
 // IMPORTANT: For development, always use AdMob's official test ad units.
 // Using live ads during development is against AdMob policy.
-import type { RewardItem } from '@capacitor-community/admob';
 // Do not add any imports from '@capacitor-community/admob' at the top level.
 
 class AdMobServiceImpl {
@@ -99,7 +98,7 @@ class AdMobServiceImpl {
     }
   }
 
-  async showRewardedAd(): Promise<RewardItem | null> {
+  async showRewardedAd(): Promise<import('@capacitor-community/admob').RewardItem | null> {
     if (!this.isAvailable() || !this.isInitialized) {
       console.error('AdMob not available or not initialized.');
       return null;
@@ -110,7 +109,7 @@ class AdMobServiceImpl {
         const { AdMob } = await import('@capacitor-community/admob');
 
         try {
-            const rewardListener = AdMob.addListener(AdMob.RewardedAdPluginEvents.Rewarded, (reward: RewardItem) => {
+            const rewardListener = AdMob.addListener(AdMob.RewardedAdPluginEvents.Rewarded, (reward) => {
                 console.log('Rewarded video ad reward received:', reward);
                 rewardListener.remove();
                 resolve(reward);
