@@ -15,7 +15,6 @@ import { Switch } from '@/components/ui/switch';
 import Image from 'next/image';
 import { DailyLimitIndicator } from './daily-limit-indicator';
 import Link from 'next/link';
-import { useAdMob } from '@/hooks/use-admob';
 
 function Loader() {
   return (
@@ -41,26 +40,15 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const [isUserCreated, setIsUserCreated] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached, isPremium, grantExtraScan } = useAppContext();
-  const { showRewarded, isInitialized: isAdMobInitialized } = useAdMob();
-
-  const handleWatchAd = async () => {
-    setIsWatchingAd(true);
-    const success = await showRewarded();
-    if (success) {
-      grantExtraScan();
-    }
-    setIsWatchingAd(false);
-  };
-
-
+  const { addScan, isLimitReached, isPremium } = useAppContext();
+  
   const handleScan = async () => {
     if (!imageFile || !imagePreview) return;
 
     if (isLimitReached && !isPremium) {
       toast({
           title: 'Daily Limit Reached',
-          description: 'Upgrade to Premium or watch an ad for one more scan.',
+          description: 'Upgrade to Premium for unlimited scans.',
           variant: 'destructive',
         });
       return;
@@ -94,7 +82,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       if (isLimitReached && !isPremium) {
         toast({
           title: 'Daily Limit Reached',
-          description: 'Please upgrade to premium or watch an ad for one more scan.',
+          description: 'Please upgrade to premium for unlimited scans.',
           variant: 'destructive'
         })
         return;
@@ -176,15 +164,9 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                 <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4">
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg">Daily Limit Reached</h3>
-                        <p className="text-muted-foreground text-sm mt-1">Upgrade to Premium for unlimited scans or watch an ad for one more.</p>
+                        <p className="text-muted-foreground text-sm mt-1">Upgrade to Premium for unlimited scans.</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                         {isAdMobInitialized && (
-                          <Button variant="outline" onClick={handleWatchAd} disabled={isWatchingAd} className="w-full sm:w-auto">
-                            {isWatchingAd ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Video className="mr-2 h-4 w-4" />}
-                            Watch Ad
-                          </Button>
-                        )}
                         <Button asChild className="w-full sm:w-auto bg-primary/90 hover:bg-primary">
                             <Link href="/premium">
                                 Upgrade Now

@@ -1,118 +1,123 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
-import { isPlatform } from '@capacitor/core';
-import { useToast } from './use-toast';
-import { 
-  AdMob, 
-  BannerAdOptions, 
-  BannerAdSize, 
-  InterstitialAdOptions,
-  RewardedAdOptions,
-  BannerAdPosition,
-  AdMobError
-} from '@capacitor-community/admob';
 
-// Use test IDs for development. Replace with your real IDs in production.
-const AD_UNITS = {
-  // Test Ad Unit IDs from Google
-  BANNER: isPlatform('ios') ? 'ca-app-pub-3940256099942544/2934735716' : 'ca-app-pub-3940256099942544/6300978111',
-  REWARDED: isPlatform('ios') ? 'ca-app-pub-3940256099942544/1712485313' : 'ca-app-pub-3940256099942544/5224354917',
-};
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { type ScanResult, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
+import { isToday } from 'date-fns';
 
-// Singleton hook state to prevent multiple initializations
-let isAdMobInitialized = false;
+export const MAX_FREE_SCANS = 5;
+const SCANS_STORAGE_KEY = 'imagerights-ai-scans';
+const PREMIUM_STORAGE_KEY = 'imagerights-ai-premium';
 
-export function useAdMob() {
-  const [isInitialized, setIsInitialized] = useState(isAdMobInitialized);
-  const { toast } = useToast();
 
+export interface UseScansReturn {
+  scans: ScanResult[];
+  addScan: (imageData: string, analysisResult: AnalyzeImageForCopyrightOutput) => ScanResult;
+  getScanById: (id: string) => ScanResult | undefined;
+  todaysScanCount: number;
+  isLimitReached: boolean;
+  isPremium: boolean;
+  setPremiumStatus: (status: boolean) => void;
+  isInitialized: boolean;
+  clearHistory: () => void;
+  deleteScans: (ids: string[]) => void;
+  scansToday: ScanResult[];
+}
+
+export function useScans(): UseScansReturn {
+  const [scans, setScans] = useState<ScanResult[]>([]);
+  const [isPremium, setIsPremium] = useState<boolean>(true); // Default to premium
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+  // Load from local storage on mount
   useEffect(() => {
-    // This effect runs only once to initialize AdMob on native platforms.
-    if (!isAdMobInitialized && isPlatform('capacitor')) {
-      const initializeAdMob = async () => {
-        try {
-          await AdMob.initialize({});
-          isAdMobInitialized = true;
-          setIsInitialized(true);
-          console.log('AdMob Initialized');
-          // Show banner after initialization
-          await showBanner();
-        } catch (e) {
-          console.error('AdMob initialization failed', e);
-        }
-      };
+    if (typeof window === 'undefined') return;
 
-      initializeAdMob();
-    }
-  }, []); // Empty dependency array ensures this runs only once
+    let storedScans: ScanResult[] = [];
+    let storedPremium = true;
 
-  const showBanner = useCallback(async () => {
     try {
-      const options: BannerAdOptions = {
-        adId: AD_UNITS.BANNER,
-        adSize: BannerAdSize.ADAPTIVE_BANNER,
-        position: BannerAdPosition.BOTTOM_CENTER,
-        margin: 0,
-        isTesting: true, // Keep true during development
-      };
-      await AdMob.showBanner(options);
-      console.log('Banner ad shown');
-    } catch (e) {
-      console.error('Failed to show banner ad', e);
+      const scansItem = localStorage.getItem(SCANS_STORAGE_KEY);
+      if (scansItem) storedScans = JSON.parse(scansItem);
+      
+      const premiumItem = localStorage.getItem(PREMIUM_STORAGE_KEY);
+       if (premiumItem !== null) storedPremium = JSON.parse(premiumItem);
+
+    } catch (error) {
+      console.error("Failed to parse data from localStorage", error);
+      // Clear corrupted data
+      localStorage.removeItem(SCANS_STORAGE_KEY);
+      localStorage.removeItem(PREMIUM_STORAGE_KEY);
+    }
+    
+    setScans(storedScans);
+    setIsPremium(storedPremium);
+    setIsInitialized(true);
+  }, []);
+
+  const saveScans = useCallback((newScans: ScanResult[]) => {
+    setScans(newScans);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(SCANS_STORAGE_KEY, JSON.stringify(newScans));
+    }
+  }, []);
+  
+  const setPremiumStatus = useCallback((status: boolean) => {
+    setIsPremium(status);
+     if (typeof window !== 'undefined') {
+      localStorage.setItem(PREMIUM_STORAGE_KEY, JSON.stringify(status));
     }
   }, []);
 
-  const showRewarded = useCallback((): Promise<boolean> => {
-    return new Promise(async (resolve) => {
-      if (!isInitialized) {
-        toast({
-          title: 'Ad Not Available',
-          description: 'Ads are only available in the mobile app.',
-          variant: 'destructive',
-        });
-        return resolve(false);
-      }
 
-      try {
-        const options: RewardedAdOptions = {
-          adId: AD_UNITS.REWARDED,
-          isTesting: true,
-        };
+  const addScan = useCallback((imageData: string, analysisResult: AnalyzeImageForCopyrightOutput): ScanResult => {
+    const newScan: ScanResult = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      image: imageData,
+      analysis: analysisResult,
+    };
+    const updatedScans = [newScan, ...scans];
+    saveScans(updatedScans);
+    return newScan;
+  }, [scans, saveScans]);
 
-        const rewardListener = AdMob.addListener('onRewarded', (reward) => {
-          console.log('Reward earned:', reward);
-          toast({
-            title: 'Reward Granted!',
-            description: `You've earned ${reward.amount} extra scan.`,
-          });
-          rewardListener.remove();
-          resolve(true); // User earned the reward
-        });
+  const getScanById = useCallback((id: string): ScanResult | undefined => {
+    return scans.find(scan => scan.id === id);
+  }, [scans]);
 
-        await AdMob.prepareRewarded(options);
-        await AdMob.showRewarded();
-      } catch (e) {
-        const error = e as AdMobError;
-        console.error('Failed to show rewarded ad', error);
+  const scansToday = useMemo(() => {
+    if (!isInitialized) return [];
+    return scans.filter(scan => isToday(new Date(scan.timestamp)));
+  }, [scans, isInitialized]);
 
-        // Handle common errors
-        if (error.code === 2) { // Ad not ready
-           toast({
-            title: 'Ad Not Ready',
-            description: 'The ad is still loading. Please try again in a moment.',
-            variant: 'destructive',
-          });
-        } else {
-           toast({
-            title: 'Ad Failed to Load',
-            description: 'Please try again later.',
-            variant: 'destructive',
-          });
-        }
-        resolve(false);
-      }
-    });
-  }, [isInitialized, toast]);
+  const todaysScanCount = scansToday.length;
+  
+  const isLimitReached = useMemo(() => {
+    if (!isInitialized || isPremium) return false;
+    return todaysScanCount >= MAX_FREE_SCANS;
+  }, [isPremium, todaysScanCount, isInitialized]);
 
-  return { isInitialized, showRewarded };
+  const clearHistory = useCallback(() => {
+    saveScans([]);
+  }, [saveScans]);
+  
+  const deleteScans = useCallback((ids: string[]) => {
+    const idsToDelete = new Set(ids);
+    const updatedScans = scans.filter(scan => !idsToDelete.has(scan.id));
+    saveScans(updatedScans);
+  }, [scans, saveScans]);
+
+  return { 
+    scans, 
+    addScan, 
+    getScanById, 
+    todaysScanCount,
+    isLimitReached, 
+    isPremium, 
+    setPremiumStatus,
+    isInitialized,
+    clearHistory,
+    deleteScans,
+    scansToday,
+  };
 }

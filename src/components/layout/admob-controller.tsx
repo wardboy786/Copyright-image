@@ -1,6 +1,6 @@
 'use client';
 
-import { useAdMob } from '@/hooks/use-admob';
+import { useAdMob } from '@/hooks/native/use-admob';
 
 /**
  * This component's sole purpose is to activate the useAdMob hook,
