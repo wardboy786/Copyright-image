@@ -15,10 +15,12 @@ export function useAdMob() {
   const { toast } = useToast();
 
   const initializeAndShowBanner = useCallback(async () => {
+    // Only run on native platforms
     if (!isPlatform('capacitor')) {
       return;
     }
-     if (isInitialized) {
+    // Already initialized
+    if (isInitialized) {
       return;
     }
 
@@ -42,6 +44,8 @@ export function useAdMob() {
     }
   }, [isInitialized]);
 
+  // This useEffect will run once when the hook is first used,
+  // handling the entire initialization and banner display process.
   useEffect(() => {
     initializeAndShowBanner();
   }, [initializeAndShowBanner]);
