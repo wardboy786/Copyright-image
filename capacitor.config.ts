@@ -6,8 +6,9 @@ const LIVE_URL = 'https://copyright-image.vercel.app';
 const config: CapacitorConfig = {
   appId: 'com.imagerightsai.app',
   appName: 'ImageRights AI',
-  // webDir is not needed when using a server URL for production.
-  // The 'out' directory is still used by Vercel for deployment.
+  // The 'public' directory is used by Capacitor to ensure the 'assets' folder is created.
+  // It is ignored for bundling when server.url is set, but required for the sync command to succeed.
+  webDir: 'public',
   server: {
     // This is the Vercel URL that the native app will use to fetch the web content
     // and make API calls to the serverless functions.
