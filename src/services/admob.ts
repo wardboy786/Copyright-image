@@ -1,13 +1,8 @@
 // --- AdMob Configuration ---
 // IMPORTANT: For development, always use AdMob's official test ad units.
 // Using live ads during development is against AdMob policy.
-
+import type { RewardItem, BannerAdSize, BannerAdPosition, BannerAdPluginEvents, RewardedAdPluginEvents } from '@capacitor-community/admob';
 // Do not add any imports from '@capacitor-community/admob' at the top level.
-
-type RewardItem = {
-  type: string;
-  amount: number;
-};
 
 class AdMobServiceImpl {
   private static instance: AdMobServiceImpl;
