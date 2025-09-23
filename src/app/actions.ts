@@ -16,7 +16,13 @@ export async function analyzeImageAction(input: AnalyzeImageForCopyrightInput): 
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // The response was not JSON
+          throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
+        }
         throw new Error(errorData.error || `Request failed with status ${response.status}`);
     }
     

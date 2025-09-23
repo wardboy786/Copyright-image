@@ -7,10 +7,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, X, CheckCheck } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { type ScanResult } from '@/lib/types';
 
 export default function HistoryPage() {
-  const { scans: allScans, isInitialized, deleteScans } = useAppContext();
-  const [displayedScans, setDisplayedScans] = useState<typeof allScans>([]);
+  const { scans: allScans = [], isInitialized, deleteScans } = useAppContext();
+  const [displayedScans, setDisplayedScans] = useState<ScanResult[]>([]);
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [isSelectionMode, setSelectionMode] = useState(false);
 
