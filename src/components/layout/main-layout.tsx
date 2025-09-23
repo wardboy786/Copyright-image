@@ -22,7 +22,7 @@ const menuItems = [
 ];
 
 const AdMobController = dynamic(() =>
-  import('./admob-controller').then((mod) => mod.AdMobController),
+  import('@/components/layout/admob-controller').then((mod) => mod.AdMobController),
   { ssr: false }
 );
 
