@@ -1,12 +1,12 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { analyzeImageAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/hooks/use-app-context';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, Loader2, Info, Image as ImageIcon, X, Zap } from 'lucide-react';
+import { UploadCloud, Loader2, Info, Image as ImageIcon, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -15,8 +15,6 @@ import { Switch } from '@/components/ui/switch';
 import Image from 'next/image';
 import { DailyLimitIndicator } from './daily-limit-indicator';
 import Link from 'next/link';
-import { useAdMob } from '@/hooks/use-admob';
-import { MAX_FREE_SCANS } from '@/hooks/use-scans';
 
 function Loader() {
   return (
@@ -35,22 +33,13 @@ function Loader() {
 
 export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanResult) => void; }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isAdLoading, setIsAdLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [isUserCreated, setIsUserCreated] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached, isPremium, todaysScanCount, grantExtraScan } = useAppContext();
-  const { initialize: initializeAdMob, showRewarded, isInitialized: isAdMobInitialized } = useAdMob();
-
-  useEffect(() => {
-    // Initialize AdMob when the component mounts
-    if (!isAdMobInitialized) {
-      initializeAdMob();
-    }
-  }, [initializeAdMob, isAdMobInitialized]);
+  const { addScan, isLimitReached, isPremium } = useAppContext();
 
   const handleScan = async () => {
     if (!imageFile || !imagePreview) return;
@@ -58,7 +47,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     if (isLimitReached) {
       toast({
           title: 'Daily Limit Reached',
-          description: 'Upgrade to Premium or watch an ad for one more scan.',
+          description: 'Upgrade to Premium for unlimited scans.',
           variant: 'destructive',
         });
       return;
@@ -84,26 +73,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     setIsLoading(false);
   };
   
-  const handleWatchAd = async () => {
-    setIsAdLoading(true);
-    const success = await showRewarded();
-    if (success) {
-      grantExtraScan();
-      toast({
-        title: 'Scan Granted!',
-        description: 'You have received one extra scan.',
-      });
-    } else {
-      toast({
-        title: 'Ad Not Completed',
-        description: 'The ad was not completed, so no scan was granted.',
-        variant: 'destructive',
-      });
-    }
-    setIsAdLoading(false);
-  };
-
-
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
@@ -194,17 +163,13 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                 <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4">
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg">Daily Limit Reached</h3>
-                        <p className="text-muted-foreground text-sm mt-1">Upgrade to Premium for unlimited scans or watch an ad for one more.</p>
+                        <p className="text-muted-foreground text-sm mt-1">Upgrade to Premium for unlimited scans.</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <Button asChild className="w-full sm:w-auto bg-primary/90 hover:bg-primary">
                             <Link href="/premium">
                                 Upgrade Now
                             </Link>
-                        </Button>
-                         <Button onClick={handleWatchAd} disabled={isAdLoading || !isAdMobInitialized} className="w-full sm:w-auto" variant="outline">
-                            {isAdLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                            Watch Ad
                         </Button>
                     </div>
                 </CardContent>

@@ -11,7 +11,6 @@ import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
-import { useAdMob } from '@/hooks/use-admob';
 
 
 const menuItems = [
@@ -53,8 +52,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const { isInitialized: isAppContextInitialized } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
   
-  // The useAdMob hook now handles its own initialization and banner display.
-  useAdMob();
   
   if (showSplash && !isAppContextInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
