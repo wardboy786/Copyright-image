@@ -11,20 +11,24 @@ export async function analyzeImageAction(file: File, isAiGenerated: boolean, isU
     formData.append('isAiGenerated', String(isAiGenerated));
     formData.append('isUserCreated', String(isUserCreated));
 
-
+    // Use the absolute URL for the fetch request
     const response = await fetch(`${API_BASE}/analyze`, {
         method: 'POST',
         body: formData,
+        // IMPORTANT: Do NOT manually set the 'Content-Type' header when using FormData.
+        // The browser will automatically set it to 'multipart/form-data' with the correct boundary.
     });
 
     if (!response.ok) {
         let errorData;
         try {
+          // Try to parse a JSON error response from the server
           errorData = await response.json();
         } catch (e) {
-          // The response was not JSON
+          // If the response isn't JSON, use the status text
           throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
         }
+        // Use the specific error from the server if available
         throw new Error(errorData.error || `Request failed with status ${response.status}`);
     }
     
