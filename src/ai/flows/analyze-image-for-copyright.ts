@@ -6,6 +6,8 @@
  * - AnalyzeImageForCopyrightOutput - The return type for the analyzeImageForCopyright function.
  */
 
+'use server';
+
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
