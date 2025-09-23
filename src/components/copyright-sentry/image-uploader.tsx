@@ -31,15 +31,16 @@ function Loader() {
 
 export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanResult) => void; }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [image, setImage] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [isUserCreated, setIsUserCreated] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached, isPremium } = useAppContext();
+  const { addScan, isLimitReached } = useAppContext();
 
   const handleScan = async () => {
-    if (!image) return;
+    if (!imageFile || !imagePreview) return;
 
     if (isLimitReached) {
       toast({
@@ -51,14 +52,11 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     }
 
     setIsLoading(true);
-    const result = await analyzeImageAction({
-      photoDataUri: image,
-      isAiGenerated,
-      isUserCreated
-    });
+    const result = await analyzeImageAction(imageFile, isAiGenerated, isUserCreated);
     
     if (result.success) {
-      const newScan = addScan(image, result.data);
+      // We still use the data URI for local storage and display
+      const newScan = addScan(imagePreview, result.data);
       onScanComplete(newScan);
       toast({
         title: 'Scan Complete!',
@@ -85,12 +83,15 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
           description: 'Please upgrade to premium for unlimited scans.',
           variant: 'destructive'
         })
+        return;
       }
+      
+      setImageFile(file);
 
       const reader = new FileReader();
       reader.onload = (event) => {
-        const photoDataUri = event.target?.result as string;
-        setImage(photoDataUri);
+        const dataUri = event.target?.result as string;
+        setImagePreview(dataUri);
       };
       reader.readAsDataURL(file);
     },
@@ -105,7 +106,8 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   });
   
   const reset = () => {
-      setImage(null);
+      setImagePreview(null);
+      setImageFile(null);
   }
   
   return (
@@ -118,13 +120,13 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                     className={cn(
                     'w-full rounded-lg transition-colors flex flex-col items-center justify-center p-8 text-center cursor-pointer min-h-[250px] border-4 border-dashed relative overflow-hidden',
                     isDragActive ? 'bg-primary/10 border-primary' : 'border-border/50 hover:bg-muted/50 hover:border-muted-foreground/20',
-                    isLimitReached && !image && 'cursor-not-allowed opacity-60'
+                    isLimitReached && !imagePreview && 'cursor-not-allowed opacity-60'
                     )}
                 >
                     <input {...getInputProps()} />
 
                     <AnimatePresence>
-                    {!image ? (
+                    {!imagePreview ? (
                         <motion.div
                             key="placeholder"
                             initial={{ scale: 0.8, opacity: 0 }}
@@ -143,12 +145,12 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                         </motion.div>
                     ) : (
                          <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                            <Image src={image} alt="Image preview" fill className="object-contain" />
+                            <Image src={imagePreview} alt="Image preview" fill className="object-contain" />
                          </motion.div>
                     )}
                     </AnimatePresence>
                 </div>
-                 {image && (
+                 {imagePreview && (
                     <Button variant="destructive" size="icon" className="absolute top-6 right-6 z-10 rounded-full" onClick={reset}>
                         <X className="h-4 w-4"/>
                     </Button>
@@ -183,7 +185,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
         </Card>
 
         <div className="flex justify-center">
-            <Button size="lg" onClick={handleScan} disabled={!image || isLoading || isLimitReached} className="w-full max-w-sm rounded-full">
+            <Button size="lg" onClick={handleScan} disabled={!imageFile || isLoading || isLimitReached} className="w-full max-w-sm rounded-full">
                 <ImageIcon className="mr-2 h-4 w-4" />
                 {isLimitReached ? 'Daily Limit Reached' : 'Start Scan'}
             </Button>

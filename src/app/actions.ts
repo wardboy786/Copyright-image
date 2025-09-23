@@ -1,19 +1,22 @@
 'use client';
-import { type AnalyzeImageForCopyrightInput, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
+import { type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 
 // The API base will always be a relative path.
 // On the web, it calls the same domain.
 // In Capacitor with a `server.url`, it calls that URL.
 const API_BASE = '/api';
 
-export async function analyzeImageAction(input: AnalyzeImageForCopyrightInput): Promise<{ success: true, data: AnalyzeImageForCopyrightOutput } | { success: false, error: string }> {
+export async function analyzeImageAction(file: File, isAiGenerated: boolean, isUserCreated: boolean): Promise<{ success: true, data: AnalyzeImageForCopyrightOutput } | { success: false, error: string }> {
   try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('isAiGenerated', String(isAiGenerated));
+    formData.append('isUserCreated', String(isUserCreated));
+
+
     const response = await fetch(`${API_BASE}/analyze`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(input),
+        body: formData,
     });
 
     if (!response.ok) {

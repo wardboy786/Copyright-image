@@ -3,7 +3,7 @@
  * This route handler replaces the Vercel Serverless Function.
  */
 import { NextResponse } from 'next/server';
-import { analyzeImageForCopyright, AnalyzeImageForCopyrightInput } from '@/ai/flows/analyze-image-for-copyright';
+import { analyzeImageForCopyright } from '@/ai/flows/analyze-image-for-copyright';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -22,16 +22,27 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   try {
-    const input = await req.json() as AnalyzeImageForCopyrightInput;
+    const formData = await req.formData();
+    const file = formData.get('file') as File | null;
+    const isAiGenerated = formData.get('isAiGenerated') === 'true';
+    const isUserCreated = formData.get('isUserCreated') === 'true';
 
-    if (!input.photoDataUri) {
-      return new NextResponse(JSON.stringify({ error: 'Missing photoDataUri in request body' }), {
+    if (!file) {
+      return new NextResponse(JSON.stringify({ error: 'Missing file in request body' }), {
         status: 400,
         headers: CORS_HEADERS,
       });
     }
 
-    const result = await analyzeImageForCopyright(input);
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const result = await analyzeImageForCopyright({ 
+        image: buffer, 
+        mimeType: file.type,
+        isAiGenerated,
+        isUserCreated
+    });
     return new NextResponse(JSON.stringify(result), { status: 200, headers: CORS_HEADERS });
 
   } catch (error) {

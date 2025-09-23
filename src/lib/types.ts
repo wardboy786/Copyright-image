@@ -1,4 +1,4 @@
-import { type AnalyzeImageForCopyrightInput as GenkitAnalyzeImageForCopyrightInput, type AnalyzeImageForCopyrightOutput as GenkitAnalyzeImageForCopyrightOutput } from "@/ai/flows/analyze-image-for-copyright";
+import { type AnalyzeImageForCopyrightOutput as GenkitAnalyzeImageForCopyrightOutput } from "@/ai/flows/analyze-image-for-copyright";
 
 export type OverallAssessment = 'Safe to use' | 'Moderate' | 'Copyright Detected';
 
@@ -12,9 +12,6 @@ export interface AnalysisBreakdownItem {
 export interface AnalyzeImageForCopyrightOutput extends Omit<GenkitAnalyzeImageForCopyrightOutput, 'breakdown'> {
     breakdown: AnalysisBreakdownItem[];
 }
-
-export type AnalyzeImageForCopyrightInput = GenkitAnalyzeImageForCopyrightInput;
-
 
 export interface ScanResult {
   id: string;
