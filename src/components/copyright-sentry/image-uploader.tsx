@@ -13,6 +13,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import Image from 'next/image';
+import { DailyLimitIndicator } from './daily-limit-indicator';
+import Link from 'next/link';
 
 function Loader() {
   return (
@@ -55,13 +57,12 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     const result = await analyzeImageAction(imageFile, isAiGenerated, isUserCreated);
     
     if (result.success) {
-      // We still use the data URI for local storage and display
       const newScan = addScan(imagePreview, result.data);
-      onScanComplete(newScan);
       toast({
         title: 'Scan Complete!',
         description: 'Your image has been successfully analyzed.',
       });
+      onScanComplete(newScan);
     } else {
       toast({
         title: 'Scan Failed',
@@ -102,7 +103,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [] },
     multiple: false,
-    disabled: isLoading || isLimitReached,
+    disabled: isLoading,
   });
   
   const reset = () => {
@@ -119,8 +120,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                     {...getRootProps()}
                     className={cn(
                     'w-full rounded-lg transition-colors flex flex-col items-center justify-center p-8 text-center cursor-pointer min-h-[250px] border-4 border-dashed relative overflow-hidden',
-                    isDragActive ? 'bg-primary/10 border-primary' : 'border-border/50 hover:bg-muted/50 hover:border-muted-foreground/20',
-                    isLimitReached && !imagePreview && 'cursor-not-allowed opacity-60'
+                    isDragActive ? 'bg-primary/10 border-primary' : 'border-border/50 hover:bg-muted/50 hover:border-muted-foreground/20'
                     )}
                 >
                     <input {...getInputProps()} />
@@ -158,37 +158,59 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
             </CardContent>
         </Card>
 
-        <Card className="shadow-lg shadow-primary/10">
-            <CardContent className="space-y-6 p-4 sm:p-6">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                    <Label htmlFor="ai-generated" className="font-semibold">Is this image AI-generated?</Label>
-                </div>
-                <Switch
-                    id="ai-generated"
-                    checked={isAiGenerated}
-                    onCheckedChange={setIsAiGenerated}
-                />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                    <Label htmlFor="user-created" className="font-semibold">Did you create this image?</Label>
-                    <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Info className="w-4 h-4"/>Includes generating it with AI prompts.</p>
-                </div>
-                <Switch
-                    id="user-created"
-                    checked={isUserCreated}
-                    onCheckedChange={setIsUserCreated}
-                />
-                </div>
-            </CardContent>
-        </Card>
+        {isLimitReached && (
+            <Card className="shadow-lg shadow-primary/10 bg-muted/30">
+                <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex-1">
+                        <h3 className="font-semibold text-lg">Daily Limit Reached</h3>
+                        <p className="text-muted-foreground text-sm mt-1">Upgrade to Premium for unlimited scans.</p>
+                    </div>
+                    <Button asChild className="w-full sm:w-auto bg-primary/90 hover:bg-primary">
+                        <Link href="/premium">
+                            Upgrade Now
+                        </Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        )}
 
-        <div className="flex justify-center">
-            <Button size="lg" onClick={handleScan} disabled={!imageFile || isLoading || isLimitReached} className="w-full max-w-sm rounded-full">
-                <ImageIcon className="mr-2 h-4 w-4" />
-                {isLimitReached ? 'Daily Limit Reached' : 'Start Scan'}
-            </Button>
+        {!isLimitReached && (
+            <>
+                <Card className="shadow-lg shadow-primary/10">
+                    <CardContent className="space-y-6 p-4 sm:p-6">
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div>
+                            <Label htmlFor="ai-generated" className="font-semibold">Is this image AI-generated?</Label>
+                        </div>
+                        <Switch
+                            id="ai-generated"
+                            checked={isAiGenerated}
+                            onCheckedChange={setIsAiGenerated}
+                        />
+                        </div>
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div>
+                            <Label htmlFor="user-created" className="font-semibold">Did you create this image?</Label>
+                            <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><Info className="w-4 h-4"/>Includes generating it with AI prompts.</p>
+                        </div>
+                        <Switch
+                            id="user-created"
+                            checked={isUserCreated}
+                            onCheckedChange={setIsUserCreated}
+                        />
+                        </div>
+                    </CardContent>
+                </Card>
+                <div className="flex justify-center">
+                    <Button size="lg" onClick={handleScan} disabled={!imageFile || isLoading} className="w-full max-w-sm rounded-full">
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        Start Scan
+                    </Button>
+                </div>
+            </>
+        )}
+        <div className="pt-4">
+            <DailyLimitIndicator/>
         </div>
     </div>
   );

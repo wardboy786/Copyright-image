@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { type ScanResult, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
-import { format } from 'date-fns';
+import { isToday } from 'date-fns';
 
 export const MAX_FREE_SCANS = 5;
 const SCANS_STORAGE_KEY = 'imagerights-ai-scans';
@@ -87,8 +87,7 @@ export function useScans(): UseScansReturn {
 
   const scansToday = useMemo(() => {
     if (!isInitialized) return [];
-    const today = format(new Date(), 'yyyy-MM-dd');
-    return scans.filter(scan => format(new Date(scan.timestamp), 'yyyy-MM-dd') === today);
+    return scans.filter(scan => isToday(new Date(scan.timestamp)));
   }, [scans, isInitialized]);
 
   const todaysScanCount = scansToday.length;
@@ -112,7 +111,7 @@ export function useScans(): UseScansReturn {
     scans, 
     addScan, 
     getScanById, 
-    todaysScanCount, 
+    todaysScanCount,
     isLimitReached, 
     isPremium, 
     setPremiumStatus,
