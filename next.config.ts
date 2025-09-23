@@ -25,7 +25,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverActions: false,
   typescript: {
     ignoreBuildErrors: true,
   },
