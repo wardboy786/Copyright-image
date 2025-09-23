@@ -6,7 +6,8 @@ const LIVE_URL = 'https://your-app.vercel.app';
 const config: CapacitorConfig = {
   appId: 'com.imagerightsai.app',
   appName: 'ImageRights AI',
-  webDir: 'out',
+  // webDir is not needed when using a server URL for production.
+  // The 'out' directory is still used by Vercel for deployment.
   server: {
     // This is the Vercel URL that the native app will use to fetch the web content
     // and make API calls to the serverless functions.
