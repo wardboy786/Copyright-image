@@ -12,11 +12,16 @@ import {
   AdMobError
 } from '@capacitor-community/admob';
 
-// Use test IDs for development. Replace with your real IDs in production.
+// Test Ad Unit IDs from Google
 const AD_UNITS = {
-  // Test Ad Unit IDs from Google
-  BANNER: isPlatform('ios') ? 'ca-app-pub-3940256099942544/2934735716' : 'ca-app-pub-3940256099942544/6300978111',
-  REWARDED: isPlatform('ios') ? 'ca-app-pub-3940256099942544/1712485313' : 'ca-app-pub-3940256099942544/5224354917',
+  BANNER: {
+    ios: 'ca-app-pub-3940256099942544/2934735716',
+    android: 'ca-app-pub-3940256099942544/6300978111',
+  },
+  REWARDED: {
+    ios: 'ca-app-pub-3940256099942544/1712485313',
+    android: 'ca-app-pub-3940256099942544/5224354917',
+  },
 };
 
 // Singleton hook state to prevent multiple initializations
@@ -47,9 +52,10 @@ export function useAdMob() {
   }, []); // Empty dependency array ensures this runs only once
 
   const showBanner = useCallback(async () => {
+    if (!isPlatform('capacitor')) return;
     try {
       const options: BannerAdOptions = {
-        adId: AD_UNITS.BANNER,
+        adId: isPlatform('ios') ? AD_UNITS.BANNER.ios : AD_UNITS.BANNER.android,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
@@ -64,7 +70,7 @@ export function useAdMob() {
 
   const showRewarded = useCallback((): Promise<boolean> => {
     return new Promise(async (resolve) => {
-      if (!isInitialized) {
+      if (!isInitialized || !isPlatform('capacitor')) {
         toast({
           title: 'Ad Not Available',
           description: 'Ads are only available in the mobile app.',
@@ -75,7 +81,7 @@ export function useAdMob() {
 
       try {
         const options: RewardedAdOptions = {
-          adId: AD_UNITS.REWARDED,
+          adId: isPlatform('ios') ? AD_UNITS.REWARDED.ios : AD_UNITS.REWARDED.android,
           isTesting: true,
         };
 
