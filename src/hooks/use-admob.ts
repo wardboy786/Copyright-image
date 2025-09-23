@@ -1,9 +1,14 @@
-
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { isPlatform } from '@capacitor/core';
 import { useToast } from './use-toast';
-import type { AdMob as AdMobType, BannerAd as BannerAdType, RewardedAd as RewardedAdType, InterstitialAd as InterstitialAdType, AdMobBannerSize as AdMobBannerSizeType } from '@capacitor-community/admob';
+import type { 
+  AdMob as AdMobType, 
+  BannerAd as BannerAdType, 
+  RewardedAd as RewardedAdType, 
+  InterstitialAd as InterstitialAdType,
+  AdMobBannerSize as AdMobBannerSizeType
+} from '@capacitor-community/admob';
 
 // Use test IDs for development. Replace with your real IDs in production.
 const AD_UNITS = {
