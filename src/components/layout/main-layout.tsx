@@ -11,6 +11,9 @@ import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
+import { useAdMob } from '@/hooks/use-admob';
+import { isPlatform } from '@capacitor/core';
+
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -49,7 +52,23 @@ function BottomNavBar() {
 function AppContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const { isInitialized: isAppContextInitialized } = useAppContext();
+  const { initialize, showBanner, isInitialized: isAdMobInitialized } = useAdMob();
   const [showSplash, setShowSplash] = useState(true);
+  
+  useEffect(() => {
+    // Only initialize AdMob on native platforms
+    if (isPlatform('capacitor')) {
+      initialize();
+    }
+  }, [initialize]);
+
+  useEffect(() => {
+    // Show banner once AdMob is initialized
+    if (isAdMobInitialized) {
+      showBanner();
+    }
+  }, [isAdMobInitialized, showBanner]);
+
   
   if (showSplash && !isAppContextInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
