@@ -1,10 +1,8 @@
 'use client';
 import { type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 
-// The API base will always be a relative path.
-// On the web, it calls the same domain.
-// In Capacitor with a `server.url`, it calls that URL.
-const API_BASE = '/api';
+// The API base must be an absolute URL to work in the Capacitor WebView.
+const API_BASE = 'https://copyright-image.vercel.app/api';
 
 export async function analyzeImageAction(file: File, isAiGenerated: boolean, isUserCreated: boolean): Promise<{ success: true, data: AnalyzeImageForCopyrightOutput } | { success: false, error: string }> {
   try {
