@@ -1,11 +1,16 @@
 // --- AdMob Configuration ---
 // IMPORTANT: For development, always use AdMob's official test ad units.
 // Using live ads during development is against AdMob policy.
-import { BannerAdPluginEvents, RewardedAdPluginEvents, type RewardItem } from '@capacitor-community/admob';
+// This service is designed to be client-side only.
+
+// Dynamically import types to avoid server-side build errors
+type AdMobPlugin = import('@capacitor-community/admob').AdMobPlugin;
+type RewardItem = import('@capacitor-community/admob').RewardItem;
 
 class AdMobServiceImpl {
   private static instance: AdMobServiceImpl;
   private isInitialized = false;
+  private AdMob: AdMobPlugin | null = null;
 
   // Ad Unit IDs
   private readonly TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
@@ -23,14 +28,28 @@ class AdMobServiceImpl {
     return typeof window !== 'undefined' && (window as any).Capacitor?.isPluginAvailable('AdMob');
   }
 
+  private async getAdMobInstance(): Promise<AdMobPlugin | null> {
+    if (this.AdMob) {
+      return this.AdMob;
+    }
+    if (this.isAvailable()) {
+      const { AdMob } = await import('@capacitor-community/admob');
+      this.AdMob = AdMob;
+      return this.AdMob;
+    }
+    return null;
+  }
+
   async initialize(): Promise<void> {
     if (!this.isAvailable() || this.isInitialized) {
       if(this.isInitialized) console.log('AdMob already initialized.');
       return;
     }
+
     try {
-      const { AdMob } = await import('@capacitor-community/admob');
-      // Replace with your real device ID to see test ads on your phone
+      const AdMob = await this.getAdMobInstance();
+      if (!AdMob) return;
+      
       const testingDevices = ['YOUR_ADVERTISING_ID_HERE'];
       
       await AdMob.initialize({
@@ -45,11 +64,12 @@ class AdMobServiceImpl {
   }
 
   async showBanner(): Promise<void> {
-    if (!this.isAvailable() || !this.isInitialized) {
-        return;
-    }
+    if (!this.isInitialized) return;
+    
+    const AdMob = await this.getAdMobInstance();
+    if (!AdMob) return;
 
-    const { AdMob } = await import('@capacitor-community/admob');
+    const { BannerAdPluginEvents } = await import('@capacitor-community/admob');
     
     AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => {
       console.error('ADMOB FAILED TO LOAD:', error);
@@ -75,7 +95,8 @@ class AdMobServiceImpl {
   async hideBanner(): Promise<void> {
     if (!this.isAvailable()) return;
     try {
-      const { AdMob } = await import('@capacitor-community/admob');
+      const AdMob = await this.getAdMobInstance();
+      if (!AdMob) return;
       await AdMob.hideBanner();
       console.log('Banner ad hidden.');
     } catch (e) {
@@ -84,10 +105,11 @@ class AdMobServiceImpl {
   }
 
   async showInterstitialAd(): Promise<void> {
-    if (!this.isAvailable() || !this.isInitialized) return;
+    if (!this.isInitialized) return;
     console.log(`Preparing interstitial ad with ID: ${this.TEST_INTERSTITIAL_ID}`);
     try {
-      const { AdMob } = await import('@capacitor-community/admob');
+      const AdMob = await this.getAdMobInstance();
+      if (!AdMob) return;
       await AdMob.prepareInterstitial({
         adId: this.TEST_INTERSTITIAL_ID,
       });
@@ -99,14 +121,20 @@ class AdMobServiceImpl {
   }
 
   async showRewardedAd(): Promise<RewardItem | null> {
-    if (!this.isAvailable() || !this.isInitialized) {
-      console.error('AdMob not available or not initialized.');
+    if (!this.isInitialized) {
+      console.error('AdMob not initialized.');
       return null;
     }
     console.log(`Preparing rewarded ad with ID: ${this.TEST_REWARDED_ID}`);
 
     return new Promise(async (resolve) => {
-        const { AdMob } = await import('@capacitor-community/admob');
+        const AdMob = await this.getAdMobInstance();
+        if (!AdMob) {
+            resolve(null);
+            return;
+        }
+
+        const { RewardedAdPluginEvents } = await import('@capacitor-community/admob');
 
         try {
             const rewardListener = AdMob.addListener(RewardedAdPluginEvents.Rewarded, (reward: RewardItem) => {
