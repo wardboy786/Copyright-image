@@ -1,7 +1,7 @@
 // --- AdMob Configuration ---
 // IMPORTANT: For development, always use AdMob's official test ad units.
 // Using live ads during development is against AdMob policy.
-import type { RewardItem, BannerAdSize, BannerAdPosition, BannerAdPluginEvents, RewardedAdPluginEvents } from '@capacitor-community/admob';
+import type { RewardItem } from '@capacitor-community/admob';
 // Do not add any imports from '@capacitor-community/admob' at the top level.
 
 class AdMobServiceImpl {
@@ -50,21 +50,21 @@ class AdMobServiceImpl {
         return;
     }
 
-    const { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents } = await import('@capacitor-community/admob');
+    const { AdMob } = await import('@capacitor-community/admob');
     
-    AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error: any) => {
+    AdMob.addListener(AdMob.BannerAdPluginEvents.FailedToLoad, (error: any) => {
       console.error('ADMOB FAILED TO LOAD:', error);
     });
 
-    AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
+    AdMob.addListener(AdMob.BannerAdPluginEvents.Loaded, () => {
       console.log('Ad loaded successfully');
     });
 
     try {
       await AdMob.showBanner({
         adId: this.TEST_BANNER_ID,
-        adSize: BannerAdSize.ADAPTIVE_BANNER,
-        position: BannerAdPosition.BOTTOM_CENTER,
+        adSize: AdMob.BannerAdSize.ADAPTIVE_BANNER,
+        position: AdMob.BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
       });
     } catch (e) {
@@ -107,10 +107,10 @@ class AdMobServiceImpl {
     console.log(`Preparing rewarded ad with ID: ${this.TEST_REWARDED_ID}`);
 
     return new Promise(async (resolve) => {
-        const { AdMob, RewardedAdPluginEvents } = await import('@capacitor-community/admob');
+        const { AdMob } = await import('@capacitor-community/admob');
 
         try {
-            const rewardListener = AdMob.addListener(RewardedAdPluginEvents.Rewarded, (reward: RewardItem) => {
+            const rewardListener = AdMob.addListener(AdMob.RewardedAdPluginEvents.Rewarded, (reward: RewardItem) => {
                 console.log('Rewarded video ad reward received:', reward);
                 rewardListener.remove();
                 resolve(reward);
