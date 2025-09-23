@@ -6,13 +6,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/hooks/use-app-context';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, Loader2, Info, Film, Image as ImageIcon, X } from 'lucide-react';
+import { UploadCloud, Loader2, Info, Image as ImageIcon, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { RewardedAdDialog } from '@/components/copyright-sentry/rewarded-ad-dialog';
 import Image from 'next/image';
 
 function Loader() {
@@ -35,18 +34,17 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const [image, setImage] = useState<string | null>(null);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [isUserCreated, setIsUserCreated] = useState(false);
-  const [showRewardedAd, setShowRewardedAd] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached } = useAppContext();
+  const { addScan, isLimitReached, isPremium } = useAppContext();
 
-  const handleScan = async (isFreeScan: boolean = false) => {
+  const handleScan = async () => {
     if (!image) return;
 
-    if (isLimitReached && !isFreeScan) {
+    if (isLimitReached) {
       toast({
           title: 'Daily Limit Reached',
-          description: 'Watch an ad to get one more scan.',
+          description: 'Upgrade to Premium for unlimited scans.',
           variant: 'destructive',
         });
       return;
@@ -76,11 +74,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     setIsLoading(false);
   };
 
-  const handleRewardedAdComplete = () => {
-    // A scan is initiated, and we consider this the "free" one.
-    handleScan(true);
-  };
-
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
@@ -89,7 +82,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       if (isLimitReached) {
         toast({
           title: 'Daily Limit Reached',
-          description: 'Watch an ad for one more scan.',
+          description: 'Please upgrade to premium for unlimited scans.',
           variant: 'destructive'
         })
       }
@@ -108,7 +101,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [] },
     multiple: false,
-    disabled: isLoading,
+    disabled: isLoading || isLimitReached,
   });
   
   const reset = () => {
@@ -189,27 +182,12 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
             </CardContent>
         </Card>
 
-        {isLimitReached ? (
-            <div className="flex justify-center">
-                <Button size="lg" onClick={() => setShowRewardedAd(true)} disabled={!image} className="w-full max-w-sm rounded-full">
-                    <Film className="mr-2 h-4 w-4" />
-                    Watch Ad to Scan
-                </Button>
-            </div>
-        ) : (
-            <div className="flex justify-center">
-                <Button size="lg" onClick={() => handleScan()} disabled={!image || isLoading} className="w-full max-w-sm rounded-full">
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    Start Scan
-                </Button>
-            </div>
-        )}
-
-      <RewardedAdDialog 
-        open={showRewardedAd}
-        onOpenChange={setShowRewardedAd}
-        onAdWatched={handleRewardedAdComplete}
-      />
+        <div className="flex justify-center">
+            <Button size="lg" onClick={handleScan} disabled={!image || isLoading || isLimitReached} className="w-full max-w-sm rounded-full">
+                <ImageIcon className="mr-2 h-4 w-4" />
+                {isLimitReached ? 'Daily Limit Reached' : 'Start Scan'}
+            </Button>
+        </div>
     </div>
   );
 }

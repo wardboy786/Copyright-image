@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw, Download } from 'lucide-react';
-import { AdBanner } from './ad-banner';
 import { useAppContext } from '@/hooks/use-app-context';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -181,8 +180,6 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
         </CardContent>
       </Card>
       
-      {!isPremium && <AdBanner />}
-
       <Card className={cn("border-2 shadow-lg", assessmentConfig.borderColor, assessmentConfig.bgColor)}>
         <CardHeader className="flex flex-col items-center text-center gap-3 p-6">
            <assessmentConfig.Icon className={cn("w-12 h-12", assessmentConfig.color)} />
@@ -192,9 +189,9 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
           </div>
         </CardHeader>
         <CardFooter className="px-6 pb-6">
-            <Button variant="outline" className="w-full" onClick={handleExport}>
+            <Button variant="outline" className="w-full" onClick={handleExport} disabled={!isPremium}>
                 <Download className="w-4 h-4 mr-2" />
-                Export as PDF
+                {isPremium ? 'Export as PDF' : 'Upgrade to Export'}
             </Button>
         </CardFooter>
       </Card>

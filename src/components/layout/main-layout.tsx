@@ -6,14 +6,11 @@ import { Header } from './header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import { AdBanner } from '@/components/copyright-sentry/ad-banner';
 import { SplashScreen } from './splash-screen';
 import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
-import { AdMobService } from '@/services/admob';
-import { InterstitialAd } from '@/components/copyright-sentry/interstitial-ad';
 
 
 const menuItems = [
@@ -55,15 +52,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const { isInitialized } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
 
-  useEffect(() => {
-    // Initialize AdMob service once the app is ready and on the client
-    if (typeof window !== 'undefined') {
-        AdMobService.initialize().catch(err => {
-            console.error("Failed to initialize AdMob Service:", err);
-        });
-    }
-  }, []);
-
   if (showSplash && !isInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
   }
@@ -78,14 +66,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col flex-1">
           <Header />
           <main className="flex-1 p-4 md:p-6 lg:p-8 pb-32 md:pb-8">
-            <InterstitialAd />
             {children}
           </main>
-          {isMobile && (
-              <div className="fixed bottom-16 left-0 w-full z-40">
-                  <AdBanner />
-              </div>
-          )}
         </div>
         {isMobile && <BottomNavBar />}
         <Toaster />
