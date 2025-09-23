@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
-
+import dynamic from 'next/dynamic';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -20,6 +20,12 @@ const menuItems = [
   { href: '/premium', label: 'Premium', icon: Gem },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
+
+const AdMobController = dynamic(() =>
+  import('./admob-controller').then((mod) => mod.AdMobController),
+  { ssr: false }
+);
+
 
 function BottomNavBar() {
   const pathname = usePathname();
@@ -72,6 +78,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         </div>
         {isMobile && <BottomNavBar />}
         <Toaster />
+        <AdMobController />
       </div>
     </>
   );
