@@ -1,3 +1,4 @@
+
 // --- AdMob Configuration ---
 // IMPORTANT: For development, always use AdMob's official test ad units.
 // Using live ads during development is against AdMob policy.
@@ -24,13 +25,12 @@ class AdMobServiceImpl {
     return typeof window !== 'undefined' && (window as any).Capacitor?.isPluginAvailable('AdMob');
   }
 
-  private async getAdMobAndTypes() {
+  private async getAdMob() {
     if (!this.isAvailable()) {
       return null;
     }
     // Dynamically import everything at once
-    const admobModule = await import('@capacitor-community/admob');
-    return admobModule;
+    return await import('@capacitor-community/admob');
   }
 
   async initialize(): Promise<void> {
@@ -39,7 +39,7 @@ class AdMobServiceImpl {
       return;
     }
     
-    const admob = await this.getAdMobAndTypes();
+    const admob = await this.getAdMob();
     if (!admob) return;
 
     try {
@@ -57,7 +57,7 @@ class AdMobServiceImpl {
   }
 
   async showBanner(): Promise<void> {
-    const admob = await this.getAdMobAndTypes();
+    const admob = await this.getAdMob();
     if (!admob || !this.isInitialized) return;
 
     admob.AdMob.addListener(admob.BannerAdPluginEvents.FailedToLoad, (error: any) => {
@@ -81,7 +81,7 @@ class AdMobServiceImpl {
   }
 
   async hideBanner(): Promise<void> {
-    const admob = await this.getAdMobAndTypes();
+    const admob = await this.getAdMob();
     if (!admob) return;
     try {
       await admob.AdMob.hideBanner();
@@ -92,7 +92,7 @@ class AdMobServiceImpl {
   }
 
   async showInterstitialAd(): Promise<void> {
-    const admob = await this.getAdMobAndTypes();
+    const admob = await this.getAdMob();
     if (!admob || !this.isInitialized) return;
     
     console.log(`Preparing interstitial ad with ID: ${this.TEST_INTERSTITIAL_ID}`);
@@ -108,7 +108,7 @@ class AdMobServiceImpl {
   }
 
   async showRewardedAd(): Promise<any | null> {
-    const admob = await this.getAdMobAndTypes();
+    const admob = await this.getAdMob();
     if (!admob || !this.isInitialized) {
       console.error('AdMob not initialized.');
       return null;
@@ -118,7 +118,7 @@ class AdMobServiceImpl {
 
     return new Promise(async (resolve) => {
         try {
-            const rewardListener = admob.AdMob.addListener(admob.RewardedAdPluginEvents.Rewarded, (reward: import('@capacitor-community/admob').RewardItem) => {
+            const rewardListener = admob.AdMob.addListener(admob.RewardAdPluginEvents.Rewarded, (reward: import('@capacitor-community/admob').RewardItem) => {
                 console.log('Rewarded video ad reward received:', reward);
                 rewardListener.remove();
                 resolve(reward);
