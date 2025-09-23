@@ -1,15 +1,13 @@
 'use client';
 import { type AnalyzeImageForCopyrightInput, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 
-// The API base will be determined by the environment the app is running in.
-// In a browser, it will be a relative path '/api'.
-// In the Capacitor app, it will be the full server URL defined in capacitor.config.ts.
+// The API base will always be a relative path.
+// On the web, it calls the same domain.
+// In Capacitor with a `server.url`, it calls that URL.
 const API_BASE = '/api';
 
 export async function analyzeImageAction(input: AnalyzeImageForCopyrightInput): Promise<{ success: true, data: AnalyzeImageForCopyrightOutput } | { success: false, error: string }> {
   try {
-    // In Capacitor, fetch will automatically use the configured server.url as the base.
-    // In a regular browser, this will be a relative request to the same origin.
     const response = await fetch(`${API_BASE}/analyze`, {
         method: 'POST',
         headers: {
