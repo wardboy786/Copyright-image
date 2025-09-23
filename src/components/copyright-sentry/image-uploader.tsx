@@ -6,15 +6,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/hooks/use-app-context';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, Loader2, Info, Image as ImageIcon, X, Video } from 'lucide-react';
+import { UploadCloud, Loader2, Info, Image as ImageIcon, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import Image from 'next/image';
-import { useAdmob } from '@/hooks/use-admob';
 import { DailyLimitIndicator } from './daily-limit-indicator';
+import Link from 'next/link';
 
 function Loader() {
   return (
@@ -39,8 +39,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const [isUserCreated, setIsUserCreated] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached, grantExtraScan } = useAppContext();
-  const { showRewarded, showInterstitial } = useAdmob();
+  const { addScan, isLimitReached } = useAppContext();
 
   const handleScan = async () => {
     if (!imageFile || !imagePreview) return;
@@ -48,7 +47,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     if (isLimitReached) {
       toast({
           title: 'Daily Limit Reached',
-          description: 'Upgrade to Premium or watch an ad for an extra scan.',
+          description: 'Upgrade to Premium for unlimited scans.',
           variant: 'destructive',
         });
       return;
@@ -63,8 +62,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
         title: 'Scan Complete!',
         description: 'Your image has been successfully analyzed.',
       });
-      // Show an ad after a successful scan
-      await showInterstitial();
       onScanComplete(newScan);
     } else {
       toast({
@@ -75,25 +72,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     }
     setIsLoading(false);
   };
-  
-  const handleWatchAd = async () => {
-      setIsLoading(true);
-      const wasRewarded = await showRewarded();
-      if (wasRewarded) {
-          grantExtraScan();
-          toast({
-              title: 'Scan Unlocked',
-              description: 'You can now perform one more scan.',
-          });
-      } else {
-           toast({
-              title: 'Ad Not Completed',
-              description: 'The ad was closed before completion. No scan was granted.',
-              variant: 'destructive'
-          });
-      }
-      setIsLoading(false);
-  };
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -103,7 +81,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       if (isLimitReached) {
         toast({
           title: 'Daily Limit Reached',
-          description: 'Please upgrade to premium or watch an ad for an extra scan.',
+          description: 'Please upgrade to premium for unlimited scans.',
           variant: 'destructive'
         })
         return;
@@ -185,11 +163,12 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                 <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4">
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg">Daily Limit Reached</h3>
-                        <p className="text-muted-foreground text-sm mt-1">Watch a short ad to unlock one more scan for today.</p>
+                        <p className="text-muted-foreground text-sm mt-1">Upgrade to Premium for unlimited scans.</p>
                     </div>
-                    <Button onClick={handleWatchAd} disabled={isLoading} className="w-full sm:w-auto bg-primary/90 hover:bg-primary">
-                        <Video className="mr-2 h-4 w-4" />
-                        Watch Ad for a Scan
+                    <Button asChild className="w-full sm:w-auto bg-primary/90 hover:bg-primary">
+                        <Link href="/premium">
+                            Upgrade Now
+                        </Link>
                     </Button>
                 </CardContent>
             </Card>
