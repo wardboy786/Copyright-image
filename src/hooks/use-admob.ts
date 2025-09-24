@@ -45,7 +45,7 @@ const useAdMob = () => {
 
     try {
       const options: BannerAdOptions = {
-        adId: Capacitor.isPlatform('ios') ? AD_UNITS.BANNER.ios : AD_UNITS.BANNER.android,
+        adId: Capacitor.isPlatform('android') ? AD_UNITS.BANNER.android : AD_UNITS.BANNER.ios,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
@@ -69,7 +69,7 @@ const useAdMob = () => {
 
     return new Promise((resolve) => {
       const options: RewardedAdOptions = {
-        adId: Capacitor.isPlatform('ios') ? AD_UNITS.REWARDED.ios : AD_UNITS.REWARDED.android,
+        adId: Capacitor.isPlatform('android') ? AD_UNITS.REWARDED.android : AD_UNITS.REWARDED.ios,
         isTesting: true,
       };
 
