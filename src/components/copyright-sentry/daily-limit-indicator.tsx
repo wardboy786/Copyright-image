@@ -9,7 +9,7 @@ import { Button } from '../ui/button';
 import { MAX_FREE_SCANS } from '@/hooks/use-scans';
 
 export function DailyLimitIndicator() {
-  const { todaysScanCount, isPremium, isInitialized } = useAppContext();
+  const { todaysScanCount, isPremium, isInitialized, totalAllowedScans } = useAppContext();
 
   if (isPremium) {
     return (
@@ -32,7 +32,8 @@ export function DailyLimitIndicator() {
       )
   }
 
-  const progressValue = (todaysScanCount / MAX_FREE_SCANS) * 100;
+  const progressValue = (todaysScanCount / totalAllowedScans) * 100;
+  const scansLeft = totalAllowedScans - todaysScanCount;
 
   return (
     <div className="p-4">
@@ -43,7 +44,7 @@ export function DailyLimitIndicator() {
             <CardContent className="p-4 pt-0">
                 <div className="flex justify-between items-center mb-2 text-xs">
                     <span className="font-medium text-muted-foreground">Daily Limit</span>
-                    <span className="font-bold">{todaysScanCount} / {MAX_FREE_SCANS}</span>
+                    <span className="font-bold">{todaysScanCount} / {totalAllowedScans} ({Math.max(0, scansLeft)} left)</span>
                 </div>
                 <Progress value={progressValue} className="h-2 mb-4"/>
                 <Button size="sm" className="w-full" asChild>

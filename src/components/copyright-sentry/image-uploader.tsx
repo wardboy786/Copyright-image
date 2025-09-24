@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/hooks/use-app-context';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, Loader2, Info, Image as ImageIcon, X, Video } from 'lucide-react';
+import { UploadCloud, Loader2, Info, Image as ImageIcon, X, Video, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -16,6 +16,7 @@ import Image from 'next/image';
 import { DailyLimitIndicator } from './daily-limit-indicator';
 import Link from 'next/link';
 import useAdMob from '@/hooks/use-admob';
+import { MAX_REWARDED_SCANS } from '@/hooks/use-scans';
 
 
 function Loader() {
@@ -42,10 +43,18 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const [isUserCreated, setIsUserCreated] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached, isPremium, grantExtraScan } = useAppContext();
+  const { addScan, isLimitReached, isPremium, grantExtraScan, isRewardedScansLimitReached, rewardedScansUsed } = useAppContext();
   const { showRewarded } = useAdMob();
   
   const handleWatchAd = async () => {
+    if (isRewardedScansLimitReached) {
+        toast({
+            title: 'Rewarded Scan Limit Reached',
+            description: `You can watch ads for up to ${MAX_REWARDED_SCANS} extra scans per day. Please try again tomorrow or upgrade.`,
+            variant: 'destructive',
+        });
+        return;
+    }
     setIsWatchingAd(true);
     const rewarded = await showRewarded();
     if (rewarded) {
@@ -176,12 +185,12 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
             </CardContent>
         </Card>
         
-        {isLimitReached && !isPremium && (
+        {isLimitReached && !isPremium && !isRewardedScansLimitReached && (
             <Card className="shadow-lg shadow-primary/10 bg-muted/30">
                 <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4">
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg">Daily Limit Reached</h3>
-                        <p className="text-muted-foreground text-sm mt-1">Upgrade or watch an ad for one more scan.</p>
+                        <p className="text-muted-foreground text-sm mt-1">Upgrade or watch an ad for one more scan. ({MAX_REWARDED_SCANS - rewardedScansUsed} remaining)</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <Button onClick={handleWatchAd} disabled={isWatchingAd} variant="outline" className="w-full sm:w-auto">
@@ -194,6 +203,23 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                             </Link>
                         </Button>
                     </div>
+                </CardContent>
+            </Card>
+        )}
+        
+        {isLimitReached && !isPremium && isRewardedScansLimitReached && (
+            <Card className="shadow-lg shadow-amber-500/10 bg-amber-500/10 border border-amber-500/30">
+                <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4">
+                     <ShieldCheck className="w-10 h-10 text-amber-500 flex-shrink-0" />
+                    <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-amber-400">All Free Scans Used</h3>
+                        <p className="text-muted-foreground text-sm mt-1">You've used all of your daily and rewarded scans. Upgrade to Premium for unlimited scans or check back tomorrow.</p>
+                    </div>
+                    <Button asChild className="w-full sm:w-auto bg-primary/90 hover:bg-primary mt-4 sm:mt-0">
+                        <Link href="/premium">
+                            Upgrade to Premium
+                        </Link>
+                    </Button>
                 </CardContent>
             </Card>
         )}

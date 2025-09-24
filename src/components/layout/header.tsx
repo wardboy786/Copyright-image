@@ -3,32 +3,33 @@ import { usePathname } from 'next/navigation';
 import { Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useAppContext } from '@/hooks/use-app-context';
-import { MAX_FREE_SCANS } from '@/hooks/use-scans';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 
 function DailyLimitCounter() {
-    const { isInitialized, isPremium, todaysScanCount } = useAppContext();
+    const { isInitialized, isPremium, todaysScanCount, totalAllowedScans } = useAppContext();
 
     if (!isInitialized || isPremium) {
         return null;
     }
+
+    const scansLeft = totalAllowedScans - todaysScanCount;
 
     return (
         <div className="flex items-center gap-2 text-sm font-semibold text-primary">
             <Zap className="w-5 h-5"/>
             <AnimatePresence mode="wait" initial={false}>
                 <motion.span
-                    key={todaysScanCount}
+                    key={scansLeft}
                     initial={{ y: 5, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: -5, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {MAX_FREE_SCANS - todaysScanCount}
+                    {Math.max(0, scansLeft)}
                 </motion.span>
             </AnimatePresence>
-             <span>/ {MAX_FREE_SCANS}</span>
+             <span>/ {totalAllowedScans}</span>
         </div>
     )
 }

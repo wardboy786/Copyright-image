@@ -5,6 +5,7 @@ import { type ScanResult, type AnalyzeImageForCopyrightOutput } from '@/lib/type
 import { isToday } from 'date-fns';
 
 export const MAX_FREE_SCANS = 5;
+export const MAX_REWARDED_SCANS = 15;
 const SCANS_STORAGE_KEY = 'imagerights-ai-scans';
 const PREMIUM_STORAGE_KEY = 'imagerights-ai-premium';
 const EXTRA_SCANS_KEY = 'imagerights-ai-extra-scans';
@@ -23,6 +24,9 @@ export interface UseScansReturn {
   deleteScans: (ids: string[]) => void;
   scansToday: ScanResult[];
   grantExtraScan: () => void;
+  rewardedScansUsed: number;
+  isRewardedScansLimitReached: boolean;
+  totalAllowedScans: number;
 }
 
 export function useScans(): UseScansReturn {
@@ -112,19 +116,26 @@ export function useScans(): UseScansReturn {
 
   const todaysScanCount = scansToday.length;
 
-  const totalAllowedScans = useMemo(() => {
+  const rewardedScansUsed = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    let extra = 0;
     if (extraScans && extraScans.date === todayStr) {
-      extra = extraScans.count;
+      return extraScans.count;
     }
-    return MAX_FREE_SCANS + extra;
+    return 0;
   }, [extraScans]);
+
+  const totalAllowedScans = useMemo(() => {
+    return MAX_FREE_SCANS + rewardedScansUsed;
+  }, [rewardedScansUsed]);
   
   const isLimitReached = useMemo(() => {
     if (!isInitialized || isPremium) return false;
     return todaysScanCount >= totalAllowedScans;
   }, [isPremium, todaysScanCount, isInitialized, totalAllowedScans]);
+
+  const isRewardedScansLimitReached = useMemo(() => {
+    return rewardedScansUsed >= MAX_REWARDED_SCANS;
+  }, [rewardedScansUsed]);
 
   const clearHistory = useCallback(() => {
     saveScans([]);
@@ -137,14 +148,18 @@ export function useScans(): UseScansReturn {
   }, [scans, saveScans]);
   
   const grantExtraScan = useCallback(() => {
+    if (rewardedScansUsed >= MAX_REWARDED_SCANS) {
+      console.log("Cannot grant extra scan, daily limit for rewarded scans reached.");
+      return;
+    }
     const todayStr = new Date().toISOString().split('T')[0];
     const newExtraScans = {
-      count: (extraScans?.date === todayStr ? extraScans.count : 0) + 1,
+      count: rewardedScansUsed + 1,
       date: todayStr,
     };
     setExtraScans(newExtraScans);
     localStorage.setItem(EXTRA_SCANS_KEY, JSON.stringify(newExtraScans));
-  }, [extraScans]);
+  }, [rewardedScansUsed]);
 
   return { 
     scans, 
@@ -159,5 +174,8 @@ export function useScans(): UseScansReturn {
     deleteScans,
     scansToday,
     grantExtraScan,
+    rewardedScansUsed,
+    isRewardedScansLimitReached,
+    totalAllowedScans
   };
 }
