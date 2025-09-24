@@ -1,8 +1,9 @@
 'use client';
-import { AdMob } from '@capacitor-community/admob';
+import { AdMob, BannerAdPluginEvents, BannerAdSize } from '@capacitor-community/admob';
 import { useEffect } from 'react';
 import useAdMob from '@/hooks/use-admob';
 import { useAppContext } from '@/hooks/use-app-context';
+import { PluginListenerHandle } from '@capacitor/core';
 
 export function AdMobController({
     setAdHeight
@@ -13,27 +14,35 @@ export function AdMobController({
   const { isPremium, isInitialized } = useAppContext();
 
   useEffect(() => {
-    if (isInitialized && !isPremium) {
-      const initAndShow = async () => {
-        await initialize();
-        showBanner();
-      };
-      initAndShow();
+    let listener: PluginListenerHandle | null = null;
 
-      // Listen for banner ad size changes
-      const listener = AdMob.addListener('bannerAdSize', (info) => {
-        setAdHeight(info.height);
-      });
+    const initAds = async () => {
+      if (isInitialized && !isPremium) {
+        try {
+          await initialize();
+          await showBanner();
 
-      // Cleanup on component unmount
-      return () => {
-        // The listener object from this plugin does not have a `remove` method.
-        // The correct way to clean up is to call `removeAllListeners`.
-        AdMob.removeAllListeners();
-      };
-    } else {
+          // Listen for banner ad size changes
+          listener = await AdMob.addListener(BannerAdPluginEvents.Size, (info: BannerAdSize) => {
+            setAdHeight(info.height);
+          });
+        } catch (error) {
+            console.error("Error initializing or showing ads:", error);
+            setAdHeight(0);
+        }
+      } else {
         setAdHeight(0);
-    }
+      }
+    };
+
+    initAds();
+
+    // Cleanup on component unmount
+    return () => {
+      if (listener) {
+        listener.remove();
+      }
+    };
   }, [isInitialized, isPremium, initialize, showBanner, setAdHeight]);
 
   return null; // This component does not render anything
