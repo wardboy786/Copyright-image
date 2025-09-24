@@ -80,6 +80,7 @@ export function useScans(): UseScansReturn {
   
   const setPremiumStatus = useCallback((status: boolean) => {
     setIsPremium(status);
+    console.log(`Premium status set to: ${status}`);
      if (typeof window !== 'undefined') {
       localStorage.setItem(PREMIUM_STORAGE_KEY, JSON.stringify(status));
     }
