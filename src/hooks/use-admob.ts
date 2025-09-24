@@ -31,7 +31,7 @@ const useAdMob = () => {
       const options: BannerAdOptions = {
         adId: 'ca-app-pub-3940256099942544/6300978111', // Test banner ad ID
         position: BannerAdPosition.BOTTOM_CENTER,
-        margin: 65, // Set to 0, we'll handle spacing with CSS
+        margin: 64, // Margin for the nav bar
         adSize: BannerAdSize.BANNER,
         isTesting: true,
       };

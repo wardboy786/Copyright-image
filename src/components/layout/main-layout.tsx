@@ -29,20 +29,12 @@ const AdMobController = dynamic(
 
 function BottomNavBar() {
   const pathname = usePathname();
-  const { isPremium } = useAppContext();
-
-  // The base height of the nav bar is h-16 (4rem or 64px)
-  // We add space for the banner ad (50px) + the safe area inset.
-  const adSpace = isPremium ? '0px' : '50px';
 
   return (
     <nav 
       className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden"
       style={{
-        // `env(safe-area-inset-bottom)` is the space for the home bar on iOS.
-        // We add the ad height to this to push the nav bar above the ad.
         paddingBottom: `env(safe-area-inset-bottom)`,
-        bottom: `calc(${adSpace} + env(safe-area-inset-bottom))`
       }}
     >
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
@@ -76,10 +68,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
   }
   
-  // Base padding for nav bar (h-16 = 4rem = 64px)
-  // Extra padding for ad (50px) + safe area.
-  // This calc is a bit more robust for layout.
-  const mobilePaddingBottom = isPremium ? `calc(4rem + env(safe-area-inset-bottom))` : `calc(4rem + 50px + env(safe-area-inset-bottom))`;
+  const mobilePaddingBottom = isPremium ? `calc(4rem + env(safe-area-inset-bottom))` : `114px`;
 
   return (
     <>
