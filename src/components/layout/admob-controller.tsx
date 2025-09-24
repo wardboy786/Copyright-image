@@ -1,5 +1,5 @@
 'use client';
-import { AdMob, BannerAdPluginEvents, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
+import { AdMob, BannerAdPluginEvents, BannerAdSize } from '@capacitor-community/admob';
 import { useEffect } from 'react';
 import useAdMob from '@/hooks/use-admob';
 import { useAppContext } from '@/hooks/use-app-context';
