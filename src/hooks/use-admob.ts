@@ -1,5 +1,5 @@
 'use client';
-import { AdMob, AdMobRewardItem } from '@capacitor-community/admob';
+import { AdMob, AdMobRewardItem, RewardAdOptions, BannerAdOptions, BannerAdPosition, BannerAdSize } from '@capacitor-community/admob';
 import { Toast } from '@capacitor/toast';
 import { Capacitor } from '@capacitor/core';
 
@@ -25,12 +25,12 @@ const useAdMob = () => {
     try {
       await AdMob.showBanner({
         adId: 'ca-app-pub-3940256099942544/6300978111', // Test banner ad ID
-        position: 'BOTTOM_CENTER',
+        position: 'BOTTOM_CENTER' as any,
         margin: 0,
-        adSize: 'BANNER',
+        adSize: 'BANNER' as any,
       });
       console.log('Banner ad shown successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to show banner ad:', error);
     }
   };
@@ -80,10 +80,10 @@ const useAdMob = () => {
         resolve(false);
       });
 
-      AdMob.prepareRewardedVideoAd({
+      AdMob.prepareRewardVideoAd({
         adId: 'ca-app-pub-3940256099942544/5224354917', // Test rewarded ad ID
       })
-      .then(() => AdMob.showRewardedVideoAd())
+      .then(() => AdMob.showRewardVideoAd())
       .catch((error: any) => {
         console.error('Error preparing/showing rewarded ad:', error);
         cleanup();
