@@ -1,7 +1,35 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { type CdvPurchase, type Product, type Offer, type Transaction } from 'cordova-plugin-purchase';
+
+// Re-define types locally to avoid Next.js build errors with non-module packages.
+export type Product = {
+  id: string;
+  title: string;
+  description: string;
+  offers: Offer[];
+  // ... other product properties
+};
+
+export type Offer = {
+  id: string;
+  price: {
+      amount: number;
+      formatted: string;
+  };
+  // ... other offer properties
+};
+
+export type Transaction = {
+  products: { id: string }[];
+  isActive: boolean;
+  // ... other transaction properties
+};
+
+export type CdvPurchase = {
+    store: any; // Simplified for this context
+};
+
 
 export const MONTHLY_PLAN_ID = 'monthly_premium';
 export const YEARLY_PLAN_ID = 'yearly_premium';
@@ -12,13 +40,13 @@ export const useBilling = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkPremiumStatus = useCallback(async (store: CdvPurchase.Store) => {
+  const checkPremiumStatus = useCallback(async (store: any) => {
     if (!Capacitor.isNativePlatform()) {
       setIsPremium(false);
       return false;
     }
     try {
-        const transactions = await store.ownedPurchases();
+        const transactions: Transaction[] = await store.ownedPurchases();
         const hasMonthly = transactions.some(t => t.products.some(p => p.id === MONTHLY_PLAN_ID) && t.isActive);
         const hasYearly = transactions.some(t => t.products.some(p => p.id === YEARLY_PLAN_ID) && t!.isActive);
         
@@ -62,14 +90,14 @@ export const useBilling = () => {
           const fetchedProducts = await store.getProducts([MONTHLY_PLAN_ID, YEARLY_PLAN_ID]);
           setProducts(fetchedProducts);
 
-          store.when().verified((receipt) => {
+          store.when().verified((receipt: any) => {
             receipt.finish();
-          }).unverified((receipt) => {
+          }).unverified((receipt: any) => {
             console.warn('Purchase unverified');
             receipt.finish();
           }).productUpdated(() => {
             checkPremiumStatus(store);
-          }).approved(async (transaction: Transaction) => {
+          }).approved(async (transaction: any) => {
             const isVerified = await transaction.verify();
             if (isVerified) {
               transaction.finish();

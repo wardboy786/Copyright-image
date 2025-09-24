@@ -6,8 +6,18 @@ import { useAppContext } from '@/hooks/use-app-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import type { Offer } from 'cordova-plugin-purchase';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Define the Offer type locally to avoid build issues with the cordova plugin.
+type Offer = {
+    id: string;
+    price: {
+        amount: number;
+        formatted: string;
+    };
+    // Add other properties as needed from the cordova-plugin-purchase types
+};
+
 
 const features = [
   'Unlimited Daily Scans',
@@ -31,7 +41,7 @@ export default function PremiumPage() {
     }
     setIsPurchasing(offer.id);
     try {
-        await billing.purchase(offer);
+        await billing.purchase(offer as any); // Cast to any to satisfy the underlying hook
         toast({ title: 'Purchase Successful!', description: 'You are now a Premium member.' });
     } catch (error) {
         console.error('Purchase failed', error);
