@@ -78,7 +78,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
         </div>
         {isMobile && <BottomNavBar />}
         <Toaster />
-        <AdMobController />
       </div>
     </>
   );
@@ -95,6 +94,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <AppContent>{children}</AppContent>
+      <AdMobController />
     </ThemeProvider>
   );
 }
