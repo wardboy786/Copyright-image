@@ -20,6 +20,7 @@ export function AdMobController({
 
   useEffect(() => {
     if (!isInitialized || isPremium || !Capacitor.isNativePlatform()) {
+      // No ad will be shown, so ensure ad height is 0
       setAdHeight(0);
       return;
     }
@@ -29,21 +30,6 @@ export function AdMobController({
     const initAds = async () => {
       try {
         await initialize();
-
-        // Listen for banner ad size changes using Capacitor events
-        // This is the correct, documented way to get the size.
-        listener = await AdMob.addListener(
-          BannerAdPluginEvents.SizeChanged,
-          (size: AdMobBannerSize) => {
-            console.log('Banner ad size changed:', size);
-            if (size && typeof size.height === 'number') {
-              setAdHeight(size.height);
-            } else {
-              setAdHeight(0);
-            }
-          }
-        );
-
         await showBanner();
       } catch (error) {
         console.error('Error initializing or showing ads:', error);
@@ -58,6 +44,7 @@ export function AdMobController({
       if (listener) {
         listener.remove();
       }
+      AdMob.hideBanner();
     };
   }, [isInitialized, isPremium, initialize, showBanner, setAdHeight]);
 

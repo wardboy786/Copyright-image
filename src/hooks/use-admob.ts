@@ -31,7 +31,7 @@ const useAdMob = () => {
       const options: BannerAdOptions = {
         adId: 'ca-app-pub-3940256099942544/6300978111', // Test banner ad ID
         position: BannerAdPosition.BOTTOM_CENTER,
-        margin: 0,
+        margin: 64, // Position the ad above the 64px bottom nav bar
         adSize: BannerAdSize.BANNER,
       };
       await AdMob.showBanner(options);

@@ -32,7 +32,8 @@ function BottomNavBar({ adHeight }: { adHeight: number }) {
   return (
     <nav 
       className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden"
-      style={{ bottom: `${adHeight}px` }}
+      // The ad will now have its own margin, so we don't need to adjust the nav bar
+      // style={{ bottom: `${adHeight}px` }}
     >
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
         {menuItems.map((item) => (
@@ -62,12 +63,13 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [showSplash, setShowSplash] = useState(true);
   const { isPremium } = useAppContext();
   const [adHeight, setAdHeight] = useState(0);
-
-  const pb = isMobile ? `pb-[${80 + adHeight}px]` : 'pb-8';
   
   if (showSplash && !isAppContextInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
   }
+
+  // The total padding at the bottom will be for the nav bar (64px) and the ad (50px standard banner)
+  const mobilePaddingBottom = isPremium ? '80px' : '130px';
 
   return (
     <>
@@ -80,7 +82,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
           <Header />
           <main 
             className="flex-1 p-4 md:p-6 lg:p-8"
-            style={{ paddingBottom: isMobile ? `${80 + adHeight}px` : '32px' }}
+            style={{ paddingBottom: isMobile ? mobilePaddingBottom : '32px' }}
           >
             {children}
           </main>
