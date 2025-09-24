@@ -1,9 +1,10 @@
 'use client';
-import { AdMob, BannerAdPluginEvents, BannerAdSize } from '@capacitor-community/admob';
+import { AdMob, BannerAdPluginEvents, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
 import { useEffect } from 'react';
 import useAdMob from '@/hooks/use-admob';
 import { useAppContext } from '@/hooks/use-app-context';
 import { PluginListenerHandle } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 
 export function AdMobController({
     setAdHeight
@@ -14,24 +15,31 @@ export function AdMobController({
   const { isPremium, isInitialized } = useAppContext();
 
   useEffect(() => {
+    if (!isInitialized || isPremium || !Capacitor.isNativePlatform()) {
+      setAdHeight(0);
+      return;
+    }
+
     let listener: PluginListenerHandle | null = null;
 
     const initAds = async () => {
-      if (isInitialized && !isPremium) {
-        try {
-          await initialize();
-          await showBanner();
-
-          // Listen for banner ad size changes using the correct event
-          listener = await AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: BannerAdSize) => {
+      try {
+        await initialize();
+        
+        // Listen for banner ad size changes using the correct event
+        listener = await AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: BannerAdSize) => {
+          if (size && typeof size.height === 'number') {
             setAdHeight(size.height);
-          });
-        } catch (error) {
-            console.error("Error initializing or showing ads:", error);
+          } else {
             setAdHeight(0);
-        }
-      } else {
-        setAdHeight(0);
+          }
+        });
+
+        await showBanner();
+
+      } catch (error) {
+          console.error("Error initializing or showing ads:", error);
+          setAdHeight(0);
       }
     };
 
