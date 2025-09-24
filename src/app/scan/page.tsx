@@ -24,21 +24,29 @@ export default function ScanPage() {
     if (isInitialized) {
       if (scanId) {
         const foundScan = getScanById(scanId);
-        setCurrentScan(foundScan);
-      } else {
+        // Only update if the scanId from URL is different from the one in state
+        if (foundScan && foundScan.id !== currentScan?.id) {
+          setCurrentScan(foundScan);
+        } else if (!foundScan) {
+          setCurrentScan(null); // Scan from URL not found
+        }
+      } else if (currentScan === undefined) {
+        // Only set to null on initial load if there's no scanId and no scan in state
         setCurrentScan(null);
       }
     }
-  }, [scanId, getScanById, isInitialized]);
+  }, [scanId, getScanById, isInitialized, currentScan?.id]);
 
 
   const handleScanComplete = (scan: ScanResult) => {
-    // Navigate to the same page with the new scan's ID as a query param
+    setCurrentScan(scan);
+    // Navigate to update URL, but the component now relies on state
     router.push(`/scan?id=${scan.id}`, { scroll: false });
   };
 
   const handleScanAnother = () => {
-    // Navigate back to the uploader by removing query params
+    setCurrentScan(null);
+    // Navigate back to the clean URL
     router.push('/scan', { scroll: false });
   };
 
@@ -53,7 +61,7 @@ export default function ScanPage() {
     );
   }
   
-  // Scan not found error
+  // Scan not found error when coming from a direct URL link
   if (scanId && currentScan === null) {
      return (
       <Alert variant="destructive">
@@ -68,7 +76,7 @@ export default function ScanPage() {
   return (
     <div className="flex flex-col gap-8">
       <AnimatePresence mode="wait">
-        {!scanId || !currentScan ? (
+        {!currentScan ? (
           <motion.div
             key="uploader"
             initial={{ opacity: 0, y: 20 }}
