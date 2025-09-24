@@ -27,8 +27,6 @@ export interface UseScansReturn {
   rewardedScansUsed: number;
   isRewardedScansLimitReached: boolean;
   totalAllowedScans: number;
-  isScanning: boolean;
-  scanProgress: number;
   startScan: (file: File, isAi: boolean, isUser: boolean, preview: string) => Promise<ScanResult | { error: string }>;
 }
 
@@ -37,9 +35,7 @@ export function useScans(): UseScansReturn {
   const [isPremium, setIsPremium] = useState<boolean>(true); // Default to premium
   const [extraScans, setExtraScans] = useState<{ count: number; date: string } | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-
+  
   // Load from local storage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -80,27 +76,6 @@ export function useScans(): UseScansReturn {
 
     setIsInitialized(true);
   }, []);
-  
-  useEffect(() => {
-    let timer: NodeJS.Timeout | undefined;
-    if (isScanning) {
-      setScanProgress(0);
-      let progress = 0;
-      timer = setInterval(() => {
-        progress += 5; // Simulate progress
-        if (progress > 95) { // Don't let it reach 100 until it's actually done
-          clearInterval(timer);
-          return;
-        }
-        setScanProgress(progress);
-      }, 500);
-    } else {
-      setScanProgress(100);
-       setTimeout(() => setScanProgress(0), 500); // Reset after completion animation
-    }
-    return () => clearInterval(timer);
-  }, [isScanning]);
-
 
   const saveScans = useCallback((newScans: ScanResult[]) => {
     setScans(newScans);
@@ -132,7 +107,6 @@ export function useScans(): UseScansReturn {
   }, [scans, saveScans]);
   
   const startScan = useCallback(async (file: File, isAi: boolean, isUser: boolean, preview: string) => {
-    setIsScanning(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -156,8 +130,6 @@ export function useScans(): UseScansReturn {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       return { error: `Failed to analyze image: ${errorMessage}` };
-    } finally {
-      setIsScanning(false);
     }
   }, [addScan]);
 
@@ -234,8 +206,6 @@ export function useScans(): UseScansReturn {
     rewardedScansUsed,
     isRewardedScansLimitReached,
     totalAllowedScans,
-    isScanning,
-    scanProgress,
     startScan,
   };
 }

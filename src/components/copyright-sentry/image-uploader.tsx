@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 
 
 export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanResult) => void; }) {
+  const [isLoading, setIsLoading] = useState(false);
   const [isWatchingAd, setIsWatchingAd] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -28,7 +29,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   
   const { toast } = useToast();
   const router = useRouter();
-  const { isLimitReached, isPremium, grantExtraScan, isRewardedScansLimitReached, rewardedScansUsed, startScan, isScanning } = useAppContext();
+  const { isLimitReached, isPremium, grantExtraScan, isRewardedScansLimitReached, rewardedScansUsed, startScan } = useAppContext();
   const { showRewarded } = useAdMob();
   
   const handleWatchAd = async () => {
@@ -64,11 +65,12 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       return;
     }
     
-    // We don't need to set a local loading state anymore
+    setIsLoading(true);
     const result = await startScan(imageFile, isAiGenerated, isUserCreated, imagePreview);
     
     // Reset the uploader UI
     reset();
+    setIsLoading(false);
 
     if ('id' in result) { // This is a successful ScanResult
       toast({
@@ -81,7 +83,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
           </Button>
         ),
       });
-      // The onScanComplete prop might not be needed anymore, but we'll call it for now
       onScanComplete(result);
     } else { // This is an error object
       toast({
@@ -97,7 +98,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       const file = acceptedFiles[0];
       if (!file) return;
       
-      if (isScanning) {
+      if (isLoading) {
         toast({
           title: 'Scan in Progress',
           description: 'Please wait for the current scan to finish before starting a new one.',
@@ -123,14 +124,14 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       };
       reader.readAsDataURL(file);
     },
-    [isLimitReached, toast, isPremium, isScanning]
+    [isLimitReached, toast, isPremium, isLoading]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [] },
     multiple: false,
-    disabled: isScanning,
+    disabled: isLoading,
   });
   
   const reset = () => {
@@ -149,7 +150,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                     className={cn(
                     'w-full rounded-lg transition-colors flex flex-col items-center justify-center p-8 text-center cursor-pointer min-h-[250px] border-4 border-dashed relative overflow-hidden',
                     isDragActive ? 'bg-primary/10 border-primary' : 'border-border/50 hover:bg-muted/50 hover:border-muted-foreground/20',
-                    isScanning && 'cursor-not-allowed opacity-50'
+                    isLoading && 'cursor-not-allowed opacity-50'
                     )}
                 >
                     <input {...getInputProps()} />
@@ -180,7 +181,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                     </AnimatePresence>
                 </div>
                  {imagePreview && (
-                    <Button variant="destructive" size="icon" className="absolute top-6 right-6 z-10 rounded-full" onClick={reset} disabled={isScanning}>
+                    <Button variant="destructive" size="icon" className="absolute top-6 right-6 z-10 rounded-full" onClick={reset} disabled={isLoading}>
                         <X className="h-4 w-4"/>
                     </Button>
                  )}
@@ -195,7 +196,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                         <p className="text-muted-foreground text-sm mt-1">Upgrade or watch an ad for one more scan. ({MAX_REWARDED_SCANS - rewardedScansUsed} remaining)</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <Button onClick={handleWatchAd} disabled={isWatchingAd || isScanning} variant="outline" className="w-full sm:w-auto">
+                        <Button onClick={handleWatchAd} disabled={isWatchingAd || isLoading} variant="outline" className="w-full sm:w-auto">
                           {isWatchingAd ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Video className="w-4 h-4 mr-2"/>}
                           Watch Ad for 1 Scan
                         </Button>
@@ -239,7 +240,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                             id="ai-generated"
                             checked={isAiGenerated}
                             onCheckedChange={setIsAiGenerated}
-                            disabled={isScanning}
+                            disabled={isLoading}
                         />
                         </div>
                         <div className="flex items-center justify-between rounded-lg border p-4">
@@ -251,15 +252,15 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                             id="user-created"
                             checked={isUserCreated}
                             onCheckedChange={setIsUserCreated}
-                            disabled={isScanning}
+                            disabled={isLoading}
                         />
                         </div>
                     </CardContent>
                 </Card>
                 <div className="flex justify-center">
-                    <Button size="lg" onClick={handleScan} disabled={!imageFile || isScanning} className="w-full max-w-sm rounded-full">
-                        {isScanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ImageIcon className="mr-2 h-4 w-4" />}
-                        {isScanning ? 'Scanning...' : 'Start Scan'}
+                    <Button size="lg" onClick={handleScan} disabled={!imageFile || isLoading} className="w-full max-w-sm rounded-full">
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ImageIcon className="mr-2 h-4 w-4" />}
+                        {isLoading ? 'Scanning...' : 'Start Scan'}
                     </Button>
                 </div>
             </>
