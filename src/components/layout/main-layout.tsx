@@ -37,7 +37,7 @@ function BottomNavBar() {
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden"
+      className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t"
       style={{
         paddingBottom: `env(safe-area-inset-bottom)`,
         // The ad banner has a margin of 64px, so we don't need to offset the nav bar itself.
