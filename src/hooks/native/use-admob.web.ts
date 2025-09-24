@@ -20,7 +20,17 @@ const useAdMob = () => {
       return Promise.resolve(false);
   }
 
-  return { initialize, showBanner, showRewarded };
+  const prepareInterstitial = async (): Promise<void> => {
+    console.log('AdMob: Prepare Interstitial Ad (Web Mock)');
+    return Promise.resolve();
+  }
+
+  const showInterstitial = async (): Promise<void> => {
+    console.log('AdMob: Show Interstitial Ad (Web Mock)');
+    return Promise.resolve();
+  }
+
+  return { initialize, showBanner, showRewarded, prepareInterstitial, showInterstitial };
 };
 
 export default useAdMob;

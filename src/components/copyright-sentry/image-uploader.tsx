@@ -42,8 +42,8 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const [isUserCreated, setIsUserCreated] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached, isPremium, grantExtraScan } = useAppContext();
-  const { showRewarded } = useAdMob();
+  const { addScan, isLimitReached, isPremium, grantExtraScan, shouldShowInterstitial, interstitialAdClosed } = useAppContext();
+  const { showRewarded, prepareInterstitial, showInterstitial } = useAdMob();
   
   const handleWatchAd = async () => {
     setIsWatchingAd(true);
@@ -79,6 +79,13 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
         title: 'Scan Complete!',
         description: 'Your image has been successfully analyzed.',
       });
+      
+      if (shouldShowInterstitial()) {
+        await prepareInterstitial();
+        await showInterstitial();
+        interstitialAdClosed();
+      }
+
       onScanComplete(newScan);
     } else {
       toast({

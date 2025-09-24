@@ -5,9 +5,11 @@ import { type ScanResult, type AnalyzeImageForCopyrightOutput } from '@/lib/type
 import { isToday } from 'date-fns';
 
 export const MAX_FREE_SCANS = 5;
+const INTERSTITIAL_AD_INTERVAL = 3;
 const SCANS_STORAGE_KEY = 'imagerights-ai-scans';
 const PREMIUM_STORAGE_KEY = 'imagerights-ai-premium';
 const EXTRA_SCANS_KEY = 'imagerights-ai-extra-scans';
+const INTERSTITIAL_COUNTER_KEY = 'imagerights-ai-interstitial-counter';
 
 
 export interface UseScansReturn {
@@ -23,12 +25,15 @@ export interface UseScansReturn {
   deleteScans: (ids: string[]) => void;
   scansToday: ScanResult[];
   grantExtraScan: () => void;
+  shouldShowInterstitial: () => boolean;
+  interstitialAdClosed: () => void;
 }
 
 export function useScans(): UseScansReturn {
   const [scans, setScans] = useState<ScanResult[]>([]);
   const [isPremium, setIsPremium] = useState<boolean>(true); // Default to premium
   const [extraScans, setExtraScans] = useState<{ count: number; date: string } | null>(null);
+  const [interstitialCounter, setInterstitialCounter] = useState(0);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   // Load from local storage on mount
@@ -38,6 +43,7 @@ export function useScans(): UseScansReturn {
     let storedScans: ScanResult[] = [];
     let storedPremium = true;
     let storedExtraScans: { count: number; date: string } | null = null;
+    let storedInterstitialCounter = 0;
 
     try {
       const scansItem = localStorage.getItem(SCANS_STORAGE_KEY);
@@ -48,6 +54,10 @@ export function useScans(): UseScansReturn {
 
       const extraScansItem = localStorage.getItem(EXTRA_SCANS_KEY);
       if (extraScansItem) storedExtraScans = JSON.parse(extraScansItem);
+      
+      const interstitialCounterItem = localStorage.getItem(INTERSTITIAL_COUNTER_KEY);
+      if (interstitialCounterItem) storedInterstitialCounter = JSON.parse(interstitialCounterItem);
+
 
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
@@ -55,10 +65,12 @@ export function useScans(): UseScansReturn {
       localStorage.removeItem(SCANS_STORAGE_KEY);
       localStorage.removeItem(PREMIUM_STORAGE_KEY);
       localStorage.removeItem(EXTRA_SCANS_KEY);
+      localStorage.removeItem(INTERSTITIAL_COUNTER_KEY);
     }
     
     setScans(storedScans);
     setIsPremium(storedPremium);
+    setInterstitialCounter(storedInterstitialCounter);
     
     // Reset extra scans if it's a new day
     if (storedExtraScans && isToday(new Date(storedExtraScans.date))) {
@@ -96,8 +108,15 @@ export function useScans(): UseScansReturn {
     };
     const updatedScans = [newScan, ...scans];
     saveScans(updatedScans);
+
+    if (!isPremium) {
+        const newCount = interstitialCounter + 1;
+        setInterstitialCounter(newCount);
+        localStorage.setItem(INTERSTITIAL_COUNTER_KEY, JSON.stringify(newCount));
+    }
+
     return newScan;
-  }, [scans, saveScans]);
+  }, [scans, saveScans, isPremium, interstitialCounter]);
 
   const getScanById = useCallback((id: string): ScanResult | undefined => {
     return scans.find(scan => scan.id === id);
@@ -144,6 +163,16 @@ export function useScans(): UseScansReturn {
     localStorage.setItem(EXTRA_SCANS_KEY, JSON.stringify(newExtraScans));
   }, [extraScans]);
 
+  const shouldShowInterstitial = useCallback(() => {
+    if (isPremium) return false;
+    return interstitialCounter >= INTERSTITIAL_AD_INTERVAL;
+  }, [isPremium, interstitialCounter]);
+
+  const interstitialAdClosed = useCallback(() => {
+    setInterstitialCounter(0);
+    localStorage.setItem(INTERSTITIAL_COUNTER_KEY, JSON.stringify(0));
+  }, []);
+
 
   return { 
     scans, 
@@ -158,5 +187,7 @@ export function useScans(): UseScansReturn {
     deleteScans,
     scansToday,
     grantExtraScan,
+    shouldShowInterstitial,
+    interstitialAdClosed,
   };
 }

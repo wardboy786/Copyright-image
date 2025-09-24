@@ -1,5 +1,5 @@
 'use client';
-import { AdMob, AdMobRewardItem, RewardAdOptions, BannerAdOptions, BannerAdPosition, BannerAdSize, RewardAdPluginEvents } from '@capacitor-community/admob';
+import { AdMob, AdMobRewardItem, RewardAdOptions, BannerAdOptions, BannerAdPosition, BannerAdSize, RewardAdPluginEvents, InterstitialAdPluginEvents, AdOptions } from '@capacitor-community/admob';
 import { Toast } from '@capacitor/toast';
 import { Capacitor } from '@capacitor/core';
 
@@ -107,10 +107,42 @@ const useAdMob = () => {
     });
   };
 
+  const prepareInterstitial = async (): Promise<void> => {
+    if (!Capacitor.isNativePlatform()) {
+        console.log('AdMob: Skipped preparing interstitial ad (not a native platform).');
+        return;
+    }
+    try {
+        const options: AdOptions = {
+            adId: 'ca-app-pub-3940256099942544/1033173712', // Test interstitial ad ID
+            isTesting: true,
+        };
+        await AdMob.prepareInterstitial(options);
+        console.log('AdMob: Interstitial ad prepared successfully.');
+    } catch (error) {
+        console.error('AdMob: Failed to prepare interstitial ad:', error);
+    }
+  };
+
+  const showInterstitial = async (): Promise<void> => {
+    if (!Capacitor.isNativePlatform()) {
+        console.log('AdMob: Skipped showing interstitial ad (not a native platform).');
+        return;
+    }
+    try {
+        await AdMob.showInterstitial();
+        console.log('AdMob: Interstitial ad shown successfully.');
+    } catch (error) {
+        console.error('AdMob: Failed to show interstitial ad:', error);
+    }
+  };
+
   return {
     initialize,
     showBanner,
     showRewarded,
+    prepareInterstitial,
+    showInterstitial,
   };
 };
 
