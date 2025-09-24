@@ -1,5 +1,5 @@
 'use client';
-import { AdMob, AdMobRewardItem, RewardAdOptions, BannerAdOptions, BannerAdPosition, BannerAdSize } from '@capacitor-community/admob';
+import { AdMob, AdMobRewardItem, RewardAdOptions, BannerAdOptions, BannerAdPosition, BannerAdSize, RewardAdPluginEvents } from '@capacitor-community/admob';
 import { Toast } from '@capacitor/toast';
 import { Capacitor } from '@capacitor/core';
 
@@ -11,7 +11,7 @@ const useAdMob = () => {
     try {
       await AdMob.initialize({
         requestTrackingAuthorization: true,
-        testingDevices: ['2077ef9a63d2b398840261c8221a0c9b'], // Generic test device ID for simulators
+        testingDevices: ['2077ef9a63d2b398840261c8221a0c9b'],
         initializeForTesting: true,
       });
       console.log('AdMob initialized successfully');
@@ -23,12 +23,13 @@ const useAdMob = () => {
   const showBanner = async (): Promise<void> => {
     if (!Capacitor.isNativePlatform()) return;
     try {
-      await AdMob.showBanner({
+      const options: BannerAdOptions = {
         adId: 'ca-app-pub-3940256099942544/6300978111', // Test banner ad ID
-        position: 'BOTTOM_CENTER' as any,
+        position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
-        adSize: 'BANNER' as any,
-      });
+        adSize: BannerAdSize.BANNER,
+      };
+      await AdMob.showBanner(options);
       console.log('Banner ad shown successfully');
     } catch (error: any) {
       console.error('Failed to show banner ad:', error);
@@ -54,7 +55,7 @@ const useAdMob = () => {
         if (failListener) failListener.remove();
       };
 
-      rewardListener = AdMob.addListener('rewardedVideoDidEarnReward', (reward: AdMobRewardItem) => {
+      rewardListener = AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: AdMobRewardItem) => {
         console.log('Reward earned:', reward);
         Toast.show({
           text: `Reward Earned! You got 1 extra scan.`,
@@ -64,13 +65,13 @@ const useAdMob = () => {
         resolve(true);
       });
 
-      closeListener = AdMob.addListener('rewardedVideoDidDismiss', () => {
+      closeListener = AdMob.addListener(RewardAdPluginEvents.Dismissed, () => {
         console.log('Rewarded ad closed');
         cleanup();
         resolve(false);
       });
 
-      failListener = AdMob.addListener('rewardedVideoDidFailToLoad', (error: any) => {
+      failListener = AdMob.addListener(RewardAdPluginEvents.FailedToLoad, (error: any) => {
         console.error('Rewarded ad failed to load:', error);
         Toast.show({
           text: 'Ad Not Available. Please try again later.',
@@ -80,10 +81,12 @@ const useAdMob = () => {
         resolve(false);
       });
 
-      AdMob.prepareRewardVideoAd({
+      const options: RewardAdOptions = {
         adId: 'ca-app-pub-3940256099942544/5224354917', // Test rewarded ad ID
-      })
-      .then(() => AdMob.showRewardVideoAd())
+      };
+      
+      AdMob.prepareRewardedVideoAd(options)
+      .then(() => AdMob.showRewardedVideoAd())
       .catch((error: any) => {
         console.error('Error preparing/showing rewarded ad:', error);
         cleanup();
