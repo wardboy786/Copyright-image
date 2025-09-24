@@ -1,5 +1,5 @@
 'use client';
-import { AdMob, BannerAdPluginEvents, BannerAdSize } from '@capacitor-community/admob';
+import { AdMob, BannerAdSize } from '@capacitor-community/admob';
 import { useEffect } from 'react';
 import useAdMob from '@/hooks/use-admob';
 import { useAppContext } from '@/hooks/use-app-context';
@@ -26,8 +26,8 @@ export function AdMobController({
       try {
         await initialize();
         
-        // Listen for banner ad size changes using the correct event
-        listener = await AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: BannerAdSize) => {
+        // Listen for banner ad size changes using the correct event name
+        listener = await AdMob.addListener('bannerAdSizeChanged', (size: BannerAdSize) => {
           if (size && typeof size.height === 'number') {
             setAdHeight(size.height);
           } else {
