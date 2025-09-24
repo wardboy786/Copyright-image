@@ -1,5 +1,5 @@
 'use client';
-import { AdMob } from '@capacitor-community/admob';
+import { AdMob, AdMobRewardItem } from '@capacitor-community/admob';
 import { Toast } from '@capacitor/toast';
 import { Capacitor } from '@capacitor/core';
 
@@ -54,7 +54,7 @@ const useAdMob = () => {
         if (failListener) failListener.remove();
       };
 
-      rewardListener = AdMob.addListener('rewardedVideoDidEarnReward', (reward: any) => {
+      rewardListener = AdMob.addListener('rewardedVideoDidEarnReward', (reward: AdMobRewardItem) => {
         console.log('Reward earned:', reward);
         Toast.show({
           text: `Reward Earned! You got 1 extra scan.`,
