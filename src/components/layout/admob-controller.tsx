@@ -22,9 +22,9 @@ export function AdMobController({
           await initialize();
           await showBanner();
 
-          // Listen for banner ad size changes
-          listener = await AdMob.addListener(BannerAdPluginEvents.Size, (info: BannerAdSize) => {
-            setAdHeight(info.height);
+          // Listen for banner ad size changes using the correct event
+          listener = await AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size: BannerAdSize) => {
+            setAdHeight(size.height);
           });
         } catch (error) {
             console.error("Error initializing or showing ads:", error);
