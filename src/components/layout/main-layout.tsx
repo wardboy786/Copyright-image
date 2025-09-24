@@ -29,12 +29,19 @@ const AdMobController = dynamic(
 
 function BottomNavBar() {
   const pathname = usePathname();
+  const { isPremium } = useAppContext();
+  
+  // Total height of the ad banner (50px) + the nav bar itself (64px) = 114px.
+  // This padding prevents content from being hidden behind the ad and nav bar.
+  // When premium, the ad is gone, so we only need to account for the nav bar.
+  const navPadding = isPremium ? '64px' : '114px';
 
   return (
     <nav 
       className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden"
       style={{
         paddingBottom: `env(safe-area-inset-bottom)`,
+        // The ad banner has a margin of 64px, so we don't need to offset the nav bar itself.
       }}
     >
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
@@ -68,7 +75,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
   }
   
-  const mobilePaddingBottom = isPremium ? `calc(4rem + env(safe-area-inset-bottom))` : `114px`;
+  // The total padding needed at the bottom of the main content area.
+  // For non-premium users, this is ad height (50px) + nav bar height (64px) = 114px.
+  // For premium users, it's just the nav bar height (64px).
+  const mobilePaddingBottom = !isPremium ? `114px` : `64px`;
 
   return (
     <>

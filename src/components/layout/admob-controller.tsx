@@ -1,12 +1,10 @@
 'use client';
-import { AdMob } from '@capacitor-community/admob';
 import { useEffect } from 'react';
-import useAdMob from '@/hooks/use-admob';
-import { useAppContext } from '@/hooks/use-app-context';
 import { Capacitor } from '@capacitor/core';
+import { useAppContext } from '@/hooks/use-app-context';
+import { AdMob } from '@capacitor-community/admob';
 
 export function AdMobController() {
-  const { initialize, showBanner } = useAdMob();
   const { isPremium, isInitialized } = useAppContext();
 
   useEffect(() => {
@@ -15,6 +13,10 @@ export function AdMobController() {
     }
 
     const initAds = async () => {
+      // Dynamically import the native-specific hook to ensure the correct one is bundled.
+      const useAdMobNative = (await import('@/hooks/use-admob')).default;
+      const { initialize, showBanner } = useAdMobNative();
+      
       try {
         await initialize();
         await showBanner();
@@ -29,7 +31,7 @@ export function AdMobController() {
     return () => {
       AdMob.hideBanner();
     };
-  }, [isInitialized, isPremium, initialize, showBanner]);
+  }, [isInitialized, isPremium]);
 
   return null; // This component does not render anything
 }
