@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { purchaseService } from '@/services/purchaseService';
 
 // Re-define types locally to avoid Next.js build errors with non-module packages.
 export type Product = {
@@ -40,17 +41,13 @@ export const useBilling = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkPremiumStatus = useCallback(async (store: any) => {
-    if (!Capacitor.isNativePlatform()) {
+  const checkPremiumStatus = useCallback(async () => {
+    if (!purchaseService.isAvailable()) {
       setIsPremium(false);
       return false;
     }
     try {
-        const transactions: Transaction[] = await store.ownedPurchases();
-        const hasMonthly = transactions.some(t => t.products.some(p => p.id === MONTHLY_PLAN_ID) && t.isActive);
-        const hasYearly = transactions.some(t => t.products.some(p => p.id === YEARLY_PLAN_ID) && t!.isActive);
-        
-        const premiumStatus = hasMonthly || hasYearly;
+        const premiumStatus = await purchaseService.isPremium();
         setIsPremium(premiumStatus);
         return premiumStatus;
     } catch (error) {
@@ -63,7 +60,7 @@ export const useBilling = () => {
 
   useEffect(() => {
     const initializeBilling = async () => {
-        if (!Capacitor.isNativePlatform()) {
+        if (!purchaseService.isAvailable()) {
           console.log('Billing not initialized: Not a native platform.');
           setIsInitialized(true);
           setIsLoading(false);
@@ -71,41 +68,16 @@ export const useBilling = () => {
         }
 
         try {
-          const { CdvPurchase, ProductType, Store } = await import('cordova-plugin-purchase');
-          const store = CdvPurchase.store;
+          const onProductUpdated = () => {
+            checkPremiumStatus();
+          };
           
-          store.initialize([
-            {
-              type: ProductType.PAID_SUBSCRIPTION,
-              id: MONTHLY_PLAN_ID,
-              platform: Store.GOOGLE_PLAY,
-            },
-            {
-              type: ProductType.PAID_SUBSCRIPTION,
-              id: YEARLY_PLAN_ID,
-              platform: Store.GOOGLE_PLAY,
-            },
-          ]);
+          await purchaseService.initialize(onProductUpdated);
           
-          const fetchedProducts = await store.getProducts([MONTHLY_PLAN_ID, YEARLY_PLAN_ID]);
-          setProducts(fetchedProducts);
-
-          store.when().verified((receipt: any) => {
-            receipt.finish();
-          }).unverified((receipt: any) => {
-            console.warn('Purchase unverified');
-            receipt.finish();
-          }).productUpdated(() => {
-            checkPremiumStatus(store);
-          }).approved(async (transaction: any) => {
-            const isVerified = await transaction.verify();
-            if (isVerified) {
-              transaction.finish();
-              await checkPremiumStatus(store);
-            }
-          });
+          const fetchedProducts = await purchaseService.getProducts([MONTHLY_PLAN_ID, YEARLY_PLAN_ID]);
+          setProducts(fetchedProducts as Product[]);
           
-          await checkPremiumStatus(store);
+          await checkPremiumStatus();
         } catch (error) {
           console.error('Failed to initialize billing', error);
         } finally {
@@ -122,10 +94,13 @@ export const useBilling = () => {
       throw new Error('Purchases can only be made on a mobile device.');
     }
     try {
-      const { CdvPurchase } = await import('cordova-plugin-purchase');
-      await CdvPurchase.store.order(offer);
+      await purchaseService.order(offer as any);
+      // After a successful order, re-check premium status
+      await checkPremiumStatus();
     } catch (error) {
       console.error('Purchase failed', error);
+      // Re-check status even if there's an error (e.g., user cancels)
+      await checkPremiumStatus();
       throw error;
     }
   };
@@ -135,9 +110,8 @@ export const useBilling = () => {
       throw new Error('Purchases can only be restored on a mobile device.');
     }
     try {
-      const { CdvPurchase } = await import('cordova-plugin-purchase');
-      await CdvPurchase.store.restorePurchases();
-      await checkPremiumStatus(CdvPurchase.store);
+      await purchaseService.restorePurchases();
+      await checkPremiumStatus();
     } catch (error) {
       console.error('Failed to restore purchases', error);
       throw error;
