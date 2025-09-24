@@ -12,7 +12,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 const features = [
   'Unlimited Daily Scans',
   'Ad-Free Experience',
-  'Export Scan Results as PDF',
   'Priority Customer Support',
 ];
 
