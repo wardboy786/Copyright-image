@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Scan, History, Gem, Settings, Home } from 'lucide-react';
+import { Scan, History, Gem, Settings, Home, Loader2 } from 'lucide-react';
 import { Header } from './header';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -9,9 +9,10 @@ import { Toaster } from '@/components/ui/toaster';
 import { SplashScreen } from './splash-screen';
 import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
 import dynamic from 'next/dynamic';
+import { Progress } from '@/components/ui/progress';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -25,6 +26,45 @@ const AdMobController = dynamic(
   () => import('@/components/layout/admob-controller').then((mod) => mod.AdMobController),
   { ssr: false }
 );
+
+function GlobalScanIndicator() {
+  const { isScanning, scanProgress } = useAppContext();
+  const isMobile = useIsMobile();
+  
+  // The ad banner is 50px tall. The bottom nav bar is 64px tall.
+  // The indicator should sit on top of the nav bar, or on top of the ad if it's present.
+  const adHeight = 50; 
+  const navHeight = 64;
+  const bottomOffset = isMobile ? `${navHeight}px` : '16px';
+
+
+  return (
+    <AnimatePresence>
+      {isScanning && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 20, opacity: 0 }}
+          className="fixed bottom-0 left-0 right-0 z-[60] p-4 pointer-events-none"
+          style={{
+            bottom: isMobile ? bottomOffset : '0px',
+            paddingBottom: isMobile ? '0' : '1rem',
+          }}
+        >
+          <div className="max-w-2xl mx-auto p-3 bg-primary/20 backdrop-blur-sm rounded-lg border border-primary/30 pointer-events-auto">
+             <div className="flex items-center gap-4">
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                <div className="flex-1">
+                    <p className="text-sm font-semibold text-primary-foreground">Analysis in progress...</p>
+                    <Progress value={scanProgress} className="h-2 mt-1"/>
+                </div>
+             </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 
 function BottomNavBar() {
@@ -68,7 +108,7 @@ function BottomNavBar() {
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
-  const { isInitialized: isAppContextInitialized, isPremium } = useAppContext();
+  const { isInitialized: isAppContextInitialized, isPremium, isScanning } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
   
   if (showSplash && !isAppContextInitialized) {
@@ -78,7 +118,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
   // The total padding needed at the bottom of the main content area.
   // For non-premium users, this is ad height (50px) + nav bar height (64px) = 114px.
   // For premium users, it's just the nav bar height (64px).
-  const mobilePaddingBottom = !isPremium ? `114px` : `64px`;
+  // If a scan is in progress, we add more padding to not obscure content.
+  let mobilePaddingBottom = !isPremium ? `114px` : `64px`;
+  if (isScanning) {
+    mobilePaddingBottom = `calc(${mobilePaddingBottom} + 70px)`; // Add space for the indicator
+  }
+
 
   return (
     <>
@@ -97,6 +142,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
           </main>
         </div>
         {isMobile && <BottomNavBar />}
+        <GlobalScanIndicator />
         <Toaster />
         {!isPremium && <AdMobController />}
       </div>

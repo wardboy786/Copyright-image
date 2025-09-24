@@ -27,6 +27,9 @@ export interface UseScansReturn {
   rewardedScansUsed: number;
   isRewardedScansLimitReached: boolean;
   totalAllowedScans: number;
+  isScanning: boolean;
+  scanProgress: number;
+  startScan: (file: File, isAi: boolean, isUser: boolean, preview: string) => Promise<ScanResult | { error: string }>;
 }
 
 export function useScans(): UseScansReturn {
@@ -34,6 +37,8 @@ export function useScans(): UseScansReturn {
   const [isPremium, setIsPremium] = useState<boolean>(true); // Default to premium
   const [extraScans, setExtraScans] = useState<{ count: number; date: string } | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
 
   // Load from local storage on mount
   useEffect(() => {
@@ -75,6 +80,27 @@ export function useScans(): UseScansReturn {
 
     setIsInitialized(true);
   }, []);
+  
+  useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
+    if (isScanning) {
+      setScanProgress(0);
+      let progress = 0;
+      timer = setInterval(() => {
+        progress += 5; // Simulate progress
+        if (progress > 95) { // Don't let it reach 100 until it's actually done
+          clearInterval(timer);
+          return;
+        }
+        setScanProgress(progress);
+      }, 500);
+    } else {
+      setScanProgress(100);
+       setTimeout(() => setScanProgress(0), 500); // Reset after completion animation
+    }
+    return () => clearInterval(timer);
+  }, [isScanning]);
+
 
   const saveScans = useCallback((newScans: ScanResult[]) => {
     setScans(newScans);
@@ -104,6 +130,37 @@ export function useScans(): UseScansReturn {
 
     return newScan;
   }, [scans, saveScans]);
+  
+  const startScan = useCallback(async (file: File, isAi: boolean, isUser: boolean, preview: string) => {
+    setIsScanning(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('isAiGenerated', String(isAi));
+      formData.append('isUserCreated', String(isUser));
+      
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Request failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+      const newScan = addScan(preview, result);
+      return newScan;
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      return { error: `Failed to analyze image: ${errorMessage}` };
+    } finally {
+      setIsScanning(false);
+    }
+  }, [addScan]);
+
 
   const getScanById = useCallback((id: string): ScanResult | undefined => {
     return scans.find(scan => scan.id === id);
@@ -176,6 +233,9 @@ export function useScans(): UseScansReturn {
     grantExtraScan,
     rewardedScansUsed,
     isRewardedScansLimitReached,
-    totalAllowedScans
+    totalAllowedScans,
+    isScanning,
+    scanProgress,
+    startScan,
   };
 }
