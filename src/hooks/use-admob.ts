@@ -1,114 +1,102 @@
 'use client';
+import { AdMob } from '@capacitor-community/admob';
+import { Toast } from '@capacitor/toast';
 import { Capacitor } from '@capacitor/core';
-import { useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import {
-  AdMob,
-  BannerAdOptions,
-  BannerAdSize,
-  BannerAdPosition,
-  RewardedAdOptions,
-  AdMobError,
-} from '@capacitor-community/admob';
 
-const AD_UNITS = {
-  // Test Ad Unit IDs from Google. Replace with your own IDs for production.
-  BANNER: {
-    ios: 'ca-app-pub-3940256099942544/2934735716',
-    android: 'ca-app-pub-3940256099942544/6300978111',
-  },
-  REWARDED: {
-    ios: 'ca-app-pub-3940256099942544/1712485313',
-    android: 'ca-app-pub-3940256099942544/5224354917',
-  },
-};
-
+// This hook is designed to run on native platforms.
+// It will not work in a web browser.
 const useAdMob = () => {
-  const { toast } = useToast();
-
-  const initialize = useCallback(async (): Promise<boolean> => {
-    if (!Capacitor.isNativePlatform()) {
-      console.log('AdMob: Not running on a native platform.');
-      return false;
-    }
-    try {
-      await AdMob.initialize({});
-      return true;
-    } catch (e) {
-      console.error('AdMob initialization failed', e);
-      return false;
-    }
-  }, []);
-
-  const showBanner = useCallback(async () => {
+  const initialize = async (): Promise<void> => {
     if (!Capacitor.isNativePlatform()) return;
-
     try {
-      const options: BannerAdOptions = {
-        adId: Capacitor.isPlatform('android') ? AD_UNITS.BANNER.android : AD_UNITS.BANNER.ios,
-        adSize: BannerAdSize.ADAPTIVE_BANNER,
-        position: BannerAdPosition.BOTTOM_CENTER,
-        margin: 0,
-        isTesting: true, // Use test ads during development
-      };
-      await AdMob.showBanner(options);
-    } catch (e) {
-      console.error('Banner ad failed', e);
-    }
-  }, []);
-
-  const showRewarded = useCallback(async (): Promise<boolean> => {
-    if (!Capacitor.isNativePlatform()) {
-      toast({
-        variant: 'destructive',
-        title: 'Not on Mobile',
-        description: 'Ads are only available on the mobile app.',
+      await AdMob.initialize({
+        requestTrackingAuthorization: true,
+        testingDevices: ['2077ef9a63d2b398840261c8221a0c9b'], // Generic test device ID for simulators
+        initializeForTesting: true,
       });
-      return false;
+      console.log('AdMob initialized successfully');
+    } catch (error) {
+      console.error('AdMob initialization failed:', error);
     }
+  };
 
+  const showBanner = async (): Promise<void> => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      await AdMob.showBanner({
+        adId: 'ca-app-pub-3940256099942544/6300978111', // Test banner ad ID
+        position: 'BOTTOM_CENTER',
+        margin: 0,
+        adSize: 'BANNER',
+      });
+      console.log('Banner ad shown successfully');
+    } catch (error) {
+      console.error('Failed to show banner ad:', error);
+    }
+  };
+
+  const showRewarded = async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform()) {
+        await Toast.show({
+            text: 'Ads are only available in the mobile app.',
+            duration: 'long'
+        });
+        return Promise.resolve(false);
+    }
     return new Promise((resolve) => {
-      const options: RewardedAdOptions = {
-        adId: Capacitor.isPlatform('android') ? AD_UNITS.REWARDED.android : AD_UNITS.REWARDED.ios,
-        isTesting: true,
+      let rewardListener: any;
+      let closeListener: any;
+      let failListener: any;
+
+      const cleanup = () => {
+        if (rewardListener) rewardListener.remove();
+        if (closeListener) closeListener.remove();
+        if (failListener) failListener.remove();
       };
 
-      const rewardListener = AdMob.addListener('rewardedVideoUserDidEarnReward', (reward) => {
-        console.log('AdMob reward earned:', reward);
-        toast({ title: 'Reward Earned!', description: `You earned ${reward.amount} extra scan.` });
+      rewardListener = AdMob.addListener('rewardedVideoDidEarnReward', (reward: any) => {
+        console.log('Reward earned:', reward);
+        Toast.show({
+          text: `Reward Earned! You got 1 extra scan.`,
+          duration: 'long',
+        });
+        cleanup();
         resolve(true);
       });
 
-      const closeListener = AdMob.addListener('rewardedVideoDidDismiss', () => {
-        rewardListener.remove();
-        closeListener.remove();
-        failListener.remove();
-        resolve(false);
-      });
-      
-      const failListener = AdMob.addListener('rewardedVideoDidFailToLoad', (error: AdMobError) => {
-        console.error('Rewarded ad failed to load', error);
-        toast({
-          variant: 'destructive',
-          title: 'Ad Not Available',
-          description: 'Could not load an ad. Please try again later.',
-        });
-        rewardListener.remove();
-        closeListener.remove();
-        failListener.remove();
+      closeListener = AdMob.addListener('rewardedVideoDidDismiss', () => {
+        console.log('Rewarded ad closed');
+        cleanup();
         resolve(false);
       });
 
-      AdMob.prepareRewarded(options)
-        .then(() => AdMob.showRewarded())
-        .catch(e => {
-          console.error('Error preparing/showing rewarded ad', e);
-          resolve(false);
+      failListener = AdMob.addListener('rewardedVideoDidFailToLoad', (error: any) => {
+        console.error('Rewarded ad failed to load:', error);
+        Toast.show({
+          text: 'Ad Not Available. Please try again later.',
+          duration: 'long',
         });
+        cleanup();
+        resolve(false);
+      });
+
+      AdMob.prepareRewardedVideoAd({
+        adId: 'ca-app-pub-3940256099942544/5224354917', // Test rewarded ad ID
+      })
+      .then(() => AdMob.showRewardedVideoAd())
+      .catch((error: any) => {
+        console.error('Error preparing/showing rewarded ad:', error);
+        cleanup();
+        resolve(false);
+      });
     });
-  }, [toast]);
+  };
 
-  return { initialize, showBanner, showRewarded };
+  return {
+    initialize,
+    showBanner,
+    showRewarded,
+  };
 };
 
 export default useAdMob;

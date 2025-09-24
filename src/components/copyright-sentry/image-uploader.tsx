@@ -50,6 +50,10 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     const rewarded = await showRewarded();
     if (rewarded) {
       grantExtraScan();
+      toast({
+        title: 'Scan Granted!',
+        description: 'You can now perform one extra scan.',
+      });
     }
     setIsWatchingAd(false);
   };

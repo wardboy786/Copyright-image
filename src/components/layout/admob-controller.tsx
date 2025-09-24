@@ -10,10 +10,8 @@ export function AdMobController() {
   useEffect(() => {
     if (isInitialized && !isPremium) {
       const initAndShow = async () => {
-        const success = await initialize();
-        if (success) {
-          showBanner();
-        }
+        await initialize();
+        showBanner();
       };
       initAndShow();
     }
