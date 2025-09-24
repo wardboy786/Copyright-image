@@ -1,13 +1,10 @@
 'use client';
 import {
   AdMob,
-  BannerAdPluginEvents,
-  type AdMobBannerSize,
 } from '@capacitor-community/admob';
 import { useEffect } from 'react';
 import useAdMob from '@/hooks/use-admob';
 import { useAppContext } from '@/hooks/use-app-context';
-import { type PluginListenerHandle } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 
 export function AdMobController({
@@ -25,12 +22,14 @@ export function AdMobController({
       return;
     }
 
-    let listener: PluginListenerHandle | null = null;
-
     const initAds = async () => {
       try {
         await initialize();
         await showBanner();
+        // Since we now use a margin, we can set a fixed height for layout purposes if needed,
+        // but for now we will rely on the margin to push content.
+        // A standard banner is 50px high.
+        setAdHeight(50); 
       } catch (error) {
         console.error('Error initializing or showing ads:', error);
         setAdHeight(0);
@@ -41,9 +40,6 @@ export function AdMobController({
 
     // Cleanup on component unmount
     return () => {
-      if (listener) {
-        listener.remove();
-      }
       AdMob.hideBanner();
     };
   }, [isInitialized, isPremium, initialize, showBanner, setAdHeight]);
