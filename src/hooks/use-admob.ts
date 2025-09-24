@@ -1,5 +1,5 @@
 'use client';
-import { isPlatform } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -8,7 +8,6 @@ import {
   BannerAdSize,
   BannerAdPosition,
   RewardedAdOptions,
-  AdMobRewarded,
   AdMobError,
 } from '@capacitor-community/admob';
 
@@ -28,7 +27,7 @@ const useAdMob = () => {
   const { toast } = useToast();
 
   const initialize = useCallback(async (): Promise<boolean> => {
-    if (!isPlatform('capacitor')) {
+    if (!Capacitor.isNativePlatform()) {
       console.log('AdMob: Not running on a native platform.');
       return false;
     }
@@ -42,11 +41,11 @@ const useAdMob = () => {
   }, []);
 
   const showBanner = useCallback(async () => {
-    if (!isPlatform('capacitor')) return;
+    if (!Capacitor.isNativePlatform()) return;
 
     try {
       const options: BannerAdOptions = {
-        adId: isPlatform('ios') ? AD_UNITS.BANNER.ios : AD_UNITS.BANNER.android,
+        adId: Capacitor.isPlatform('ios') ? AD_UNITS.BANNER.ios : AD_UNITS.BANNER.android,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
@@ -59,7 +58,7 @@ const useAdMob = () => {
   }, []);
 
   const showRewarded = useCallback(async (): Promise<boolean> => {
-    if (!isPlatform('capacitor')) {
+    if (!Capacitor.isNativePlatform()) {
       toast({
         variant: 'destructive',
         title: 'Not on Mobile',
@@ -70,7 +69,7 @@ const useAdMob = () => {
 
     return new Promise((resolve) => {
       const options: RewardedAdOptions = {
-        adId: isPlatform('ios') ? AD_UNITS.REWARDED.ios : AD_UNITS.REWARDED.android,
+        adId: Capacitor.isPlatform('ios') ? AD_UNITS.REWARDED.ios : AD_UNITS.REWARDED.android,
         isTesting: true,
       };
 
