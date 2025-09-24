@@ -85,8 +85,8 @@ const useAdMob = () => {
         adId: 'ca-app-pub-3940256099942544/5224354917', // Test rewarded ad ID
       };
       
-      AdMob.prepareRewardedVideoAd(options)
-      .then(() => AdMob.showRewardedVideoAd())
+      AdMob.prepareRewardVideoAd(options)
+      .then(() => AdMob.showRewardVideoAd())
       .catch((error: any) => {
         console.error('Error preparing/showing rewarded ad:', error);
         cleanup();
