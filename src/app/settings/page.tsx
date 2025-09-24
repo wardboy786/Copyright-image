@@ -48,10 +48,10 @@ export default function SettingsPage() {
         title: "Purchases Restored",
         description: "Your premium status has been updated.",
       });
-    } catch (e) {
+    } catch (e: any) {
        toast({
         title: "Restore Failed",
-        description: "We couldn't restore your purchases. Please try again later.",
+        description: e.message || "We couldn't restore your purchases. Please try again later.",
         variant: 'destructive',
       });
     }
@@ -94,7 +94,7 @@ export default function SettingsPage() {
                 <div>
                   <Label className="font-semibold">Premium Status</Label>
                   <p className="text-sm text-muted-foreground">
-                    {isInitialized ? (isPremium ? 'Active' : 'Not Active') : 'Loading...'}
+                    {billing.isLoading ? 'Loading...' : (isPremium ? 'Active' : 'Not Active')}
                   </p>
                 </div>
                 <Button asChild variant="secondary" size="sm">
@@ -104,7 +104,7 @@ export default function SettingsPage() {
                   </Link>
                 </Button>
             </div>
-             <Button onClick={handleRestorePurchases} variant="outline" className="w-full">
+             <Button onClick={handleRestorePurchases} variant="outline" className="w-full" disabled={billing.isLoading}>
                 Restore Purchases
             </Button>
         </CardContent>
@@ -168,5 +168,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    

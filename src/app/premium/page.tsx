@@ -6,8 +6,7 @@ import { useAppContext } from '@/hooks/use-app-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { Offer } from 'capacitor-in-app-billing';
-import { AnimatePresence, motion } from 'framer-motion';
+import { type Offer } from 'cordova-plugin-purchase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const features = [
@@ -92,7 +91,7 @@ export default function PremiumPage() {
                         </div>
                     </div>
                     <CardTitle className="text-2xl">Billing Not Available</CardTitle>
-                    <CardDescription>Could not connect to the app store. Please check your connection and try again.</CardDescription>
+                    <CardDescription>Could not connect to the app store. This feature is only available on mobile devices. Please check your connection and try again.</CardDescription>
                 </CardHeader>
             </Card>
         )
