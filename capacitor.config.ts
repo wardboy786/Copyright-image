@@ -20,14 +20,6 @@ const config: CapacitorConfig = {
     // iosScheme: 'http',
     cleartext: true, // Allow http for local development.
   },
-  plugins: {
-    CapacitorAssets: {
-      icon: {
-        path: 'public/images/logo.svg'
-      },
-      splash: false // Explicitly disable splash screen generation
-    }
-  },
 };
 
 export default config;
