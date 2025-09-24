@@ -92,10 +92,10 @@ const useAdMob = () => {
       };
       
       console.log('AdMob: Preparing rewarded ad...');
-      AdMob.prepareRewardedVideoAd(options)
+      AdMob.prepareRewardVideoAd(options)
       .then(() => {
         console.log('AdMob: Showing rewarded ad...');
-        AdMob.showRewardedVideoAd()
+        AdMob.showRewardVideoAd()
       })
       .catch((error: any) => {
         console.error('AdMob: Error preparing/showing rewarded ad:', error);
