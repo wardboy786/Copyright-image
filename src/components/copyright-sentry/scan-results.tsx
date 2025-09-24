@@ -5,12 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw, Download } from 'lucide-react';
-import { useAppContext } from '@/hooks/use-app-context';
-import { useToast } from '@/hooks/use-toast';
+import { CheckCircle2, AlertTriangle, ShieldAlert, FileText, Info, Users, RotateCcw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 
 interface ScanResultsProps {
@@ -60,88 +56,10 @@ const getAssessmentConfig = (assessment: OverallAssessment) => {
 };
 
 export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
-  const { isPremium } = useAppContext();
-  const { toast } = useToast();
 
   if (!scan) return null;
 
   const assessmentConfig = getAssessmentConfig(scan.analysis.overallAssessment);
-
-  const handleExport = () => {
-    try {
-      const doc = new jsPDF();
-      let finalY = 0;
-
-      // Title
-      doc.setFontSize(18);
-      doc.text('ImageRights AI Scan Report', 14, 22);
-
-      // Date
-      doc.setFontSize(11);
-      doc.setTextColor(100);
-      doc.text(`Scan Date: ${format(new Date(scan.timestamp), 'PPP, p')}`, 14, 30);
-
-      // Image
-      try {
-        doc.addImage(scan.image, 'JPEG', 14, 40, 180, 100, undefined, 'FAST');
-        finalY = 150;
-      } catch (e) {
-        console.error("Error adding image to PDF:", e);
-        doc.text("Could not render image.", 14, 80);
-        finalY = 90;
-      }
-      
-
-      // Assessment
-      doc.setFontSize(14);
-      doc.setTextColor(40);
-      doc.text('Overall Assessment:', 14, finalY);
-      doc.setFontSize(14);
-      doc.text(scan.analysis.overallAssessment, 55, finalY);
-      finalY += 10;
-
-      // Breakdown Table
-      if (scan.analysis.breakdown.length > 0) {
-        autoTable(doc, {
-          startY: finalY,
-          head: [['Element', 'Explanation']],
-          body: scan.analysis.breakdown.map(item => [item.name, item.explanation]),
-          theme: 'striped',
-          headStyles: { fillColor: [41, 128, 185] },
-        });
-        finalY = (doc as any).lastAutoTable.finalY;
-      } else {
-        doc.text("No specific copyright elements were detected.", 14, finalY + 5);
-        finalY += 10;
-      }
-
-      // Disclaimer
-      const disclaimerY = finalY + 15;
-      doc.setFontSize(10);
-      doc.setTextColor(150);
-      const disclaimerText = doc.splitTextToSize(
-        "Disclaimer: This analysis is AI-generated and for informational purposes only. It is not legal advice. Please double-verify the results before using the image, especially for commercial purposes.",
-        180
-      );
-      doc.text(disclaimerText, 14, disclaimerY);
-
-
-      doc.save(`ImageRights_AI_Scan_${scan.id.substring(0, 8)}.pdf`);
-      
-      toast({
-        title: "Export Successful",
-        description: "Your scan report has been downloaded as a PDF.",
-      });
-
-    } catch (error) {
-       console.error("Failed to generate PDF:", error);
-       toast({
-        variant: "destructive",
-        title: "Export Failed",
-        description: "An unexpected error occurred while generating the PDF.",
-      });
-    }
-  };
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -188,12 +106,6 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
             <CardDescription className="text-sm text-foreground/80 mt-1">{assessmentConfig.description}</CardDescription>
           </div>
         </CardHeader>
-        <CardFooter className="px-6 pb-6">
-            <Button variant="outline" className="w-full" onClick={handleExport} disabled={!isPremium}>
-                <Download className="w-4 h-4 mr-2" />
-                {isPremium ? 'Export as PDF' : 'Upgrade to Export'}
-            </Button>
-        </CardFooter>
       </Card>
 
       {scan.analysis.breakdown.length > 0 && (

@@ -1,12 +1,11 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { analyzeImageAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/hooks/use-app-context';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, Loader2, Info, Image as ImageIcon, X } from 'lucide-react';
+import { UploadCloud, Loader2, Info, Image as ImageIcon, X, Video, ShieldCheck, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -15,73 +14,102 @@ import { Switch } from '@/components/ui/switch';
 import Image from 'next/image';
 import { DailyLimitIndicator } from './daily-limit-indicator';
 import Link from 'next/link';
+import useAdMob from '@/hooks/use-admob';
+import { MAX_REWARDED_SCANS } from '@/hooks/use-scans';
+import { useRouter } from 'next/navigation';
 
-function Loader() {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 text-center p-8 bg-background/80 backdrop-blur-sm"
-    >
-      <Loader2 className="w-12 h-12 animate-spin text-primary" />
-      <p className="font-semibold text-xl text-foreground mt-4">Analyzing Your Image</p>
-      <p className="text-muted-foreground">This may take a few moments...</p>
-    </motion.div>
-  );
-}
 
 export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanResult) => void; }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isWatchingAd, setIsWatchingAd] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [isUserCreated, setIsUserCreated] = useState(false);
   
   const { toast } = useToast();
-  const { addScan, isLimitReached } = useAppContext();
-
+  const router = useRouter();
+  const { isLimitReached, isPremium, grantExtraScan, isRewardedScansLimitReached, rewardedScansUsed, startScan } = useAppContext();
+  const { showRewarded } = useAdMob();
+  
+  const handleWatchAd = async () => {
+    if (isRewardedScansLimitReached) {
+        toast({
+            title: 'Rewarded Scan Limit Reached',
+            description: `You can watch ads for up to ${MAX_REWARDED_SCANS} extra scans per day. Please try again tomorrow or upgrade.`,
+            variant: 'destructive',
+        });
+        return;
+    }
+    setIsWatchingAd(true);
+    const rewarded = await showRewarded();
+    if (rewarded) {
+      grantExtraScan();
+      toast({
+        title: 'Scan Granted!',
+        description: 'You can now perform one extra scan.',
+      });
+    }
+    setIsWatchingAd(false);
+  };
+  
   const handleScan = async () => {
     if (!imageFile || !imagePreview) return;
 
-    if (isLimitReached) {
+    if (isLimitReached && !isPremium) {
       toast({
           title: 'Daily Limit Reached',
-          description: 'Upgrade to Premium for unlimited scans.',
+          description: 'Watch an ad for an extra scan or upgrade to Premium.',
           variant: 'destructive',
         });
       return;
     }
-
-    setIsLoading(true);
-    const result = await analyzeImageAction(imageFile, isAiGenerated, isUserCreated);
     
-    if (result.success) {
-      const newScan = addScan(imagePreview, result.data);
+    setIsLoading(true);
+    const result = await startScan(imageFile, isAiGenerated, isUserCreated, imagePreview);
+    
+    // Reset the uploader UI
+    reset();
+    setIsLoading(false);
+
+    if ('id' in result) { // This is a successful ScanResult
       toast({
         title: 'Scan Complete!',
-        description: 'Your image has been successfully analyzed.',
+        description: 'Click here to view your results.',
+        duration: 10000, // Keep toast longer
+        action: (
+          <Button variant="outline" size="sm" onClick={() => router.push(`/scan?id=${result.id}`)}>
+            View
+          </Button>
+        ),
       });
-      onScanComplete(newScan);
-    } else {
+      onScanComplete(result);
+    } else { // This is an error object
       toast({
         title: 'Scan Failed',
         description: result.error || 'An unknown error occurred.',
         variant: 'destructive',
       });
     }
-    setIsLoading(false);
   };
-
+  
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
       if (!file) return;
+      
+      if (isLoading) {
+        toast({
+          title: 'Scan in Progress',
+          description: 'Please wait for the current scan to finish before starting a new one.',
+        })
+        return;
+      }
 
-      if (isLimitReached) {
+      if (isLimitReached && !isPremium) {
         toast({
           title: 'Daily Limit Reached',
-          description: 'Please upgrade to premium for unlimited scans.',
+          description: 'Please watch an ad or upgrade to premium for unlimited scans.',
           variant: 'destructive'
         })
         return;
@@ -96,7 +124,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
       };
       reader.readAsDataURL(file);
     },
-    [isLimitReached, toast]
+    [isLimitReached, toast, isPremium, isLoading]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -109,18 +137,20 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const reset = () => {
       setImagePreview(null);
       setImageFile(null);
+      setIsAiGenerated(false);
+      setIsUserCreated(false);
   }
   
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
         <Card className="shadow-xl shadow-primary/10 relative overflow-hidden">
-            <AnimatePresence>{isLoading && <Loader />}</AnimatePresence>
-            <CardContent className={cn("p-4 sm:p-6", isLoading && 'blur-sm')}>
+            <CardContent className="p-4 sm:p-6">
                 <div
                     {...getRootProps()}
                     className={cn(
                     'w-full rounded-lg transition-colors flex flex-col items-center justify-center p-8 text-center cursor-pointer min-h-[250px] border-4 border-dashed relative overflow-hidden',
-                    isDragActive ? 'bg-primary/10 border-primary' : 'border-border/50 hover:bg-muted/50 hover:border-muted-foreground/20'
+                    isDragActive ? 'bg-primary/10 border-primary' : 'border-border/50 hover:bg-muted/50 hover:border-muted-foreground/20',
+                    isLoading && 'cursor-not-allowed opacity-50'
                     )}
                 >
                     <input {...getInputProps()} />
@@ -151,30 +181,54 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                     </AnimatePresence>
                 </div>
                  {imagePreview && (
-                    <Button variant="destructive" size="icon" className="absolute top-6 right-6 z-10 rounded-full" onClick={reset}>
+                    <Button variant="destructive" size="icon" className="absolute top-6 right-6 z-10 rounded-full" onClick={reset} disabled={isLoading}>
                         <X className="h-4 w-4"/>
                     </Button>
                  )}
             </CardContent>
         </Card>
-
-        {isLimitReached && (
+        
+        {isLimitReached && !isPremium && !isRewardedScansLimitReached && (
             <Card className="shadow-lg shadow-primary/10 bg-muted/30">
                 <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4">
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg">Daily Limit Reached</h3>
-                        <p className="text-muted-foreground text-sm mt-1">Upgrade to Premium for unlimited scans.</p>
+                        <p className="text-muted-foreground text-sm mt-1">Upgrade or watch an ad for one more scan. ({MAX_REWARDED_SCANS - rewardedScansUsed} remaining)</p>
                     </div>
-                    <Button asChild className="w-full sm:w-auto bg-primary/90 hover:bg-primary">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <Button onClick={handleWatchAd} disabled={isWatchingAd || isLoading} variant="outline" className="w-full sm:w-auto">
+                          {isWatchingAd ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Video className="w-4 h-4 mr-2"/>}
+                          Watch Ad for 1 Scan
+                        </Button>
+                        <Button asChild className="w-full sm:w-auto bg-primary/90 hover:bg-primary">
+                            <Link href="/premium">
+                                Upgrade Now
+                            </Link>
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+        
+        {isLimitReached && !isPremium && isRewardedScansLimitReached && (
+            <Card className="shadow-lg shadow-amber-500/10 bg-amber-500/10 border border-amber-500/30">
+                <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4">
+                     <ShieldCheck className="w-10 h-10 text-amber-500 flex-shrink-0" />
+                    <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-amber-400">All Free Scans Used</h3>
+                        <p className="text-muted-foreground text-sm mt-1">You've used all of your daily and rewarded scans. Upgrade to Premium for unlimited scans or check back tomorrow.</p>
+                    </div>
+                    <Button asChild className="w-full sm:w-auto bg-primary/90 hover:bg-primary mt-4 sm:mt-0">
                         <Link href="/premium">
-                            Upgrade Now
+                            Upgrade to Premium
                         </Link>
                     </Button>
                 </CardContent>
             </Card>
         )}
 
-        {!isLimitReached && (
+
+        {!imagePreview ? null : (isLimitReached && !isPremium) ? null : (
             <>
                 <Card className="shadow-lg shadow-primary/10">
                     <CardContent className="space-y-6 p-4 sm:p-6">
@@ -186,6 +240,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                             id="ai-generated"
                             checked={isAiGenerated}
                             onCheckedChange={setIsAiGenerated}
+                            disabled={isLoading}
                         />
                         </div>
                         <div className="flex items-center justify-between rounded-lg border p-4">
@@ -197,14 +252,15 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                             id="user-created"
                             checked={isUserCreated}
                             onCheckedChange={setIsUserCreated}
+                            disabled={isLoading}
                         />
                         </div>
                     </CardContent>
                 </Card>
                 <div className="flex justify-center">
                     <Button size="lg" onClick={handleScan} disabled={!imageFile || isLoading} className="w-full max-w-sm rounded-full">
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        Start Scan
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ImageIcon className="mr-2 h-4 w-4" />}
+                        {isLoading ? 'Scanning...' : 'Start Scan'}
                     </Button>
                 </div>
             </>

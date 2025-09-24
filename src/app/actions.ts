@@ -4,6 +4,9 @@ import { type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 // The API base must be an absolute URL to work in the Capacitor WebView.
 const API_BASE = 'https://copyright-image.vercel.app/api';
 
+/**
+ * @deprecated This action is deprecated and will be removed. Use the `startScan` method from `useAppContext` instead.
+ */
 export async function analyzeImageAction(file: File, isAiGenerated: boolean, isUserCreated: boolean): Promise<{ success: true, data: AnalyzeImageForCopyrightOutput } | { success: false, error: string }> {
   try {
     const formData = new FormData();
