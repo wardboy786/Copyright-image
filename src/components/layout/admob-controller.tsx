@@ -1,24 +1,16 @@
 'use client';
-import {
-  AdMob,
-} from '@capacitor-community/admob';
+import { AdMob } from '@capacitor-community/admob';
 import { useEffect } from 'react';
 import useAdMob from '@/hooks/use-admob';
 import { useAppContext } from '@/hooks/use-app-context';
 import { Capacitor } from '@capacitor/core';
 
-export function AdMobController({
-  setAdHeight,
-}: {
-  setAdHeight: (height: number) => void;
-}) {
+export function AdMobController() {
   const { initialize, showBanner } = useAdMob();
   const { isPremium, isInitialized } = useAppContext();
 
   useEffect(() => {
     if (!isInitialized || isPremium || !Capacitor.isNativePlatform()) {
-      // No ad will be shown, so ensure ad height is 0
-      setAdHeight(0);
       return;
     }
 
@@ -26,13 +18,8 @@ export function AdMobController({
       try {
         await initialize();
         await showBanner();
-        // Since we now use a margin, we can set a fixed height for layout purposes if needed,
-        // but for now we will rely on the margin to push content.
-        // A standard banner is 50px high.
-        setAdHeight(50); 
       } catch (error) {
         console.error('Error initializing or showing ads:', error);
-        setAdHeight(0);
       }
     };
 
@@ -42,7 +29,7 @@ export function AdMobController({
     return () => {
       AdMob.hideBanner();
     };
-  }, [isInitialized, isPremium, initialize, showBanner, setAdHeight]);
+  }, [isInitialized, isPremium, initialize, showBanner]);
 
   return null; // This component does not render anything
 }

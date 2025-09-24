@@ -27,13 +27,23 @@ const AdMobController = dynamic(
 );
 
 
-function BottomNavBar({ adHeight }: { adHeight: number }) {
+function BottomNavBar() {
   const pathname = usePathname();
+  const { isPremium } = useAppContext();
+
+  // The base height of the nav bar is h-16 (4rem or 64px)
+  // We add space for the banner ad (50px) + the safe area inset.
+  const adSpace = isPremium ? '0px' : '50px';
+
   return (
     <nav 
       className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden"
-      // The ad will now have its own margin, so we don't need to adjust the nav bar
-      // style={{ bottom: `${adHeight}px` }}
+      style={{
+        // `env(safe-area-inset-bottom)` is the space for the home bar on iOS.
+        // We add the ad height to this to push the nav bar above the ad.
+        paddingBottom: `env(safe-area-inset-bottom)`,
+        bottom: `calc(${adSpace} + env(safe-area-inset-bottom))`
+      }}
     >
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
         {menuItems.map((item) => (
@@ -59,17 +69,17 @@ function BottomNavBar({ adHeight }: { adHeight: number }) {
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
-  const { isInitialized: isAppContextInitialized } = useAppContext();
+  const { isInitialized: isAppContextInitialized, isPremium } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
-  const { isPremium } = useAppContext();
-  const [adHeight, setAdHeight] = useState(0);
   
   if (showSplash && !isAppContextInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
   }
-
-  // The total padding at the bottom will be for the nav bar (64px) and the ad (50px standard banner)
-  const mobilePaddingBottom = isPremium ? '80px' : '130px';
+  
+  // Base padding for nav bar (h-16 = 4rem = 64px)
+  // Extra padding for ad (50px) + safe area.
+  // This calc is a bit more robust for layout.
+  const mobilePaddingBottom = isPremium ? `calc(4rem + env(safe-area-inset-bottom))` : `calc(4rem + 50px + env(safe-area-inset-bottom))`;
 
   return (
     <>
@@ -87,9 +97,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </div>
-        {isMobile && <BottomNavBar adHeight={adHeight} />}
+        {isMobile && <BottomNavBar />}
         <Toaster />
-        {!isPremium && <AdMobController setAdHeight={setAdHeight} />}
+        {!isPremium && <AdMobController />}
       </div>
     </>
   );
