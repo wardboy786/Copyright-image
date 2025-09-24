@@ -6,7 +6,7 @@ import { useAppContext } from '@/hooks/use-app-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { type Offer } from 'cordova-plugin-purchase';
+import type { Offer } from 'cordova-plugin-purchase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const features = [
