@@ -1,15 +1,19 @@
 'use client';
-import { AdMob } from '@capacitor-community/admob';
+import {
+  AdMob,
+  BannerAdPluginEvents,
+  type AdMobBannerSize,
+} from '@capacitor-community/admob';
 import { useEffect } from 'react';
 import useAdMob from '@/hooks/use-admob';
 import { useAppContext } from '@/hooks/use-app-context';
-import { PluginListenerHandle } from '@capacitor/core';
+import { type PluginListenerHandle } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 
 export function AdMobController({
-    setAdHeight
+  setAdHeight,
 }: {
-    setAdHeight: (height: number) => void;
+  setAdHeight: (height: number) => void;
 }) {
   const { initialize, showBanner } = useAdMob();
   const { isPremium, isInitialized } = useAppContext();
@@ -25,21 +29,25 @@ export function AdMobController({
     const initAds = async () => {
       try {
         await initialize();
-        
+
         // Listen for banner ad size changes using Capacitor events
-        listener = await AdMob.addListener('bannerAdSizeChanged', (event: any) => {
-            console.log('Banner ad size changed:', event);
-            if (event?.height) {
-                setAdHeight(event.height);
+        // This is the correct, documented way to get the size.
+        listener = await AdMob.addListener(
+          BannerAdPluginEvents.SizeChanged,
+          (size: AdMobBannerSize) => {
+            console.log('Banner ad size changed:', size);
+            if (size && typeof size.height === 'number') {
+              setAdHeight(size.height);
             } else {
-                setAdHeight(0);
+              setAdHeight(0);
             }
-        });
-        
+          }
+        );
+
         await showBanner();
       } catch (error) {
-          console.error("Error initializing or showing ads:", error);
-          setAdHeight(0);
+        console.error('Error initializing or showing ads:', error);
+        setAdHeight(0);
       }
     };
 
