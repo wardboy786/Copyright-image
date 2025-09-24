@@ -21,8 +21,8 @@ const menuItems = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-const AdMobController = dynamic(() =>
-  import('@/components/layout/admob-controller').then((mod) => mod.AdMobController),
+const AdMobController = dynamic(
+  () => import('@/components/layout/admob-controller').then((mod) => mod.AdMobController),
   { ssr: false }
 );
 

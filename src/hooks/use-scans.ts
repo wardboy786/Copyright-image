@@ -7,6 +7,7 @@ import { isToday } from 'date-fns';
 export const MAX_FREE_SCANS = 5;
 const SCANS_STORAGE_KEY = 'imagerights-ai-scans';
 const PREMIUM_STORAGE_KEY = 'imagerights-ai-premium';
+const EXTRA_SCANS_KEY = 'imagerights-ai-extra-scans';
 
 
 export interface UseScansReturn {
@@ -21,11 +22,13 @@ export interface UseScansReturn {
   clearHistory: () => void;
   deleteScans: (ids: string[]) => void;
   scansToday: ScanResult[];
+  grantExtraScan: () => void;
 }
 
 export function useScans(): UseScansReturn {
   const [scans, setScans] = useState<ScanResult[]>([]);
   const [isPremium, setIsPremium] = useState<boolean>(true); // Default to premium
+  const [extraScans, setExtraScans] = useState<{ count: number; date: string } | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   // Load from local storage on mount
@@ -34,6 +37,7 @@ export function useScans(): UseScansReturn {
 
     let storedScans: ScanResult[] = [];
     let storedPremium = true;
+    let storedExtraScans: { count: number; date: string } | null = null;
 
     try {
       const scansItem = localStorage.getItem(SCANS_STORAGE_KEY);
@@ -42,15 +46,28 @@ export function useScans(): UseScansReturn {
       const premiumItem = localStorage.getItem(PREMIUM_STORAGE_KEY);
        if (premiumItem !== null) storedPremium = JSON.parse(premiumItem);
 
+      const extraScansItem = localStorage.getItem(EXTRA_SCANS_KEY);
+      if (extraScansItem) storedExtraScans = JSON.parse(extraScansItem);
+
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
       // Clear corrupted data
       localStorage.removeItem(SCANS_STORAGE_KEY);
       localStorage.removeItem(PREMIUM_STORAGE_KEY);
+      localStorage.removeItem(EXTRA_SCANS_KEY);
     }
     
     setScans(storedScans);
     setIsPremium(storedPremium);
+    
+    // Reset extra scans if it's a new day
+    if (storedExtraScans && isToday(new Date(storedExtraScans.date))) {
+      setExtraScans(storedExtraScans);
+    } else {
+      localStorage.removeItem(EXTRA_SCANS_KEY);
+      setExtraScans(null);
+    }
+
     setIsInitialized(true);
   }, []);
 
@@ -91,11 +108,20 @@ export function useScans(): UseScansReturn {
   }, [scans, isInitialized]);
 
   const todaysScanCount = scansToday.length;
+
+  const totalAllowedScans = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    let extra = 0;
+    if (extraScans && extraScans.date === todayStr) {
+      extra = extraScans.count;
+    }
+    return MAX_FREE_SCANS + extra;
+  }, [extraScans]);
   
   const isLimitReached = useMemo(() => {
     if (!isInitialized || isPremium) return false;
-    return todaysScanCount >= MAX_FREE_SCANS;
-  }, [isPremium, todaysScanCount, isInitialized]);
+    return todaysScanCount >= totalAllowedScans;
+  }, [isPremium, todaysScanCount, isInitialized, totalAllowedScans]);
 
   const clearHistory = useCallback(() => {
     saveScans([]);
@@ -106,12 +132,23 @@ export function useScans(): UseScansReturn {
     const updatedScans = scans.filter(scan => !idsToDelete.has(scan.id));
     saveScans(updatedScans);
   }, [scans, saveScans]);
+  
+  const grantExtraScan = useCallback(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newExtraScans = {
+      count: (extraScans?.date === todayStr ? extraScans.count : 0) + 1,
+      date: todayStr,
+    };
+    setExtraScans(newExtraScans);
+    localStorage.setItem(EXTRA_SCANS_KEY, JSON.stringify(newExtraScans));
+  }, [extraScans]);
+
 
   return { 
     scans, 
     addScan, 
     getScanById, 
-    todaysScanCount,
+    todaysScanCount: todaysScanCount,
     isLimitReached, 
     isPremium, 
     setPremiumStatus,
@@ -119,5 +156,6 @@ export function useScans(): UseScansReturn {
     clearHistory,
     deleteScans,
     scansToday,
+    grantExtraScan,
   };
 }
