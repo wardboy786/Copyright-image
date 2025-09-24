@@ -2,7 +2,10 @@
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAppContext } from '@/hooks/use-app-context';
-import { AdMob } from '@capacitor-community/admob';
+import useAdMob from '@/hooks/use-admob';
+
+const INITIAL_AD_DELAY = 60 * 1000; // 1 minute
+const AD_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 export function AdMobController() {
   const { isPremium, isInitialized } = useAppContext();
@@ -12,16 +15,30 @@ export function AdMobController() {
       return;
     }
 
+    const { initialize, showBanner, prepareInterstitial, showInterstitial } = useAdMob();
+    let adTimer: NodeJS.Timeout | null = null;
+
+    const showAndScheduleAd = async () => {
+      try {
+        await prepareInterstitial();
+        await showInterstitial();
+      } catch (error) {
+        console.error('Error showing interstitial ad:', error);
+      } finally {
+        // Schedule the next ad
+        if (adTimer) clearTimeout(adTimer);
+        adTimer = setTimeout(showAndScheduleAd, AD_INTERVAL);
+      }
+    };
+
     const initAds = async () => {
-      // Dynamically import the native-specific hook to ensure the correct one is bundled.
-      const useAdMobNative = (await import('@/hooks/use-admob')).default;
-      const { initialize, showBanner } = useAdMobNative();
-      
       try {
         await initialize();
         await showBanner();
+        // Schedule the first ad
+        adTimer = setTimeout(showAndScheduleAd, INITIAL_AD_DELAY);
       } catch (error) {
-        console.error('Error initializing or showing ads:', error);
+        console.error('Error initializing ads:', error);
       }
     };
 
@@ -29,7 +46,7 @@ export function AdMobController() {
 
     // Cleanup on component unmount
     return () => {
-      AdMob.hideBanner();
+      if (adTimer) clearTimeout(adTimer);
     };
   }, [isInitialized, isPremium]);
 
