@@ -27,10 +27,13 @@ const AdMobController = dynamic(
 );
 
 
-function BottomNavBar() {
+function BottomNavBar({ adHeight }: { adHeight: number }) {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden">
+    <nav 
+      className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden"
+      style={{ bottom: `${adHeight}px` }}
+    >
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
         {menuItems.map((item) => (
           <Link
@@ -57,7 +60,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const { isInitialized: isAppContextInitialized } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
-  
+  const { isPremium } = useAppContext();
+  const [adHeight, setAdHeight] = useState(0);
+
+  const pb = isMobile ? `pb-[${80 + adHeight}px]` : 'pb-8';
   
   if (showSplash && !isAppContextInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
@@ -72,12 +78,16 @@ function AppContent({ children }: { children: React.ReactNode }) {
       <div className={cn('flex min-h-screen w-full bg-background', !isAppContextInitialized && 'opacity-0')}>
         <div className="flex flex-col flex-1">
           <Header />
-          <main className="flex-1 p-4 md:p-6 lg:p-8 pb-32 md:pb-8">
+          <main 
+            className="flex-1 p-4 md:p-6 lg:p-8"
+            style={{ paddingBottom: isMobile ? `${80 + adHeight}px` : '32px' }}
+          >
             {children}
           </main>
         </div>
-        {isMobile && <BottomNavBar />}
+        {isMobile && <BottomNavBar adHeight={adHeight} />}
         <Toaster />
+        {!isPremium && <AdMobController setAdHeight={setAdHeight} />}
       </div>
     </>
   );
@@ -94,7 +104,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <AppContent>{children}</AppContent>
-      <AdMobController />
     </ThemeProvider>
   );
 }
