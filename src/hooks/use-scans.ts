@@ -3,22 +3,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { type ScanResult, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 import { isToday } from 'date-fns';
+import { useBilling } from './use-billing';
 
 export const MAX_FREE_SCANS = 5;
 export const MAX_REWARDED_SCANS = 15;
 const SCANS_STORAGE_KEY = 'imagerights-ai-scans';
-const PREMIUM_STORAGE_KEY = 'imagerights-ai-premium';
 const EXTRA_SCANS_KEY = 'imagerights-ai-extra-scans';
-
 
 export interface UseScansReturn {
   scans: ScanResult[];
-  addScan: (imageData: string, analysisResult: AnalyzeImageForCopyrightOutput) => ScanResult;
   getScanById: (id: string) => ScanResult | undefined;
   todaysScanCount: number;
   isLimitReached: boolean;
   isPremium: boolean;
-  setPremiumStatus: (status: boolean) => void;
   isInitialized: boolean;
   clearHistory: () => void;
   deleteScans: (ids: string[]) => void;
@@ -28,45 +25,37 @@ export interface UseScansReturn {
   isRewardedScansLimitReached: boolean;
   totalAllowedScans: number;
   startScan: (file: File, isAi: boolean, isUser: boolean, preview: string) => Promise<ScanResult | { error: string }>;
+  billing: ReturnType<typeof useBilling>;
 }
 
 export function useScans(): UseScansReturn {
   const [scans, setScans] = useState<ScanResult[]>([]);
-  const [isPremium, setIsPremium] = useState<boolean>(true); // Default to premium
   const [extraScans, setExtraScans] = useState<{ count: number; date: string } | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const billing = useBilling();
+  const { isPremium } = billing;
   
-  // Load from local storage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     let storedScans: ScanResult[] = [];
-    let storedPremium = true;
     let storedExtraScans: { count: number; date: string } | null = null;
 
     try {
       const scansItem = localStorage.getItem(SCANS_STORAGE_KEY);
       if (scansItem) storedScans = JSON.parse(scansItem);
       
-      const premiumItem = localStorage.getItem(PREMIUM_STORAGE_KEY);
-       if (premiumItem !== null) storedPremium = JSON.parse(premiumItem);
-
       const extraScansItem = localStorage.getItem(EXTRA_SCANS_KEY);
       if (extraScansItem) storedExtraScans = JSON.parse(extraScansItem);
 
-
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
-      // Clear corrupted data
       localStorage.removeItem(SCANS_STORAGE_KEY);
-      localStorage.removeItem(PREMIUM_STORAGE_KEY);
       localStorage.removeItem(EXTRA_SCANS_KEY);
     }
     
     setScans(storedScans);
-    setIsPremium(storedPremium);
     
-    // Reset extra scans if it's a new day
     if (storedExtraScans && isToday(new Date(storedExtraScans.date))) {
       setExtraScans(storedExtraScans);
     } else {
@@ -83,15 +72,6 @@ export function useScans(): UseScansReturn {
       localStorage.setItem(SCANS_STORAGE_KEY, JSON.stringify(newScans));
     }
   }, []);
-  
-  const setPremiumStatus = useCallback((status: boolean) => {
-    setIsPremium(status);
-    console.log(`Premium status set to: ${status}`);
-     if (typeof window !== 'undefined') {
-      localStorage.setItem(PREMIUM_STORAGE_KEY, JSON.stringify(status));
-    }
-  }, []);
-
 
   const addScan = useCallback((imageData: string, analysisResult: AnalyzeImageForCopyrightOutput): ScanResult => {
     const newScan: ScanResult = {
@@ -192,13 +172,11 @@ export function useScans(): UseScansReturn {
 
   return { 
     scans, 
-    addScan, 
     getScanById, 
     todaysScanCount: todaysScanCount,
     isLimitReached, 
     isPremium, 
-    setPremiumStatus,
-    isInitialized,
+    isInitialized: isInitialized && billing.isInitialized,
     clearHistory,
     deleteScans,
     scansToday,
@@ -207,5 +185,6 @@ export function useScans(): UseScansReturn {
     isRewardedScansLimitReached,
     totalAllowedScans,
     startScan,
+    billing,
   };
 }

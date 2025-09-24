@@ -2,7 +2,6 @@
 import { useAppContext } from '@/hooks/use-app-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -16,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, ChevronRight, Info, FileText, Mail, Sun, Moon, Laptop } from 'lucide-react';
+import { Trash2, ChevronRight, Info, FileText, Mail, Sun, Moon, Laptop, Gem } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,7 +29,7 @@ const complianceLinks = [
 ];
 
 export default function SettingsPage() {
-  const { isPremium, setPremiumStatus, clearHistory, isInitialized } = useAppContext();
+  const { isPremium, isInitialized, clearHistory, billing } = useAppContext();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
 
@@ -41,6 +40,22 @@ export default function SettingsPage() {
       description: 'Your scan history has been successfully deleted.',
     });
   };
+
+  const handleRestorePurchases = async () => {
+    try {
+      await billing.restorePurchases();
+      toast({
+        title: "Purchases Restored",
+        description: "Your premium status has been updated.",
+      });
+    } catch (e) {
+       toast({
+        title: "Restore Failed",
+        description: "We couldn't restore your purchases. Please try again later.",
+        variant: 'destructive',
+      });
+    }
+  }
 
   return (
     <div className="grid gap-6 max-w-2xl mx-auto">
@@ -75,20 +90,23 @@ export default function SettingsPage() {
           <CardDescription>Manage your account and data.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div>
-              <Label htmlFor="premium-mode" className="font-semibold">Premium Status (Dev)</Label>
-              <p className="text-sm text-muted-foreground">
-                Simulate a premium account for testing purposes.
-              </p>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label className="font-semibold">Premium Status</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {isInitialized ? (isPremium ? 'Active' : 'Not Active') : 'Loading...'}
+                  </p>
+                </div>
+                <Button asChild variant="secondary" size="sm">
+                  <Link href="/premium">
+                    <Gem className="mr-2 h-4 w-4" />
+                    {isPremium ? 'Manage' : 'Upgrade'}
+                  </Link>
+                </Button>
             </div>
-            <Switch
-              id="premium-mode"
-              checked={isPremium}
-              onCheckedChange={setPremiumStatus}
-              disabled={!isInitialized}
-            />
-          </div>
+             <Button onClick={handleRestorePurchases} variant="outline" className="w-full">
+                Restore Purchases
+            </Button>
         </CardContent>
       </Card>
       
