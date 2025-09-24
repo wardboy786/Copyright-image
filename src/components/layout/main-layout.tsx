@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
+import dynamic from 'next/dynamic';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -20,10 +21,20 @@ const menuItems = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-function BottomNavBar() {
+const AdMobController = dynamic(
+  () => import('@/components/layout/admob-controller').then((mod) => mod.AdMobController),
+  { ssr: false }
+);
+
+
+function BottomNavBar({ adHeight }: { adHeight: number }) {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden">
+    <nav 
+      className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t md:hidden"
+      // The ad will now have its own margin, so we don't need to adjust the nav bar
+      // style={{ bottom: `${adHeight}px` }}
+    >
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
         {menuItems.map((item) => (
           <Link
@@ -50,10 +61,15 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const { isInitialized: isAppContextInitialized } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
+  const { isPremium } = useAppContext();
+  const [adHeight, setAdHeight] = useState(0);
   
   if (showSplash && !isAppContextInitialized) {
     return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
   }
+
+  // The total padding at the bottom will be for the nav bar (64px) and the ad (50px standard banner)
+  const mobilePaddingBottom = isPremium ? '80px' : '130px';
 
   return (
     <>
@@ -64,12 +80,16 @@ function AppContent({ children }: { children: React.ReactNode }) {
       <div className={cn('flex min-h-screen w-full bg-background', !isAppContextInitialized && 'opacity-0')}>
         <div className="flex flex-col flex-1">
           <Header />
-          <main className="flex-1 p-4 md:p-6 lg:p-8 pb-32 md:pb-8">
+          <main 
+            className="flex-1 p-4 md:p-6 lg:p-8"
+            style={{ paddingBottom: isMobile ? mobilePaddingBottom : '32px' }}
+          >
             {children}
           </main>
         </div>
-        {isMobile && <BottomNavBar />}
+        {isMobile && <BottomNavBar adHeight={adHeight} />}
         <Toaster />
+        {!isPremium && <AdMobController setAdHeight={setAdHeight} />}
       </div>
     </>
   );
