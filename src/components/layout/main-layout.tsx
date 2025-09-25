@@ -3,11 +3,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Scan, History, Gem, Settings, Home } from 'lucide-react';
 import { Header } from './header';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { SplashScreen } from './splash-screen';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
 import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
@@ -28,13 +27,7 @@ const AdMobController = dynamic(
 
 function BottomNavBar() {
   const pathname = usePathname();
-  const { isPremium } = useAppContext();
   
-  // Total height of the ad banner (50px) + the nav bar itself (64px) = 114px.
-  // This padding prevents content from being hidden behind the ad and nav bar.
-  // When premium, the ad is gone, so we only need to account for the nav bar.
-  const navPadding = isPremium ? '64px' : '114px';
-
   return (
     <nav 
       className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t"
@@ -66,7 +59,6 @@ function BottomNavBar() {
 
 
 function AppContent({ children }: { children: React.ReactNode }) {
-  const isMobile = useIsMobile();
   const { isInitialized: isAppContextInitialized, isPremium } = useAppContext();
   const [showSplash, setShowSplash] = useState(true);
   
@@ -77,7 +69,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   // The total padding needed at the bottom of the main content area.
   // For non-premium users, this is ad height (50px) + nav bar height (64px) = 114px.
   // For premium users, it's just the nav bar height (64px).
-  const mobilePaddingBottom = !isPremium ? `114px` : `64px`;
+  const bottomPadding = !isPremium ? `114px` : `64px`;
 
 
   return (
@@ -91,12 +83,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
           <Header />
           <main 
             className="flex-1 p-4 md:p-6 lg:p-8"
-            style={{ paddingBottom: isMobile ? mobilePaddingBottom : '32px' }}
+            style={{ paddingBottom: bottomPadding }}
           >
             {children}
           </main>
         </div>
-        {isMobile && <BottomNavBar />}
+        <BottomNavBar />
         <Toaster />
         {!isPremium && <AdMobController />}
       </div>
