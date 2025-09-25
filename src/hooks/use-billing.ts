@@ -32,8 +32,8 @@ export type CdvPurchase = {
 };
 
 
-export const MONTHLY_PLAN_ID = 'monthly-plan';
-export const YEARLY_PLAN_ID = 'yearly-plan';
+export const MONTHLY_PLAN_ID = 'photorights_monthly';
+export const YEARLY_PLAN_ID = 'photorights_yearly';
 
 export const useBilling = () => {
   const [products, setProducts] = useState<Product[]>([]);
