@@ -7,16 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// Define the Offer type locally to avoid build issues with the cordova plugin.
-type Offer = {
-    id: string;
-    price: {
-        amount: number;
-        formatted: string;
-    };
-    // Add other properties as needed from the cordova-plugin-purchase types
-};
+import { type Offer, type Product } from '@/hooks/use-billing';
 
 
 const features = [
@@ -106,8 +97,8 @@ export default function PremiumPage() {
         )
     }
     
-    const yearlyOffer = yearlyProduct.offers[0];
-    const monthlyOffer = monthlyProduct.offers[0];
+    const monthlyOffer = monthlyProduct?.offers.find(o => o.id === 'monthly-plan');
+    const yearlyOffer = yearlyProduct?.offers.find(o => o.id === 'yearly-free');
     const discount = yearlyOffer && monthlyOffer ? Math.round((1 - (yearlyOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) : 0;
 
     return (
@@ -125,8 +116,11 @@ export default function PremiumPage() {
                 <p className="text-xs text-muted-foreground">per month</p>
              </button>
              <button onClick={() => setSelectedPlan('yearly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'yearly' ? 'border-primary' : 'border-border')}>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                    3-Day Free Trial
+                </div>
                 {discount > 0 && 
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                    <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
                         Save {discount}%
                     </div>
                 }

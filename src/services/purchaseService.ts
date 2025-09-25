@@ -37,7 +37,7 @@ class CordovaPurchaseService implements PurchaseService {
 
     const { ProductType, Platform } = this.CdvPurchase;
 
-    this.store.initialize([
+    this.store.register([
       {
         type: ProductType.PAID_SUBSCRIPTION,
         id: MONTHLY_PLAN_ID,
@@ -49,6 +49,9 @@ class CordovaPurchaseService implements PurchaseService {
         platform: Platform.GOOGLE_PLAY,
       },
     ]);
+    
+    this.store.initialize();
+
 
     // Setup listeners
     this.store.when().productUpdated(onProductUpdated);
@@ -65,7 +68,7 @@ class CordovaPurchaseService implements PurchaseService {
 
   async getProducts(ids: string[]): Promise<Product[]> {
     if (!this.isAvailable()) return [];
-    return this.store.getProducts(ids);
+    return this.store.get(ids);
   }
   
   async isPremium(): Promise<boolean> {
