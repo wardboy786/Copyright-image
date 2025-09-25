@@ -81,7 +81,7 @@ export default function PremiumPage() {
                         </div>
                     </div>
                     <CardTitle className="text-3xl">You are Premium!</CardTitle>
-                    <CardDescription>You have unlocked all features of ImageRights AI.</CardDescription>
+                    <CardDescription>You have unlocked all features of Photorights AI.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center">
                     <Button variant="link" onClick={() => window.location.reload()}>Refresh Page</Button>
@@ -115,7 +115,7 @@ export default function PremiumPage() {
         <CardHeader className="text-center p-6 bg-muted/30">
           <Star className="w-12 h-12 text-primary mx-auto mb-4" />
           <CardTitle className="text-3xl">Go Premium</CardTitle>
-          <CardDescription>Unlock the full power of ImageRights AI.</CardDescription>
+          <CardDescription>Unlock the full power of Photorights AI.</CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-2 gap-3">

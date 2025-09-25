@@ -7,13 +7,13 @@ export default function AboutPage() {
       <Card>
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Image src="/images/logo.svg" alt="ImageRights AI Logo" width={64} height={64} className="w-16 h-16 text-primary"/>
+            <Image src="/images/logo.svg" alt="Photorights AI Logo" width={64} height={64} className="w-16 h-16 text-primary"/>
           </div>
-          <CardTitle className="text-3xl">About ImageRights AI</CardTitle>
+          <CardTitle className="text-3xl">About Photorights AI</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground space-y-4 text-center">
           <p>
-            ImageRights AI is a powerful tool designed to help creators, marketers, and businesses protect themselves from copyright infringement. 
+            Photorights AI is a powerful tool designed to help creators, marketers, and businesses protect themselves from copyright infringement. 
           </p>
           <p>
             Our advanced AI scans images to detect potential copyrighted elements, including logos, brand assets, characters, and more, giving you the confidence to use images safely.

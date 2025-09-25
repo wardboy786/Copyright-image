@@ -7,8 +7,8 @@ import { useBilling } from './use-billing';
 
 export const MAX_FREE_SCANS = 5;
 export const MAX_REWARDED_SCANS = 15;
-const SCANS_STORAGE_KEY = 'imagerights-ai-scans';
-const EXTRA_SCANS_KEY = 'imagerights-ai-extra-scans';
+const SCANS_STORAGE_KEY = 'photorights-ai-scans';
+const EXTRA_SCANS_KEY = 'photorights-ai-extra-scans';
 
 export interface UseScansReturn {
   scans: ScanResult[];

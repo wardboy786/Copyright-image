@@ -4,8 +4,8 @@ import { CapacitorConfig } from '@capacitor/cli';
 const LIVE_URL = 'https://copyright-image.vercel.app';
 
 const config: CapacitorConfig = {
-  appId: 'com.imagerights.ai',
-  appName: 'ImageRights AI',
+  appId: 'com.photorights.ai',
+  appName: 'Photorights AI',
   // When 'server.url' is set, 'webDir' is not used by Capacitor for the build.
   // The 'out' directory is still used by 'npm run build' for Vercel deployment.
   webDir: 'out', 

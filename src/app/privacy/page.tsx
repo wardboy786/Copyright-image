@@ -9,7 +9,7 @@ export default function PrivacyPage() {
           <CardDescription>Last Updated: September 21, 2025</CardDescription>
         </CardHeader>
         <CardContent className="text-muted-foreground space-y-4">
-            <p>ImageRights AI ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application (the "Service").</p>
+            <p>Photorights AI ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application (the "Service").</p>
             
             <h3 className="font-semibold text-foreground pt-4">1. Information We Collect</h3>
             <p>We may collect information about you in a variety of ways. The information we may collect via the Service includes:</p>

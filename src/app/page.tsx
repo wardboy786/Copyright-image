@@ -40,7 +40,7 @@ export default function Home() {
           Create with Confidence.
         </h1>
         <p className="max-w-md mx-auto mt-4 text-lg text-muted-foreground">
-          ImageRights AI helps you avoid copyright issues by intelligently scanning your images for protected content.
+          Photorights AI helps you avoid copyright issues by intelligently scanning your images for protected content.
         </p>
         <Button asChild size="lg" className="mt-8 rounded-full shadow-lg shadow-primary/30">
             <Link href="/scan">
@@ -55,7 +55,7 @@ export default function Home() {
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
       >
-        <h2 className="text-2xl font-bold text-center mb-8">Who is ImageRights AI for?</h2>
+        <h2 className="text-2xl font-bold text-center mb-8">Who is Photorights AI for?</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {whoIsItFor.map((item, index) => (
                 <motion.div key={index} variants={itemVariants}>
