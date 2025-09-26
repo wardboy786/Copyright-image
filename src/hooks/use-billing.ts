@@ -60,30 +60,32 @@ export const useBilling = () => {
 
   useEffect(() => {
     const initializeBilling = async () => {
-        if (!purchaseService.isAvailable()) {
-          console.log('Billing not initialized: Not a native platform.');
-          setIsInitialized(true);
-          setIsLoading(false);
-          return;
-        }
+      setIsLoading(true);
+      if (!purchaseService.isAvailable()) {
+        console.log('Billing not initialized: Not a native platform.');
+        setIsInitialized(true);
+        setIsLoading(false);
+        return;
+      }
 
-        try {
-          const onProductUpdated = () => {
-            checkPremiumStatus();
-          };
-          
-          await purchaseService.initialize(onProductUpdated);
-          
-          const fetchedProducts = await purchaseService.getProducts([MONTHLY_PLAN_ID, YEARLY_PLAN_ID]);
-          setProducts(fetchedProducts as Product[]);
-          
-          await checkPremiumStatus();
-        } catch (error) {
-          console.error('Failed to initialize billing', error);
-        } finally {
-            setIsInitialized(true);
-            setIsLoading(false);
-        }
+      try {
+        const onProductUpdated = () => {
+          checkPremiumStatus();
+        };
+        
+        await purchaseService.initialize(onProductUpdated);
+        
+        const fetchedProducts = await purchaseService.getProducts([MONTHLY_PLAN_ID, YEARLY_PLAN_ID]);
+        setProducts(fetchedProducts as Product[]);
+        
+        await checkPremiumStatus();
+      } catch (error) {
+        console.error('Failed to initialize billing', error);
+        // Ensure state is updated even on error
+      } finally {
+        setIsInitialized(true);
+        setIsLoading(false);
+      }
     };
     
     initializeBilling();
