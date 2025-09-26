@@ -1,6 +1,11 @@
 // services/purchaseService.ts
 
-import { MONTHLY_PLAN_ID, YEARLY_PLAN_ID, type Transaction } from "@/hooks/use-billing";
+import {
+  MONTHLY_PLAN_ID,
+  YEARLY_PLAN_ID,
+  type Transaction,
+} from '@/hooks/use-billing';
+import { validatePurchase } from '@/ai/flows/validate-purchase-flow';
 
 // Define locally to avoid module resolution issues
 type Product = import('@/hooks/use-billing').Product;
@@ -19,14 +24,14 @@ class CordovaPurchaseService implements PurchaseService {
     // Access the store via the window object to avoid build-time imports
     return (window as any).CdvPurchase.store;
   }
-  
+
   private get CdvPurchase() {
     return (window as any).CdvPurchase;
   }
-  
+
   isAvailable(): boolean {
     return !!(
-      typeof window !== 'undefined' && 
+      typeof window !== 'undefined' &&
       (window as any).CdvPurchase &&
       (window as any).CdvPurchase.store
     );
@@ -49,33 +54,61 @@ class CordovaPurchaseService implements PurchaseService {
         platform: Platform.GOOGLE_PLAY,
       },
     ]);
-    
-    this.store.initialize();
-
 
     // Setup listeners
     this.store.when().productUpdated(onProductUpdated);
+    
+    // Server-side validation flow
     this.store.when().approved(async (transaction: any) => {
-        const isVerified = await transaction.verify();
-        if (isVerified) {
-            transaction.finish();
-            onProductUpdated(); // Refresh status after purchase
+      try {
+        const { platform, products, transactionId, purchaseId } = transaction;
+        const purchaseToken = transaction.nativePurchase.purchaseToken;
+        const productId = products[0].id;
+
+        const validationResult = await validatePurchase({
+          packageName: 'com.photorights.ai',
+          productId,
+          purchaseToken,
+        });
+
+        if (validationResult.isValid) {
+          transaction.finish();
+          console.log('Purchase validated and finished successfully.');
+        } else {
+          // Handle invalid purchase, maybe log it or alert the user
+          console.error('Purchase validation failed:', validationResult.error);
         }
+      } catch (e) {
+        console.error('An error occurred during transaction verification:', e);
+      } finally {
+        onProductUpdated(); // Refresh status after any transaction attempt
+      }
     });
+
+    // Fallback for older systems or if server-side validation fails
     this.store.when().verified((receipt: any) => receipt.finish());
     this.store.when().unverified((receipt: any) => receipt.finish());
+    
+    // Initialize the store AFTER registering products and listeners
+    this.store.initialize();
   }
 
   async getProducts(ids: string[]): Promise<Product[]> {
     if (!this.isAvailable()) return [];
     return this.store.get(ids);
   }
-  
+
   async isPremium(): Promise<boolean> {
     if (!this.isAvailable()) return false;
     const transactions: Transaction[] = await this.store.ownedPurchases();
-    const hasMonthly = transactions.some(t => t.products.some(p => p.id === MONTHLY_PLAN_ID) && t.isActive);
-    const hasYearly = transactions.some(t => t.products.some(p => p.id === YEARLY_PLAN_ID) && t.isActive);
+    const hasMonthly = transactions.some(
+      (t) =>
+        t.products.some((p) => p.id === MONTHLY_PLAN_ID) && t.isActive
+    );
+    const hasYearly = transactions.some(
+      (t) =>
+        t.products.some((p) => p.id === YEARLY_PLAN_ID) && t.isActive
+    );
     return hasMonthly || hasYearly;
   }
 
@@ -100,14 +133,14 @@ class MockPurchaseService implements PurchaseService {
   }
 
   async initialize(): Promise<void> {
-    console.log("Mock purchase service: initialize");
+    console.log('Mock purchase service: initialize');
   }
 
   async getProducts(): Promise<Product[]> {
-    console.log("Mock purchase service: getProducts");
+    console.log('Mock purchase service: getProducts');
     return [];
   }
-  
+
   async isPremium(): Promise<boolean> {
     return false;
   }
@@ -123,7 +156,7 @@ class MockPurchaseService implements PurchaseService {
   }
 }
 
-export const purchaseService: PurchaseService = 
+export const purchaseService: PurchaseService =
   typeof window !== 'undefined' && (window as any).CdvPurchase
-    ? new CordovaPurchaseService() 
+    ? new CordovaPurchaseService()
     : new MockPurchaseService();
