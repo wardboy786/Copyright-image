@@ -40,16 +40,9 @@ const validatePurchaseFlow = ai.defineFlow(
   },
   async ({ packageName, productId, purchaseToken }) => {
     try {
-      const base64Credentials = process.env.PLAY_CONSOLE_CREDENTIALS;
-      if (!base64Credentials) {
-        throw new Error('PLAY_CONSOLE_CREDENTIALS environment variable is not set.');
-      }
-      
-      const decodedJson = Buffer.from(base64Credentials, 'base64').toString('utf8');
-      const credentials = JSON.parse(decodedJson);
-
+      // The GoogleAuth library automatically finds the credentials from the 
+      // GOOGLE_APPLICATION_CREDENTIALS environment variable.
       const auth = new GoogleAuth({
-        credentials,
         scopes: ['https://www.googleapis.com/auth/androidpublisher'],
       });
 
