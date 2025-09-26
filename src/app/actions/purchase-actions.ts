@@ -15,7 +15,7 @@ export async function validatePurchaseAction(
 ): Promise<ValidatePurchaseOutput> {
   // The API base must be an absolute URL to work in server-to-server communication.
   // Ensure NEXT_PUBLIC_APP_URL is set in your environment variables.
-  const apiBase = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const apiBase = process.env.NEXT_PUBLIC_APP_URL || 'https://copyright-image.vercel.app/';
   
   try {
     const response = await fetch(`${apiBase}/api/validate-purchase`, {
