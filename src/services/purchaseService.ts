@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 
 // This is the safest way to declare the plugin types for TypeScript
 declare var CdvPurchase: any;
+declare var Capacitor: any;
 
 export type Product = {
   id: string;
