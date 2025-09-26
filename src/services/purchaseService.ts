@@ -5,7 +5,7 @@ import {
   YEARLY_PLAN_ID,
   type Transaction,
 } from '@/hooks/use-billing';
-import { validatePurchase } from '@/ai/flows/validate-purchase-flow';
+import { validatePurchaseAction } from '@/app/actions/purchase-actions';
 
 // Define locally to avoid module resolution issues
 type Product = import('@/hooks/use-billing').Product;
@@ -61,11 +61,10 @@ class CordovaPurchaseService implements PurchaseService {
     // Server-side validation flow
     this.store.when().approved(async (transaction: any) => {
       try {
-        const { platform, products, transactionId, purchaseId } = transaction;
         const purchaseToken = transaction.nativePurchase.purchaseToken;
-        const productId = products[0].id;
+        const productId = transaction.products[0].id;
 
-        const validationResult = await validatePurchase({
+        const validationResult = await validatePurchaseAction({
           packageName: 'com.photorights.ai',
           productId,
           purchaseToken,
@@ -150,7 +149,7 @@ class MockPurchaseService implements PurchaseService {
     throw new Error('Purchases are only available on the mobile app.');
   }
 
-  async restorePurchases(): Promise<void> {
+async restorePurchases(): Promise<void> {
     console.log('Mock restore purchases');
     throw new Error('Purchases can only be restored on the mobile app.');
   }
