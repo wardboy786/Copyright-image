@@ -40,12 +40,13 @@ const validatePurchaseFlow = ai.defineFlow(
   },
   async ({ packageName, productId, purchaseToken }) => {
     try {
-      const credentialsString = process.env.PLAY_CONSOLE_CREDENTIALS;
-      if (!credentialsString) {
+      const base64Credentials = process.env.PLAY_CONSOLE_CREDENTIALS;
+      if (!base64Credentials) {
         throw new Error('PLAY_CONSOLE_CREDENTIALS environment variable is not set.');
       }
       
-      const credentials = JSON.parse(credentialsString);
+      const decodedJson = Buffer.from(base64Credentials, 'base64').toString('utf8');
+      const credentials = JSON.parse(decodedJson);
 
       const auth = new GoogleAuth({
         credentials,
@@ -66,17 +67,26 @@ const validatePurchaseFlow = ai.defineFlow(
       // Check if the purchase is valid
       // 0: Yet to be acknowledged, 1: Acknowledged
       const isAcknowledged = res.data.acknowledgementState === 0 || res.data.acknowledgementState === 1;
-      // 0: Active, 1: Canceled, 2: In grace period, 3: On hold
-      const isActive = res.data.paymentState === 1;
-      const isNotExpired = (res.data.expiryTimeMillis || 0) > Date.now();
+      // For subscriptions, paymentState 1 means the subscription is active. 
+      // 0 might mean pending, 2 might mean in grace period. We'll consider 1 as valid.
+      const isActive = res.data.paymentState === 1; 
+      const isNotExpired = (res.data.expiryTimeMillis ? parseInt(res.data.expiryTimeMillis) : 0) > Date.now();
 
       if (isAcknowledged && isActive && isNotExpired) {
         return { isValid: true };
       } else {
-        return { isValid: false, error: 'Purchase is not active, acknowledged, or has expired.' };
+        let error = 'Purchase is not valid. ';
+        if (!isAcknowledged) error += 'Not acknowledged. ';
+        if (!isActive) error += 'Not active. ';
+        if (!isNotExpired) error += 'Expired. ';
+        return { isValid: false, error };
       }
     } catch (e: any) {
       console.error("Error validating purchase:", e.message);
+      // Provide a more specific error for API issues
+      if (e.code && e.code >= 400 && e.code < 500) {
+          return { isValid: false, error: `Google API Error: ${e.message} (Code: ${e.code}). Please check your service account permissions and the provided purchase details.` };
+      }
       return { isValid: false, error: e.message || 'An unknown error occurred during validation.' };
     }
   }
