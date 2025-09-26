@@ -1,7 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
+import 'dotenv/config';
 
 // IMPORTANT: This is your live Vercel deployment URL.
-const LIVE_URL = 'https://copyright-image.vercel.app';
+const LIVE_URL = process.env.LIVE_URL || 'http://localhost:3000';
 
 const config: CapacitorConfig = {
   appId: 'com.photorights.ai',

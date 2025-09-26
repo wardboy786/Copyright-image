@@ -2,7 +2,7 @@
 import { type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 
 // The API base must be an absolute URL to work in the Capacitor WebView.
-const API_BASE = 'https://copyright-image.vercel.app/api';
+const API_BASE = process.env.NEXT_PUBLIC_APP_URL || 'https://copyright-image.vercel.app/api';
 
 /**
  * @deprecated This action is deprecated and will be removed. Use the `startScan` method from `useAppContext` instead.
