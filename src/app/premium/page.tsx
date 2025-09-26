@@ -1,13 +1,14 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Loader2, Star, ZapOff } from 'lucide-react';
-import { useAppContext } from '@/hooks/use-app-context';
+import { Check, Loader2, Star, ZapOff, AlertCircle } from 'lucide-react';
+import { useBilling } from '@/hooks/use-billing';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { type Offer, type Product } from '@/hooks/use-billing';
+import { type Offer } from '@/services/purchaseService';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
 const features = [
@@ -17,37 +18,43 @@ const features = [
 ];
 
 export default function PremiumPage() {
-  const { billing } = useAppContext();
+  const { 
+    isInitialized, 
+    isLoading, 
+    isPremium, 
+    products, 
+    isPurchasing, 
+    error,
+    purchase, 
+    restorePurchases 
+  } = useBilling();
+  
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
-  const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
 
-  const monthlyProduct = billing.getMonthlyPlan();
-  const yearlyProduct = billing.getYearlyPlan();
+  const monthlyProduct = products.find(p => p.id === 'photorights_monthly');
+  const yearlyProduct = products.find(p => p.id === 'photorights_yearly');
 
   const handlePurchase = async (offer: Offer | undefined) => {
-    if (!offer || !billing.products.length) {
+    if (!offer) {
         toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available.', variant: 'destructive' });
         return;
     }
-    setIsPurchasing(offer.id);
     try {
-        await billing.purchase(offer as any); 
+        await purchase(offer as any); 
         toast({ title: 'Purchase Successful!', description: 'You are now a Premium member.' });
-    } catch (error: any) {
-        console.error('Purchase failed', error);
-        // Don't show a toast for user cancellation
-        if (error?.code !== 6) { // 6 is CdvPurchase.ErrorCode.PAYMENT_CANCELLED
-            toast({ title: 'Purchase Failed', description: error.message || 'An error occurred during the purchase process.', variant: 'destructive' });
+    } catch (e: any) {
+        console.error('Purchase failed', e);
+        // User cancellation error code is 6 for this plugin
+        if (e?.code !== 6) { 
+            toast({ title: 'Purchase Failed', description: e.message || 'An error occurred during the purchase process.', variant: 'destructive' });
         }
-    } finally {
-        setIsPurchasing(null);
     }
   };
   
   const handleRestore = async () => {
     try {
-        await billing.restorePurchases();
+        await restorePurchases();
         toast({ title: 'Purchases Restored', description: 'Your previous purchases have been restored.' });
     } catch (e: any) {
         toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
@@ -55,7 +62,7 @@ export default function PremiumPage() {
   }
 
   const renderContent = () => {
-    if (billing.isLoading) {
+    if (isLoading && !isInitialized) {
         return (
              <div className="w-full max-w-md space-y-4">
                 <Skeleton className="h-64 w-full" />
@@ -65,7 +72,7 @@ export default function PremiumPage() {
         )
     }
 
-    if (billing.isPremium) {
+    if (isPremium) {
         return (
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
@@ -78,13 +85,26 @@ export default function PremiumPage() {
                     <CardDescription>You have unlocked all features of Photorights AI.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center">
-                    <Button variant="link" onClick={() => window.location.reload()}>Refresh Page</Button>
+                     <Button variant="outline" onClick={() => window.location.reload()}>Refresh Status</Button>
                 </CardContent>
             </Card>
         )
     }
     
-    if (!monthlyProduct || !yearlyProduct) {
+    if (error) {
+         return (
+            <Alert variant="destructive" className="max-w-md">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>An Error Occurred</AlertTitle>
+                <AlertDescription>
+                    {error} Please check your connection or try again later.
+                     <Button variant="link" onClick={() => window.location.reload()} className="p-0 h-auto ml-2">Retry</Button>
+                </AlertDescription>
+            </Alert>
+        );
+    }
+    
+    if (isInitialized && (!products || products.length === 0)) {
         return (
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
@@ -94,15 +114,22 @@ export default function PremiumPage() {
                         </div>
                     </div>
                     <CardTitle className="text-2xl">Billing Not Available</CardTitle>
-                    <CardDescription>Could not connect to the app store. This feature is only available on mobile devices. Please check your connection and try again.</CardDescription>
+                    <CardDescription>Could not connect to the app store. Please ensure you are on a real mobile device, have a network connection, and have enabled Google Play Services.</CardDescription>
                 </CardHeader>
+                 <CardFooter>
+                    <Button variant="outline" onClick={() => window.location.reload()} className="w-full">Retry Connection</Button>
+                </CardFooter>
             </Card>
         )
     }
     
     const monthlyOffer = monthlyProduct?.offers.find(o => o.id === 'monthly-plan');
     const yearlyOffer = yearlyProduct?.offers.find(o => o.id === 'yearly-free');
-    const discount = yearlyOffer && monthlyOffer ? Math.round((1 - (yearlyOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) : 0;
+    
+    // Calculate discount only if both offers are valid
+    const discount = (yearlyOffer && monthlyOffer && yearlyOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
+        ? Math.round((1 - (yearlyOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
+        : 0;
 
     return (
       <Card className="w-full max-w-md shadow-xl overflow-hidden">
@@ -115,11 +142,11 @@ export default function PremiumPage() {
           <div className="grid grid-cols-2 gap-3">
              <button onClick={() => setSelectedPlan('monthly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'monthly' ? 'border-primary' : 'border-border')}>
                 <p className="font-semibold">Monthly</p>
-                <p className="text-xl font-bold">{monthlyOffer?.price.formatted || '$4.99'}</p>
+                <p className="text-xl font-bold">{monthlyOffer?.price.formatted || '...'}</p>
                 <p className="text-xs text-muted-foreground">per month</p>
              </button>
              <button onClick={() => setSelectedPlan('yearly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'yearly' ? 'border-primary' : 'border-border')}>
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
                     3-Day Free Trial
                 </div>
                 {discount > 0 && 
@@ -128,7 +155,7 @@ export default function PremiumPage() {
                     </div>
                 }
                 <p className="font-semibold">Yearly</p>
-                <p className="text-xl font-bold">{yearlyOffer?.price.formatted || '$39.99'}</p>
+                <p className="text-xl font-bold">{yearlyOffer?.price.formatted || '...'}</p>
                  <p className="text-xs text-muted-foreground">per year</p>
              </button>
           </div>
@@ -146,12 +173,12 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={() => handlePurchase(selectedPlan === 'monthly' ? monthlyOffer : yearlyOffer)}
-            disabled={isPurchasing !== null}
+            disabled={isPurchasing || isLoading}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
           </Button>
-          <Button variant="ghost" onClick={handleRestore} disabled={billing.isLoading}>
+          <Button variant="ghost" onClick={handleRestore} disabled={isLoading || isPurchasing}>
             Restore Purchases
           </Button>
         </CardFooter>
@@ -160,7 +187,7 @@ export default function PremiumPage() {
   };
   
   return (
-    <div className="flex justify-center items-center py-8">
+    <div className="flex justify-center items-start py-8">
         {renderContent()}
     </div>
   );
