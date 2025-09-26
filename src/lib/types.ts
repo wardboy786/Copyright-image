@@ -19,3 +19,15 @@ export interface ScanResult {
   image: string; // data URI of the uploaded image
   analysis: AnalyzeImageForCopyrightOutput;
 }
+
+// Types for Purchase Validation
+export interface ValidatePurchaseInput {
+  packageName: string;
+  productId: string;
+  purchaseToken: string;
+}
+
+export interface ValidatePurchaseOutput {
+  isValid: boolean;
+  error?: string;
+}
