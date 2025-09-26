@@ -6,16 +6,11 @@ import {
 import { Capacitor } from '@capacitor/core';
 
 // This is the safest way to declare the plugin types for TypeScript
-declare var CdvPurchase: any;
-declare var Capacitor: any;
-
-export type Product = {
-  id: string;
-  title: string;
-  description: string;
-  offers: any[];
-  // ... other product properties
-};
+declare global {
+  interface Window {
+    CdvPurchase: any;
+  }
+}
 
 interface PurchaseService {
   isAvailable(): boolean;
@@ -25,6 +20,14 @@ interface PurchaseService {
   order(offer: any): Promise<void>;
   restorePurchases(): Promise<void>;
 }
+
+export type Product = {
+  id: string;
+  title: string;
+  description: string;
+  offers: any[];
+  // ... other product properties
+};
 
 
 class CordovaPurchaseService implements PurchaseService {
@@ -60,8 +63,8 @@ class CordovaPurchaseService implements PurchaseService {
             return;
         }
 
-        this.store = CdvPurchase.store;
-        const { ProductType, Platform, LogLevel } = CdvPurchase;
+        this.store = window.CdvPurchase.store;
+        const { ProductType, Platform, LogLevel } = window.CdvPurchase;
 
         this.store.verbosity = LogLevel.DEBUG;
 
