@@ -68,10 +68,10 @@ class CordovaPurchaseService implements PurchaseService {
       },
     ]);
 
-    this.store.when().productUpdated(onProductUpdated).approved((transaction) => {
+    this.store.when().productUpdated(onProductUpdated).approved((transaction: any) => {
         console.log('Transaction approved, verifying...');
         transaction.verify();
-    }).verified((receipt) => {
+    }).verified((receipt: any) => {
         console.log('Receipt verified, finishing transaction.');
         receipt.finish();
         onProductUpdated(); // Refresh premium status
