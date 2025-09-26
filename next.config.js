@@ -14,16 +14,6 @@ const nextConfig = {
       },
     ];
   },
-  webpack: (config, { isServer }) => {
-    // Add a rule to ignore the .genkit directory to prevent rebuild loops
-    if (!isServer) {
-        config.watchOptions.ignored = [
-            ...(config.watchOptions.ignored || []),
-            '**/.genkit/**',
-        ];
-    }
-    return config;
-  },
 };
 
 export default nextConfig;
