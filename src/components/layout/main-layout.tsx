@@ -5,10 +5,7 @@ import { Scan, History, Gem, Settings, Home } from 'lucide-react';
 import { Header } from './header';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import { SplashScreen } from './splash-screen';
-import { useState } from 'react';
 import { useAppContext } from '@/hooks/use-app-context';
-import { AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
 import dynamic from 'next/dynamic';
 
@@ -57,14 +54,8 @@ function BottomNavBar() {
   );
 }
 
-
 function AppContent({ children }: { children: React.ReactNode }) {
-  const { isInitialized: isAppContextInitialized, isPremium } = useAppContext();
-  const [showSplash, setShowSplash] = useState(true);
-  
-  if (showSplash && !isAppContextInitialized) {
-    return <SplashScreen onAnimationComplete={() => setShowSplash(false)} />;
-  }
+  const { isPremium } = useAppContext();
   
   // The total padding needed at the bottom of the main content area.
   // For non-premium users, this is ad height (50px) + nav bar height (64px) = 114px.
@@ -73,12 +64,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <>
-      <AnimatePresence>
-        {showSplash && isAppContextInitialized && <SplashScreen onAnimationComplete={() => setShowSplash(false)} />}
-      </AnimatePresence>
-
-      <div className={cn('flex min-h-screen w-full bg-background', !isAppContextInitialized && 'opacity-0')}>
+    <div className='flex min-h-screen w-full bg-background'>
         <div className="flex flex-col flex-1">
           <Header />
           <main 
@@ -92,7 +78,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
         <Toaster />
         {!isPremium && <AdMobController />}
       </div>
-    </>
   );
 }
 
