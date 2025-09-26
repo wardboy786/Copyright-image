@@ -27,10 +27,6 @@ export type Transaction = {
   // ... other transaction properties
 };
 
-export type CdvPurchase = {
-    store: any; // Simplified for this context
-};
-
 
 export const MONTHLY_PLAN_ID = 'photorights_monthly';
 export const YEARLY_PLAN_ID = 'photorights_yearly';
@@ -81,7 +77,6 @@ export const useBilling = () => {
         await checkPremiumStatus();
       } catch (error) {
         console.error('Failed to initialize billing', error);
-        // Ensure state is updated even on error
       } finally {
         setIsInitialized(true);
         setIsLoading(false);
@@ -92,23 +87,21 @@ export const useBilling = () => {
   }, [checkPremiumStatus]);
 
   const purchase = async (offer: Offer) => {
-    if (!Capacitor.isNativePlatform()) {
+    if (!purchaseService.isAvailable()) {
       throw new Error('Purchases can only be made on a mobile device.');
     }
     try {
       await purchaseService.order(offer as any);
-      // After a successful order, re-check premium status
       await checkPremiumStatus();
     } catch (error) {
       console.error('Purchase failed', error);
-      // Re-check status even if there's an error (e.g., user cancels)
       await checkPremiumStatus();
       throw error;
     }
   };
 
   const restorePurchases = async () => {
-    if (!Capacitor.isNativePlatform()) {
+    if (!purchaseService.isAvailable()) {
       throw new Error('Purchases can only be restored on a mobile device.');
     }
     try {

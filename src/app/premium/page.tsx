@@ -26,17 +26,20 @@ export default function PremiumPage() {
   const yearlyProduct = billing.getYearlyPlan();
 
   const handlePurchase = async (offer: Offer | undefined) => {
-    if (!offer) {
+    if (!offer || !billing.products.length) {
         toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available.', variant: 'destructive' });
         return;
     }
     setIsPurchasing(offer.id);
     try {
-        await billing.purchase(offer as any); // Cast to any to satisfy the underlying hook
+        await billing.purchase(offer as any); 
         toast({ title: 'Purchase Successful!', description: 'You are now a Premium member.' });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Purchase failed', error);
-        toast({ title: 'Purchase Failed', description: 'An error occurred during the purchase process. Please try again.', variant: 'destructive' });
+        // Don't show a toast for user cancellation
+        if (error?.code !== 6) { // 6 is CdvPurchase.ErrorCode.PAYMENT_CANCELLED
+            toast({ title: 'Purchase Failed', description: error.message || 'An error occurred during the purchase process.', variant: 'destructive' });
+        }
     } finally {
         setIsPurchasing(null);
     }
@@ -46,8 +49,8 @@ export default function PremiumPage() {
     try {
         await billing.restorePurchases();
         toast({ title: 'Purchases Restored', description: 'Your previous purchases have been restored.' });
-    } catch (e) {
-        toast({ title: 'Restore Failed', description: 'Could not restore purchases. Please try again later.', variant: 'destructive' });
+    } catch (e: any) {
+        toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
     }
   }
 
@@ -148,7 +151,7 @@ export default function PremiumPage() {
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
           </Button>
-          <Button variant="ghost" onClick={handleRestore}>
+          <Button variant="ghost" onClick={handleRestore} disabled={billing.isLoading}>
             Restore Purchases
           </Button>
         </CardFooter>
