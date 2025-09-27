@@ -1,10 +1,4 @@
-// services/purchaseService.ts
-import {
-  MONTHLY_PLAN_ID,
-  YEARLY_PLAN_ID,
-} from '@/hooks/use-billing';
-import { Capacitor } from '@capacitor/core';
-
+'use client';
 // This is the safest way to declare the plugin types for TypeScript
 declare global {
   interface Window {
@@ -12,158 +6,111 @@ declare global {
   }
 }
 
-interface PurchaseService {
-  isAvailable(): boolean;
-  initialize(onProductUpdated: () => void, onError: (error: any) => void): Promise<void>;
-  getProductsSync(): Product[];
-  isPremiumSync(): boolean;
-  order(offer: any): Promise<void>;
-  restorePurchases(): Promise<void>;
-}
+import {
+  MONTHLY_PLAN_ID,
+  YEARLY_PLAN_ID,
+} from '@/hooks/use-billing';
+import { Capacitor } from '@capacitor/core';
 
 export type Product = {
   id: string;
   title: string;
   description: string;
   offers: any[];
-  // ... other product properties
 };
 
-
-class CordovaPurchaseService implements PurchaseService {
-  private store: any = null; // CdvPurchase.Store
-  private isInitialized = false;
-
-  isAvailable(): boolean {
-    return Capacitor.isNativePlatform() && !!window.CdvPurchase;
-  }
-
-  private waitForDeviceReady(): Promise<void> {
-    return new Promise((resolve, reject) => {
-        if (!Capacitor.isNativePlatform()) {
-            return reject(new Error('Not a native platform'));
+class PurchaseService {
+  public async initializeStore(
+    onUpdate: (products: Product[], isPremium: boolean) => void,
+    onError: (error: string) => void
+  ): Promise<any> {
+    
+    // 1. Wait for the device to be ready.
+    await new Promise<void>((resolve) => {
+        if (Capacitor.isNativePlatform()) {
+            document.addEventListener('deviceready', () => resolve());
+        } else {
+            resolve(); // Instantly resolve for web
         }
-        // On Capacitor, 'deviceready' fires very early. 
-        // We add a small delay to ensure plugins are fully loaded.
-        document.addEventListener('deviceready', () => {
-            setTimeout(resolve, 500); 
-        });
     });
-  }
 
-  async initialize(onProductUpdated: () => void, onError: (error: any) => void): Promise<void> {
-    try {
-        await this.waitForDeviceReady();
-
-        if (!this.isAvailable()) {
-            throw new Error('cordova-plugin-purchase is not available.');
-        }
-
-        if (this.isInitialized) {
-            return;
-        }
-
-        this.store = window.CdvPurchase.store;
-        const { ProductType, Platform, LogLevel } = window.CdvPurchase;
-
-        this.store.verbosity = LogLevel.DEBUG;
-
-        this.store.error((err: unknown) => {
-            console.error('Store Error:', JSON.stringify(err));
-            onError(err);
-        });
-
-        this.store.register([
-          { id: MONTHLY_PLAN_ID, type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
-          { id: YEARLY_PLAN_ID, type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
-        ]);
-
-        this.store.when().productUpdated(onProductUpdated).approved((transaction: any) => {
-            console.log('Transaction approved, verifying...');
-            transaction.verify();
-        }).verified((receipt: any) => {
-            console.log('Receipt verified, finishing transaction.');
-            receipt.finish();
-        }).finished(() => {
-            console.log('Transaction finished.');
-            onProductUpdated(); // Final state refresh
-        });
-
-        this.store.validator = async (request: any, callback: (result: any) => void) => {
-          try {
-            const apiBase = process.env.NEXT_PUBLIC_APP_URL || 'https://copyright-image.vercel.app';
-            const body = {
-                packageName: 'com.photorights.ai',
-                productId: request.products[0].id,
-                purchaseToken: request.transaction.purchaseToken,
-            };
-
-            const response = await fetch(`${apiBase}/api/validate-purchase`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body),
-            });
-
-            const validationResult = await response.json();
-            
-            if (validationResult.isValid) {
-              callback({ ok: true, data: validationResult });
-            } else {
-              callback({ ok: false, message: validationResult.error || 'Validation failed' });
-            }
-          } catch (error: any) {
-            console.error('An error occurred during transaction verification:', error);
-            callback({ ok: false, message: error.message || 'Unknown validation error' });
-          }
-        };
-        
-        await this.store.initialize();
-        this.isInitialized = true;
-        console.log("Purchase service initialized successfully.");
-    } catch (error) {
-        console.error("Fatal error during purchase service initialization:", error);
-        onError(error);
+    // 2. Check if the plugin is available.
+    if (!Capacitor.isNativePlatform() || typeof window.CdvPurchase === 'undefined') {
+      const errorMsg = 'In-app purchases are only available on a mobile device.';
+      onError(errorMsg);
+      throw new Error(errorMsg);
     }
+    
+    const store = window.CdvPurchase.store;
+    const { ProductType, Platform, LogLevel } = window.CdvPurchase;
+
+    // 3. Set up logging and error handling first.
+    store.verbosity = LogLevel.DEBUG;
+    store.error((err: unknown) => {
+      console.error('Store Error:', JSON.stringify(err));
+      onError('A store error occurred.');
+    });
+
+    // 4. Register products.
+    store.register([
+      { id: MONTHLY_PLAN_ID, type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
+      { id: YEARLY_PLAN_ID, type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
+    ]);
+
+    // 5. Set up the validator.
+    store.validator = async (request: any, callback: (result: any) => void) => {
+      try {
+        const response = await fetch(`/api/validate-purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            packageName: 'com.photorights.ai',
+            productId: request.products[0].id,
+            purchaseToken: request.transaction.purchaseToken,
+          }),
+        });
+
+        const validationResult = await response.json();
+        
+        if (validationResult.isValid) {
+          callback({ ok: true, data: validationResult });
+        } else {
+          callback({ ok: false, message: validationResult.error || 'Validation failed' });
+        }
+      } catch (error: any) {
+        console.error('An error occurred during transaction verification:', error);
+        callback({ ok: false, message: error.message || 'Unknown validation error' });
+      }
+    };
+
+    // 6. Set up listeners for the purchase flow.
+    const refreshState = () => {
+        const products = store.products.map((p: any) => ({ ...p, offers: p.offers || [] }));
+        const isPremium = store.owned(MONTHLY_PLAN_ID) || store.owned(YEARLY_PLAN_ID);
+        onUpdate(products, isPremium);
+    };
+
+    store.when().productUpdated(refreshState).approved((transaction: any) => {
+        transaction.verify();
+    }).verified((receipt: any) => {
+        receipt.finish();
+    }).finished(refreshState).cancelled(refreshState);
+
+    // 7. Finally, initialize the store.
+    await store.initialize();
+    
+    return store;
   }
 
-  getProductsSync(): Product[] {
-    if (!this.isInitialized || !this.store.products) return [];
-    return this.store.products;
+  public async order(store: any, offer: any): Promise<void> {
+    if (!store) throw new Error('Store not initialized');
+    await store.order(offer);
   }
 
-  isPremiumSync(): boolean {
-    if (!this.isInitialized) return false;
-    const hasMonthly = this.store.owned(MONTHLY_PLAN_ID);
-    const hasYearly = this.store.owned(YEARLY_PLAN_ID);
-    return hasMonthly || hasYearly;
-  }
-
-  async order(offer: any): Promise<void> {
-    if (!this.isInitialized) throw new Error('Store not initialized');
-    await this.store.order(offer);
-  }
-
-  async restorePurchases(): Promise<void> {
-    if (!this.isInitialized) throw new Error('Store not initialized');
-    await this.store.restorePurchases();
+  public async restorePurchases(store: any): Promise<void> {
+    if (!store) throw new Error('Store not initialized');
+    await store.restorePurchases();
   }
 }
 
-class MockPurchaseService implements PurchaseService {
-  isAvailable(): boolean { return false; }
-  async initialize(): Promise<void> { console.log('Mock purchase service: initialize'); }
-  getProductsSync(): Product[] { return []; }
-  isPremiumSync(): boolean { return false; }
-  async order(offer: any): Promise<void> {
-    console.log('Mock purchase:', offer);
-    throw new Error('Purchases are only available on the mobile app.');
-  }
-  async restorePurchases(): Promise<void> {
-    console.log('Mock restore purchases');
-  }
-}
-
-export const purchaseService: PurchaseService =
-  typeof window !== 'undefined' && (window as any).CdvPurchase
-    ? new CordovaPurchaseService()
-    : new MockPurchaseService();
+export const purchaseService = new PurchaseService();

@@ -15,10 +15,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, ChevronRight, Info, FileText, Mail, Sun, Moon, Laptop, Gem } from 'lucide-react';
+import { Trash2, ChevronRight, Info, FileText, Mail, Sun, Moon, Laptop, Gem, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useBilling } from '@/hooks/use-billing';
 
 
 const complianceLinks = [
@@ -29,7 +30,8 @@ const complianceLinks = [
 ];
 
 export default function SettingsPage() {
-  const { isPremium, isInitialized, clearHistory, billing } = useAppContext();
+  const { clearHistory } = useAppContext();
+  const { isPremium, isLoading, restorePurchases } = useBilling();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
 
@@ -40,22 +42,6 @@ export default function SettingsPage() {
       description: 'Your scan history has been successfully deleted.',
     });
   };
-
-  const handleRestorePurchases = async () => {
-    try {
-      await billing.restorePurchases();
-      toast({
-        title: "Purchases Restored",
-        description: "Your premium status has been updated.",
-      });
-    } catch (e: any) {
-       toast({
-        title: "Restore Failed",
-        description: e.message || "We couldn't restore your purchases. Please try again later.",
-        variant: 'destructive',
-      });
-    }
-  }
 
   return (
     <div className="grid gap-6 max-w-2xl mx-auto">
@@ -94,7 +80,7 @@ export default function SettingsPage() {
                 <div>
                   <Label className="font-semibold">Premium Status</Label>
                   <p className="text-sm text-muted-foreground">
-                    {billing.isLoading ? 'Loading...' : (isPremium ? 'Active' : 'Not Active')}
+                    {isLoading ? 'Loading...' : (isPremium ? 'Active' : 'Not Active')}
                   </p>
                 </div>
                 <Button asChild variant="secondary" size="sm">
@@ -104,7 +90,8 @@ export default function SettingsPage() {
                   </Link>
                 </Button>
             </div>
-             <Button onClick={handleRestorePurchases} variant="outline" className="w-full" disabled={billing.isLoading}>
+             <Button onClick={restorePurchases} variant="outline" className="w-full" disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                 Restore Purchases
             </Button>
         </CardContent>

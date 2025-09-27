@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { useAppContext } from '@/hooks/use-app-context';
 import { ThemeProvider } from 'next-themes';
 import dynamic from 'next/dynamic';
+import { usePurchase } from '@/context/purchase-context';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -55,7 +56,7 @@ function BottomNavBar() {
 }
 
 function AppContent({ children }: { children: React.ReactNode }) {
-  const { isPremium } = useAppContext();
+  const { isPremium } = usePurchase();
   
   // The total padding needed at the bottom of the main content area.
   // For non-premium users, this is ad height (50px) + nav bar height (64px) = 114px.

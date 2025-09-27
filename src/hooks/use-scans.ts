@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { type ScanResult, type AnalyzeImageForCopyrightOutput } from '@/lib/types';
 import { isToday } from 'date-fns';
-import { useBilling } from './use-billing';
+import { usePurchase } from '@/context/purchase-context';
+
 
 export const MAX_FREE_SCANS = 5;
 export const MAX_REWARDED_SCANS = 15;
@@ -25,15 +26,13 @@ export interface UseScansReturn {
   isRewardedScansLimitReached: boolean;
   totalAllowedScans: number;
   startScan: (file: File, isAi: boolean, isUser: boolean, preview: string) => Promise<ScanResult | { error: string }>;
-  billing: ReturnType<typeof useBilling>;
 }
 
 export function useScans(): UseScansReturn {
   const [scans, setScans] = useState<ScanResult[]>([]);
   const [extraScans, setExtraScans] = useState<{ count: number; date: string } | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const billing = useBilling();
-  const { isPremium } = billing;
+  const { isPremium, isInitialized: isPurchaseInitialized } = usePurchase();
   
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -176,7 +175,7 @@ export function useScans(): UseScansReturn {
     todaysScanCount: todaysScanCount,
     isLimitReached, 
     isPremium, 
-    isInitialized: isInitialized && billing.isInitialized,
+    isInitialized: isInitialized && isPurchaseInitialized,
     clearHistory,
     deleteScans,
     scansToday,
@@ -185,6 +184,5 @@ export function useScans(): UseScansReturn {
     isRewardedScansLimitReached,
     totalAllowedScans,
     startScan,
-    billing,
   };
 }
