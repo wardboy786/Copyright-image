@@ -139,7 +139,6 @@ class PurchaseService {
   
   private setupListeners(): void {
     if (!this.store) return;
-
     const refreshState = () => {
         if (!this.store) return;
         const products = this.store.products.map((p: any) => ({ ...p, offers: p.offers || [] }));
@@ -152,7 +151,6 @@ class PurchaseService {
     this.store.when().approved((transaction: any) => transaction.verify());
     this.store.when().verified((receipt: any) => receipt.finish());
     this.store.when().finished(refreshState);
-    this.store.when().cancelled(refreshState);
   }
   
   public getProducts(): Product[] {
