@@ -87,13 +87,13 @@ class PurchaseService {
         this.store.verbosity = LogLevel.DEBUG;
         
         this.store.error((err: unknown) => {
-          const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
-           if (!errorMessage.includes('REGISTERING THE SAME CALLBACK TWICE')) {
-                console.error('Store Error:', errorMessage);
-                this.onError?.(`A store error occurred: ${errorMessage}`);
-            } else {
-                console.warn('Store warning: Attempted to register a callback twice. This is handled gracefully.');
-            }
+            const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
+             if (!errorMessage.includes('REGISTERING THE SAME CALLBACK TWICE')) {
+                  console.error('Store Error:', errorMessage);
+                  this.onError?.(`A store error occurred: ${errorMessage}`);
+              } else {
+                  console.warn('Store warning: Attempted to register a callback twice. This is handled gracefully.');
+              }
         });
 
         this.store.register([
@@ -147,13 +147,12 @@ class PurchaseService {
         this.onUpdate?.(products, isPremium);
     };
 
-    // Use a single when() chain
-    this.store.when()
-        .productUpdated(refreshState)
-        .approved((transaction: any) => transaction.verify())
-        .verified((receipt: any) => receipt.finish())
-        .finished(refreshState)
-        .cancelled(refreshState);
+    // Register each event listener separately to avoid chaining issues.
+    this.store.when().productUpdated(refreshState);
+    this.store.when().approved((transaction: any) => transaction.verify());
+    this.store.when().verified((receipt: any) => receipt.finish());
+    this.store.when().finished(refreshState);
+    this.store.when().cancelled(refreshState);
   }
   
   public getProducts(): Product[] {
