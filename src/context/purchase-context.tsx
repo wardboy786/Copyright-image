@@ -31,6 +31,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ...prevState,
       products,
       isPremium,
+      isLoading: false, // Stop loading once we have an update
     }));
   }, []);
 
@@ -48,24 +49,22 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const initialize = async () => {
       try {
-        const storeInstance = await purchaseService.initializeStore(
-          (products, isPremium) => {
-            if (isMounted) onStoreUpdate(products, isPremium);
-          },
-          (error) => {
-            if (isMounted) onStoreError(error);
-          }
-        );
+        // The service now handles its own singleton logic.
+        // We just need to initialize it and set up our React-level listeners.
+        const storeInstance = await purchaseService.initialize(onStoreUpdate, onStoreError);
         
         if (isMounted) {
             console.log('Purchase service initialized successfully.');
+            const initialProducts = purchaseService.getProducts();
+            const initialPremiumStatus = purchaseService.isOwned('photorights_monthly') || purchaseService.isOwned('photorights_yearly');
+
             setState(prevState => ({
               ...prevState,
               store: storeInstance,
               isInitialized: true,
               isLoading: false,
-              isPremium: storeInstance.owned('photorights_monthly') || storeInstance.owned('photorights_yearly'),
-              products: storeInstance.products.map((p: any) => ({ ...p, offers: p.offers || [] })),
+              products: initialProducts,
+              isPremium: initialPremiumStatus,
             }));
         }
       } catch (e: any) {
@@ -85,6 +84,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     return () => {
       isMounted = false;
+      // The service manages its own cleanup, so we don't need to call it here.
     };
   }, [onStoreUpdate, onStoreError]);
 
