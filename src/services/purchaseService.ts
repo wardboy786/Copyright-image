@@ -48,7 +48,8 @@ class PurchaseService {
     store.verbosity = LogLevel.DEBUG;
     store.error((err: unknown) => {
       console.error('Store Error:', JSON.stringify(err));
-      onError('A store error occurred.');
+      const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
+      onError(`A store error occurred: ${errorMessage}`);
     });
 
     // 4. Register products.
@@ -83,14 +84,16 @@ class PurchaseService {
       }
     };
 
-    // 6. Set up listeners for the purchase flow.
+    // 6. Set up listeners for the purchase flow using the correct API.
     const refreshState = () => {
         const products = store.products.map((p: any) => ({ ...p, offers: p.offers || [] }));
         const isPremium = store.owned(MONTHLY_PLAN_ID) || store.owned(YEARLY_PLAN_ID);
         onUpdate(products, isPremium);
     };
 
-    store.when().productUpdated(refreshState).approved((transaction: any) => {
+    store.when('product').updated(refreshState);
+    store.when('subscription').updated(refreshState);
+    store.when('transaction').approved((transaction: any) => {
         transaction.verify();
     }).verified((receipt: any) => {
         receipt.finish();
