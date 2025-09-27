@@ -1,4 +1,5 @@
 'use client';
+
 // This is the safest way to declare the plugin types for TypeScript
 declare global {
   interface Window {
@@ -18,6 +19,9 @@ export type Product = {
   description: string;
   offers: any[];
 };
+
+// Add a flag to prevent re-initialization
+let isInitialized = false;
 
 class PurchaseService {
   public async initializeStore(
@@ -41,6 +45,13 @@ class PurchaseService {
       throw new Error(errorMsg);
     }
     
+    // --- SINGLETON GUARD ---
+    // If the store is already initialized, return it immediately.
+    if (isInitialized) {
+        console.log("PurchaseService: Already initialized, skipping setup.");
+        return window.CdvPurchase.store;
+    }
+
     const store = window.CdvPurchase.store;
     const { ProductType, Platform, LogLevel } = window.CdvPurchase;
 
@@ -48,7 +59,13 @@ class PurchaseService {
     store.verbosity = LogLevel.DEBUG;
     store.error((err: unknown) => {
       console.error('Store Error:', JSON.stringify(err));
+      // The plugin can sometimes throw an error for registering a callback twice.
+      // We check for that specific string to prevent showing a confusing error to the user.
       const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
+      if (errorMessage.includes('REGISTERING THE SAME CALLBACK TWICE')) {
+          console.warn('Store warning: Attempted to register a callback twice. This is handled gracefully.');
+          return; // Suppress this specific error from going to the UI.
+      }
       onError(`A store error occurred: ${errorMessage}`);
     });
 
@@ -93,15 +110,24 @@ class PurchaseService {
 
     store.when('product').updated(refreshState);
     store.when('subscription').updated(refreshState);
-    store.when('transaction').approved((transaction: any) => {
+
+    store.when('transaction')
+      .approved((transaction: any) => {
         transaction.verify();
-    }).verified((receipt: any) => {
+      })
+      .verified((receipt: any) => {
         receipt.finish();
-    }).finished(refreshState).cancelled(refreshState);
+      })
+      .finished(refreshState)
+      .cancelled(refreshState);
 
     // 7. Finally, initialize the store.
     await store.initialize();
     
+    // Set the flag to true after successful initialization
+    isInitialized = true;
+    console.log("PurchaseService: Initialization complete.");
+
     return store;
   }
 
