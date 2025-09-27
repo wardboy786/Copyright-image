@@ -139,6 +139,7 @@ class PurchaseService {
   
   private setupListeners(): void {
     if (!this.store) return;
+    
     const refreshState = () => {
         if (!this.store) return;
         const products = this.store.products.map((p: any) => ({ ...p, offers: p.offers || [] }));
