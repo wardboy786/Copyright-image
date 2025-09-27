@@ -28,7 +28,7 @@ export const useBilling = () => {
     }
     setIsPurchasing(true);
     try {
-      await purchaseService.order(store, offer);
+      await purchaseService.order(offer);
     } catch (e: any) {
       // The error is handled by the listener in the context, but we catch here too
       console.error('Purchase failed in hook', e);
@@ -49,7 +49,7 @@ export const useBilling = () => {
       return;
     }
     try {
-      await purchaseService.restorePurchases(store);
+      await purchaseService.restorePurchases();
       toast({ title: 'Restore Complete', description: 'Your purchases have been restored.' });
     } catch (e: any) {
       console.error('Failed to restore purchases', e);
