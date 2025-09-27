@@ -50,6 +50,8 @@ class PurchaseService {
 
     if (this.isInitialized) {
       console.log('PurchaseService: Already initialized.');
+      // If already initialized, immediately send the current state
+      this.refreshState();
       return Promise.resolve(this.store);
     }
 
@@ -78,6 +80,7 @@ class PurchaseService {
         if (!Capacitor.isNativePlatform() || typeof window.CdvPurchase === 'undefined') {
           const errorMsg = 'In-app purchases are only available on a mobile device.';
           this.onError?.(errorMsg);
+          this.isInitializing = false;
           throw new Error(errorMsg);
         }
 
@@ -88,12 +91,8 @@ class PurchaseService {
         
         this.store.error((err: unknown) => {
             const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
-             if (!errorMessage.includes('REGISTERING THE SAME CALLBACK TWICE')) {
-                  console.error('Store Error:', errorMessage);
-                  this.onError?.(`A store error occurred: ${errorMessage}`);
-              } else {
-                  console.warn('Store warning: Attempted to register a callback twice. This is handled gracefully.');
-              }
+            console.error('Store Error:', errorMessage);
+            this.onError?.(`A store error occurred: ${errorMessage}`);
         });
 
         this.store.register([
@@ -102,7 +101,7 @@ class PurchaseService {
         ]);
         
         this.setupListeners();
-
+        
         this.store.validator = async (request: any, callback: (result: any) => void) => {
             try {
                 const response = await fetch(`/api/validate-purchase`, {
@@ -137,26 +136,30 @@ class PurchaseService {
      }
   }
   
+  private refreshState = () => {
+    if (!this.store) return;
+    const products = this.getProducts();
+    const isPremium = this.isOwned(MONTHLY_PLAN_ID) || this.isOwned(YEARLY_PLAN_ID);
+    this.onUpdate?.(products, isPremium);
+  };
+  
   private setupListeners(): void {
     if (!this.store) return;
-    
-    const refreshState = () => {
-        if (!this.store) return;
-        const products = this.store.products.map((p: any) => ({ ...p, offers: p.offers || [] }));
-        const isPremium = this.store.owned(MONTHLY_PLAN_ID) || this.store.owned(YEARLY_PLAN_ID);
-        this.onUpdate?.(products, isPremium);
-    };
 
-    // Register each event listener separately to avoid chaining issues.
-    this.store.when().productUpdated(refreshState);
+    this.store.when().productUpdated(this.refreshState);
     this.store.when().approved((transaction: any) => transaction.verify());
     this.store.when().verified((receipt: any) => receipt.finish());
-    this.store.when().finished(refreshState);
+    this.store.when().finished(this.refreshState);
   }
   
   public getProducts(): Product[] {
-    if (!this.store) return [];
-    return this.store.products.map((p: any) => ({...p, offers: p.offers || [] }));
+    if (!this.store || !this.store.products) return [];
+    return this.store.products.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        offers: p.offers || [],
+    }));
   }
 
   public isOwned(productId: string): boolean {
