@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 
@@ -7,7 +8,7 @@ export default function AboutPage() {
       <Card>
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Image src="/logo.svg" alt="Photorights AI Logo" width={64} height={64} className="w-16 h-16 text-primary"/>
+            <Image src="/images/logo.svg" alt="Photorights AI Logo" width={64} height={64} className="w-16 h-16 text-primary"/>
           </div>
           <CardTitle className="text-3xl">About Photorights AI</CardTitle>
         </CardHeader>
