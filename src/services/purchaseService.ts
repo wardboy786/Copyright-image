@@ -150,7 +150,6 @@ class PurchaseService {
     // Use a single when() chain
     this.store.when()
         .productUpdated(refreshState)
-        .subscriptionUpdated(refreshState)
         .approved((transaction: any) => transaction.verify())
         .verified((receipt: any) => receipt.finish())
         .finished(refreshState)
