@@ -1,3 +1,4 @@
+
 'use client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { type Offer } from '@/services/purchaseService';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
@@ -35,7 +35,7 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === 'photorights_monthly');
   const yearlyProduct = products.find(p => p.id === 'photorights_yearly');
 
-  const handlePurchase = async (offer: Offer | undefined) => {
+  const handlePurchase = async (offer: any | undefined) => {
     if (!offer) {
         toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available.', variant: 'destructive' });
         return;
