@@ -96,6 +96,7 @@ class PurchaseService {
 
         this.setupListeners();
         
+        // Temporarily bypass server-side validation for diagnostics
         this.store.validator = (request: any, callback: (result: any) => void) => {
             logger.log('🔒 SVC: Bypassing validation. Auto-approving.');
             callback({
@@ -199,11 +200,32 @@ class PurchaseService {
     return mappedProducts;
   }
 
-
   public isOwned(productId: string): boolean {
-    const owned = this.store?.owned(productId) ?? false;
-    logger.log(`🔍 SVC.isOwned: Checking ownership for ${productId}: ${owned}`);
-    return owned;
+    logger.log(`🔍 SVC.isOwned: Starting robust ownership check for ${productId}`);
+    // Fallback to the simple owned check first
+    const basicOwned = this.store?.owned?.(productId) ?? false;
+    if (basicOwned) {
+      logger.log(`🔍 SVC.isOwned: Basic check for ${productId} is TRUE.`);
+      return true;
+    }
+
+    // If basic check fails, perform the more robust transaction check
+    const product = this.store?.products?.find((p: any) => p.id === productId);
+    if (!product) {
+        logger.log(`SVC.isOwned: Product ${productId} not found in store for transaction check.`);
+        return false;
+    }
+
+    const hasActiveTransaction = product.transactions?.some((t: any) => {
+        const isActive = t.state === 'finished' && t.nativePurchase?.autoRenewing;
+        if (isActive) {
+            logger.log(`SVC.isOwned: Found active transaction for ${productId}:`, t);
+        }
+        return isActive;
+    });
+
+    logger.log(`🔍 SVC.isOwned: Final result for ${productId} is ${!!hasActiveTransaction}`);
+    return !!hasActiveTransaction;
   }
 
   public async order(productId: string, offerId: string): Promise<void> {
