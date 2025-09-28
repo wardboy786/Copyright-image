@@ -1,6 +1,5 @@
 
 
-
 /**
  * @fileOverview Next.js API Route for server-side validation of Google Play purchases.
  * This follows the official Google Play Developer API guidelines.
@@ -9,24 +8,39 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { type ValidatePurchaseInput } from '@/lib/types';
+import { logger } from '@/lib/in-app-logger';
 
 export async function POST(req: Request) {
+  logger.log('🚀 VALIDATION: API route hit.');
   const { packageName, productId, purchaseToken } = (await req.json()) as ValidatePurchaseInput;
+  logger.log('🚀 VALIDATION: Received request data', { packageName, productId, purchaseToken: purchaseToken ? '...' : 'null' });
+
 
   if (!packageName || !productId || !purchaseToken) {
-    return NextResponse.json({ isValid: false, error: 'Missing required validation fields.' }, { status: 400 });
+    const error = 'Missing required validation fields.';
+    logger.log(`❌ VALIDATION: ${error}`);
+    return NextResponse.json({ isValid: false, error }, { status: 400 });
   }
 
   // This is the robust way to authenticate on Vercel.
   // It relies on GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY environment variables.
-  if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-      console.error('Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY environment variables.');
-      return NextResponse.json({ isValid: false, error: 'Server authentication is not configured.' }, { status: 500 });
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+  logger.log('🚀 VALIDATION: Reading environment variables...');
+  logger.log(`🚀 VALIDATION: GOOGLE_CLIENT_EMAIL is ${clientEmail ? 'set' : 'NOT SET'}`);
+  logger.log(`🚀 VALIDATION: GOOGLE_PRIVATE_KEY is ${privateKey ? 'set' : 'NOT SET'}`);
+
+
+  if (!clientEmail || !privateKey) {
+      const error = 'Server authentication is not configured. Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY.';
+      logger.log(`❌ VALIDATION: ${error}`);
+      return NextResponse.json({ isValid: false, error }, { status: 500 });
   }
       
   const auth = new google.auth.JWT({
-      email: process.env.GOOGLE_CLIENT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      email: clientEmail,
+      key: privateKey.replace(/\\n/g, '\n'),
       scopes: ['https://www.googleapis.com/auth/androidpublisher'],
   });
 
@@ -36,45 +50,63 @@ export async function POST(req: Request) {
       auth: auth,
     });
 
+    logger.log('🚀 VALIDATION: Authorizing with Google...');
     await auth.authorize();
-
+    logger.log('✅ VALIDATION: Authorization successful.');
 
     // Verify the subscription with Google Play
+    logger.log('🚀 VALIDATION: Calling Google Play API to verify subscription...');
     const res = await androidPublisher.purchases.subscriptions.get({
       packageName: packageName,
       subscriptionId: productId,
       token: purchaseToken,
     });
+    logger.log('✅ VALIDATION: Google Play API response received.', res.data);
+
 
     // Check if the subscription is valid and active
     const isAcknowledged = res.data.acknowledgementState === 1;
     const isActive = res.data.paymentState === 1 || res.data.paymentState === 2; // 1 = Payment received, 2 = Free trial
     const isNotExpired = (res.data.expiryTimeMillis ? parseInt(res.data.expiryTimeMillis) : 0) > Date.now();
 
+    logger.log('🚀 VALIDATION: Purchase status check', { isActive, isNotExpired, isAcknowledged });
+
     if (isActive && isNotExpired) {
         // If not yet acknowledged, acknowledge it now.
         if (!isAcknowledged) {
+            logger.log('🚀 VALIDATION: Purchase not acknowledged, acknowledging now...');
             await androidPublisher.purchases.subscriptions.acknowledge({
                 packageName: packageName,
                 subscriptionId: productId,
                 token: purchaseToken,
             });
-             console.log(`Subscription ${productId} acknowledged successfully.`);
+             logger.log(`✅ VALIDATION: Subscription ${productId} acknowledged successfully.`);
         }
+        logger.log('🎉 VALIDATION: Purchase is valid.');
         return NextResponse.json({ isValid: true, data: res.data });
     } else {
       let error = 'Purchase is not valid. ';
       if (!isActive) error += 'Not active. ';
       if (!isNotExpired) error += 'Expired. ';
+      logger.log(`❌ VALIDATION: ${error.trim()}`);
       return NextResponse.json({ isValid: false, error: error.trim() });
     }
   } catch (e: any) {
-    console.error('Error validating purchase in API route:', e.message, e.errors);
+    logger.log('❌❌❌ VALIDATION: CRITICAL ERROR caught in API route.');
+    logger.log('❌ Error Message:', e.message);
+    logger.log('❌ Error Code:', e.code);
+    logger.log('❌ Error Stack:', e.stack);
+    logger.log('❌ Full Error Object:', JSON.stringify(e));
+
     // Google API errors often have a code property and an errors array
     if (e.code && e.code >= 400 && e.code < 500) {
       const errorMessage = e.errors?.[0]?.message || e.message;
-      return NextResponse.json({ isValid: false, error: `Google API Error: ${errorMessage} (Code: ${e.code}).` }, { status: e.code });
+      const finalError = `Google API Error: ${errorMessage} (Code: ${e.code}).`;
+      logger.log(`❌ VALIDATION: Responding with: ${finalError}`);
+      return NextResponse.json({ isValid: false, error: finalError }, { status: e.code });
     }
-    return NextResponse.json({ isValid: false, error: e.message || 'An unknown server error occurred during validation.' }, { status: 500 });
+    const finalError = e.message || 'An unknown server error occurred during validation.';
+    logger.log(`❌ VALIDATION: Responding with: ${finalError}`);
+    return NextResponse.json({ isValid: false, error: finalError }, { status: 500 });
   }
 }
