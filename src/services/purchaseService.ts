@@ -153,13 +153,14 @@ class PurchaseService {
       transaction.verify();
     });
 
-    this.store.when().verified(async (receipt: any) => {
-      logger.log('✅ SVC VERIFIED: Receipt verified. Finishing transaction...', receipt);
+    this.store.when().verified((receipt: any) => {
+      logger.log('✅ SVC VERIFIED: Receipt verified, finishing...', receipt);
       receipt.finish();
     });
-
-    this.store.when().finished((transaction: any) => {
-      logger.log('✅ SVC FINISHED: Transaction finished. Dispatching final state.', transaction);
+    
+    this.store.when().finished(async (transaction: any) => {
+      logger.log('✅ SVC FINISHED: Transaction finished. Forcing update and dispatching final state.', transaction);
+      await this.store.update();
       this.dispatchState();
     });
     

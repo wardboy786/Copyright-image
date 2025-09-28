@@ -54,14 +54,8 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
     };
 
-    const handlePurchaseVerified = () => {
-      logger.log('🎉 React Context: Purchase verified, forcing state dispatch.');
-      purchaseService.dispatchState(); // Force a state update
-    };
-
     window.addEventListener('purchaseStateUpdated', handleStateUpdate);
     window.addEventListener('purchaseError', handleError);
-    window.addEventListener('purchaseVerified', handlePurchaseVerified);
 
 
     const initialize = async () => {
@@ -91,7 +85,6 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       isMounted = false;
       window.removeEventListener('purchaseStateUpdated', handleStateUpdate);
       window.removeEventListener('purchaseError', handleError);
-      window.removeEventListener('purchaseVerified', handlePurchaseVerified);
     };
   }, []);
 
