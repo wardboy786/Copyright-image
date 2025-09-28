@@ -96,10 +96,10 @@ class PurchaseService {
 
         this.setupListeners();
         
-        // TEMPORARILY BYPASSING SERVER VALIDATION FOR DIAGNOSTICS
-        logger.log('⚠️ SVC: Server-side validation is TEMPORARILY BYPASSED for diagnostics.');
+        // COMPLETELY DISABLE VALIDATOR FOR DIAGNOSTIC PURPOSES
+        logger.log('⚠️ SVC: Server-side validation is DISABLED. Auto-approving all transactions.');
         this.store.validator = (request: any, callback: (result: any) => void) => {
-            logger.log('🔒 SVC: Bypassing server validation. Auto-approving.');
+            logger.log('🔒 SVC: Bypassing validation. Auto-approving.');
             callback({
                 ok: true,
                 data: {
