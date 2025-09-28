@@ -154,11 +154,7 @@ class PurchaseService {
     });
 
     this.store.when().verified(async (receipt: any) => {
-      logger.log('✅ SVC VERIFIED: Receipt verified. Forcing store update...', receipt);
-      // Force a refresh from the servers
-      await this.store.update();
-      logger.log('✅ SVC STORE UPDATED: Now finishing transaction.');
-      window.dispatchEvent(new CustomEvent('purchaseVerified'));
+      logger.log('✅ SVC VERIFIED: Receipt verified. Finishing transaction...', receipt);
       receipt.finish();
     });
 
