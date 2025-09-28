@@ -15,8 +15,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ isValid: false, error: 'Missing required validation fields.' }, { status: 400 });
   }
 
+  // Vercel/Serverless-specific authentication
   // This is the most reliable way to authenticate on Vercel.
-  // It automatically uses GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY from environment variables.
+  // It correctly uses GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY from environment variables.
   if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
       console.error('Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY environment variables.');
       return NextResponse.json({ isValid: false, error: 'Server authentication is not configured.' }, { status: 500 });
