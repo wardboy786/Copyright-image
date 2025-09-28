@@ -96,7 +96,6 @@ class PurchaseService {
 
         this.setupListeners();
         
-        // COMPLETELY DISABLE VALIDATOR FOR DIAGNOSTIC PURPOSES
         logger.log('⚠️ SVC: Server-side validation is DISABLED. Auto-approving all transactions.');
         this.store.validator = (request: any, callback: (result: any) => void) => {
             logger.log('🔒 SVC: Bypassing validation. Auto-approving.');
@@ -145,8 +144,8 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    this.store.when().productUpdated(this.dispatchState);
-    this.store.when().receiptUpdated(this.dispatchState);
+    this.store.when().productUpdated(() => this.dispatchState());
+    this.store.when().receiptUpdated(() => this.dispatchState());
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', { id: transaction.id });
       transaction.verify();
