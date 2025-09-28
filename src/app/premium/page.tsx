@@ -124,8 +124,9 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
-  const monthlyOffer = monthlyProduct?.offers.find(o => o.id === MONTHLY_OFFER_ID);
-  const yearlyOffer = yearlyProduct?.offers.find(o => o.id === YEARLY_OFFER_ID);
+  // *** FIX: Find offer by checking if the complex ID contains the simple ID ***
+  const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
+  const yearlyOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
 
   useEffect(() => {
     if (products.length > 0) {
@@ -135,30 +136,34 @@ export default function PremiumPage() {
       logger.log(`Yearly product search for "${YEARLY_PLAN_ID}":`, yearlyProduct);
       if (monthlyProduct) {
         logger.log('Monthly product offers:', monthlyProduct.offers);
+        logger.log(`Searching for offer containing "${MONTHLY_OFFER_ID}", found:`, monthlyOffer);
       } else {
         logger.log(`❌ Monthly product not found in:`, products.map(p => p.id));
       }
       if (yearlyProduct) {
         logger.log('Yearly product offers:', yearlyProduct.offers);
+        logger.log(`Searching for offer containing "${YEARLY_OFFER_ID}", found:`, yearlyOffer);
       } else {
         logger.log(`❌ Yearly product not found in:`, products.map(p => p.id));
       }
       logger.log('🔍 === END DEBUG ===');
     }
-  }, [products, monthlyProduct, yearlyProduct]);
+  }, [products, monthlyProduct, yearlyProduct, monthlyOffer, yearlyOffer]);
 
 
   const handlePurchase = async () => {
     logger.log('🔍 handlePurchase called with selected plan:', selectedPlan);
 
     const productId = selectedPlan === 'monthly' ? MONTHLY_PLAN_ID : YEARLY_PLAN_ID;
-    const offerId = selectedPlan === 'monthly' ? MONTHLY_OFFER_ID : YEARLY_OFFER_ID;
-    const product = selectedPlan === 'monthly' ? monthlyProduct : yearlyProduct;
     const offer = selectedPlan === 'monthly' ? monthlyOffer : yearlyOffer;
+    const product = selectedPlan === 'monthly' ? monthlyProduct : yearlyProduct;
+    
+    // *** FIX: Use the full offer ID from the found offer object ***
+    const offerId = offer?.id;
     
     logger.log('🔍 Attempting purchase with:', { productId, offerId, product, offer });
 
-    if (!product || !offer) {
+    if (!product || !offer || !offerId) {
         logger.log('❌ No product or offer found for purchase call.', { product, offer });
         toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available. It may be loading or not configured.', variant: 'destructive' });
         return;
@@ -265,7 +270,7 @@ export default function PremiumPage() {
         );
     }
     
-    if (isInitialized && (!products || products.length === 0)) {
+    if (isInitialized && (!products || products.length === 0 || !monthlyOffer || !yearlyOffer)) {
         const isKnownPropagationIssue = !monthlyOffer || !yearlyOffer;
          if (isKnownPropagationIssue) {
              return <PropagationErrorDisplay onRetry={() => window.location.reload()} />;
@@ -355,4 +360,3 @@ export default function PremiumPage() {
     </div>
   );
 }
-
