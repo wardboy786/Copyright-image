@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { purchaseService } from '@/services/purchaseService';
 import { type Product } from '@/lib/types';
 import { SplashScreen } from '@/components/layout/splash-screen';
@@ -29,43 +29,31 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     let isMounted = true;
 
-    const handleStateUpdate = (event: Event) => {
-      const { products, isPremium } = (event as CustomEvent).detail;
-      logger.log('React Context: Received purchaseStateUpdated event', { products, isPremium });
-      if (isMounted) {
-        setState(prevState => ({
-          ...prevState,
-          products,
-          isPremium,
-          isLoading: false, // Stop loading on first successful update
-        }));
-      }
-    };
-    
-    const handleError = (event: Event) => {
-        const { error } = (event as CustomEvent).detail;
-        logger.log('❌ React Context: Received purchaseError event', { error });
-        if (isMounted) {
-            setState(prevState => ({
-                ...prevState,
-                error,
-                isLoading: false,
-            }));
-        }
-    };
-
-    window.addEventListener('purchaseStateUpdated', handleStateUpdate);
-    window.addEventListener('purchaseError', handleError);
-
-
     const initialize = async () => {
       try {
+        // The subscription handles the initial state and all subsequent updates.
+        const unsubscribe = purchaseService.subscribe((newState) => {
+          if (isMounted) {
+            logger.log('React Context: Received state update from service subscription.', newState);
+            setState(prevState => ({
+              ...prevState,
+              isPremium: newState.isPremium,
+              products: newState.products,
+              isLoading: false, // No longer loading once we have state
+            }));
+          }
+        });
+        
+        // Now, initialize the service. This will trigger the first state emission.
         await purchaseService.initialize();
         logger.log('React Context: Purchase service initialization requested.');
+
         if (isMounted) {
-            // Set initialized to true here. The isLoading flag will be handled by the event listener.
-            setState(prevState => ({ ...prevState, isInitialized: true }));
+          setState(prevState => ({ ...prevState, isInitialized: true }));
         }
+
+        return unsubscribe;
+
       } catch (e: any) {
         logger.log('❌ React Context: Failed to initialize purchase provider', e);
         if (isMounted) {
@@ -73,23 +61,24 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               ...prevState,
               error: e.message || 'Initialization failed.',
               isLoading: false,
-              isInitialized: true,
+              isInitialized: true, // Mark as initialized even on error
             }));
         }
+        // Return a no-op unsubscribe function
+        return () => {};
       }
     };
 
-    initialize();
+    let unsubscribePromise = initialize();
 
     return () => {
       isMounted = false;
-      window.removeEventListener('purchaseStateUpdated', handleStateUpdate);
-      window.removeEventListener('purchaseError', handleError);
+      unsubscribePromise.then(unsubscribe => unsubscribe());
     };
   }, []);
 
   // Show splash screen while the store is initializing for the first time
-  if (!state.isInitialized && state.isLoading) {
+  if (!state.isInitialized) {
     return <SplashScreen onAnimationComplete={() => {}} />;
   }
 

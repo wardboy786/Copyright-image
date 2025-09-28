@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { purchaseService } from '@/services/purchaseService';
@@ -21,6 +22,14 @@ export const useBilling = () => {
   } = usePurchase();
 
   const [isPurchasing, setIsPurchasing] = useState(false);
+  
+  // This effect will reset isPurchasing when the premium status changes
+  useEffect(() => {
+      if (isPremium) {
+          setIsPurchasing(false);
+      }
+  }, [isPremium]);
+
 
   const purchase = async (productId: string, offerId: string) => {
     if (!isInitialized) {
@@ -32,13 +41,10 @@ export const useBilling = () => {
     setIsPurchasing(true);
     try {
       await purchaseService.order(productId, offerId);
-      // Success is now handled by event listeners in the context
+      // Success is now handled by the service subscription in the context
     } catch (e: any) {
       console.error('Purchase failed in hook', e);
       toast({ title: 'Purchase Failed', description: e.message || 'An error occurred during purchase.', variant: 'destructive' });
-    } finally {
-      // It's safer to have the event listener set this to false
-      // but as a fallback, we'll do it here.
       setIsPurchasing(false);
     }
   };
@@ -52,10 +58,24 @@ export const useBilling = () => {
     }
     try {
       await purchaseService.restorePurchases();
-      toast({ title: 'Restore Complete', description: 'Your purchases have been restored.' });
+      toast({ title: 'Restore Initialized', description: 'Checking for your previous purchases...' });
     } catch (e: any) {
       console.error('Failed to restore purchases', e);
       toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
+    }
+  };
+  
+   const forceCheck = async () => {
+    if (!isInitialized) {
+      const errorMsg = 'Billing service is not initialized.';
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
+      return;
+    }
+    try {
+      await purchaseService.forceCheck();
+      toast({ title: 'Sync Complete', description: 'Your subscription status has been updated.' });
+    } catch (e: any) {
+      toast({ title: 'Sync Failed', description: e.message || 'Could not sync status.', variant: 'destructive' });
     }
   };
 
@@ -76,6 +96,7 @@ export const useBilling = () => {
     products,
     purchase,
     restorePurchases,
+    forceCheck,
     getMonthlyPlan,
     getYearlyPlan,
   };

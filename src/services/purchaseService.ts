@@ -13,12 +13,22 @@ declare global {
 import { Capacitor } from '@capacitor/core';
 import { type Product, type Offer } from '@/lib/types';
 
+type State = {
+  products: Product[];
+  isPremium: boolean;
+};
+
+type Listener = (state: State) => void;
+
 class PurchaseService {
   private static instance: PurchaseService;
   private store: any;
   private isInitializing = false;
   private isInitialized = false;
   private initPromise: Promise<any> | null = null;
+  public receipts: any[] = [];
+  private listeners: Set<Listener> = new Set();
+
 
   // Private constructor to enforce singleton pattern
   private constructor() {}
@@ -31,11 +41,29 @@ class PurchaseService {
     return PurchaseService.instance;
   }
 
+  public subscribe(listener: Listener): () => void {
+    this.listeners.add(listener);
+    // Immediately notify the new subscriber with the current state
+    listener(this.getCurrentState());
+    
+    // Return an unsubscribe function
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyListeners(): void {
+    const state = this.getCurrentState();
+    logger.log('📢 SVC: Notifying listeners with new state', state);
+    this.listeners.forEach(listener => listener(state));
+  }
+
+
   public initialize(): Promise<any> {
     logger.log('🚀 SVC: Initialize called.');
     if (this.isInitialized) {
       logger.log('✅ SVC: Already initialized.');
-      this.dispatchState();
+      this.notifyListeners();
       return Promise.resolve(this.store);
     }
 
@@ -69,7 +97,7 @@ class PurchaseService {
         if (!Capacitor.isNativePlatform() || typeof window.CdvPurchase === 'undefined') {
           const errorMsg = 'In-app purchases are only available on a mobile device.';
           logger.log(`❌ SVC: ${errorMsg}`);
-          window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: errorMsg }}));
+          // We can't dispatch a window event here, so we will rely on the error being thrown
           this.isInitializing = false;
           throw new Error(errorMsg);
         }
@@ -85,7 +113,7 @@ class PurchaseService {
         this.store.error((err: unknown) => {
             const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
             logger.log('❌ SVC Store Error:', errorMessage);
-            window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: `Store Error: ${errorMessage}` }}));
+             window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: `Store Error: ${errorMessage}` }}));
         });
 
         this.store.register([
@@ -96,15 +124,9 @@ class PurchaseService {
 
         this.setupListeners();
         
-        // Disable the internal validator to rely on Google's flow and our own server if needed.
         this.store.validator = (request: any, callback: (result: any) => void) => {
             logger.log('🔒 SVC: Bypassing internal validation. Auto-approving.');
-            callback({
-                ok: true,
-                data: {
-                    isValid: true
-                }
-            });
+            callback({ ok: true, data: { isValid: true } });
         };
         logger.log('⚠️ SVC: Validator configured to auto-approve.');
 
@@ -113,43 +135,41 @@ class PurchaseService {
         this.isInitialized = true;
         this.isInitializing = false;
         logger.log("🎉 SVC: Initialization complete.");
-        this.dispatchState(); // Dispatch initial state
+        this.receipts = this.store.receipts; // Store receipts initially
+        this.notifyListeners(); // Dispatch initial state to any subscribers
         return this.store;
 
      } catch (error: any) {
         logger.log('❌ SVC: Initialization failed.', error);
         this.isInitializing = false;
         this.initPromise = null;
-        window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: error.message || 'An unknown initialization error occurred.' }}));
         throw error;
      }
   }
   
-  public dispatchState = async () => {
-    logger.log('🔄 SVC: Dispatching state update...');
-    if (!this.store) {
-      logger.log('❌ SVC: Cannot dispatch state, store is null.');
-      return;
-    }
-    // Force a store update to get the latest data before dispatching
-    await this.store.update();
-    const products = this.getProducts();
-    const isPremium = this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly');
-    logger.log('📬 SVC: Firing purchaseStateUpdated event.', { numProducts: products.length, isPremium });
-    window.dispatchEvent(new CustomEvent('purchaseStateUpdated', {
-      detail: { products, isPremium }
-    }));
-  };
-  
+  public getCurrentState(): State {
+      return {
+          products: this.getProducts(),
+          isPremium: this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly'),
+      };
+  }
+
   private setupListeners(): void {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    // This is a general listener. When ANYTHING in the store changes, we redispatch state.
-    this.store.when().productUpdated(() => this.dispatchState());
-    this.store.when().receiptUpdated(() => this.dispatchState());
+    // When ANYTHING in the store changes, we redispatch state.
+    const forceUpdate = async () => {
+        logger.log('🔄 SVC: Store change detected. Forcing update and notifying listeners.');
+        await this.store.update();
+        this.receipts = this.store.receipts;
+        this.notifyListeners();
+    }
+    
+    this.store.when().productUpdated(forceUpdate);
+    this.store.when().receiptUpdated(forceUpdate);
 
-    // This is the clean, recommended purchase flow.
+    // Clean purchase flow
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -160,10 +180,10 @@ class PurchaseService {
       receipt.finish();
     });
     
+    // This is the single source of truth for a completed purchase.
     this.store.when().finished(async (transaction: any) => {
-      logger.log('✅ SVC FINISHED: Transaction finished. Forcing update and dispatching final state.', transaction);
-      // This is the crucial step. After a purchase is finished, we force a full state update.
-      await this.dispatchState();
+      logger.log('✅ SVC FINISHED: Transaction finished. Forcing update and notifying final state.', transaction);
+      await forceUpdate();
     });
     
     logger.log('✅ SVC: Event listeners ready.');
@@ -194,40 +214,33 @@ class PurchaseService {
             offers: offers,
         };
     });
-
-    logger.log('📦 SVC.getProducts: Returning products', mappedProducts);
     return mappedProducts;
   }
 
-  public isOwned(productId: string): boolean {
-    logger.log(`🔍 SVC.isOwned: Checking ownership for ${productId}`);
-    
-    // Method 1: Check store.owned() which is the simplest check
+ public isOwned(productId: string): boolean {
     const basicOwned = this.store?.owned?.(productId);
     if (basicOwned) {
-      logger.log(`🔍 SVC.isOwned: Basic owned check for ${productId} is TRUE`);
+      logger.log(`✅ SVC.isOwned: Basic owned check for ${productId} is TRUE`);
       return true;
     }
-    logger.log(`🔍 SVC.isOwned: Basic owned check for ${productId} is false`);
-
-    // Method 2: Check through all receipts for an active transaction.
-    // This is more robust and covers cases where the simple `owned` flag might not be updated yet.
-    if (this.store && this.store.receipts) {
-      const hasVerifiedTransaction = this.store.receipts.some((receipt: any) => 
-        receipt.transactions?.some((transaction: any) => 
+    
+    if (this.receipts && this.receipts.length > 0) {
+      const hasActiveSubscription = this.receipts.some((receipt: any) => 
+        // The structure might be nested under sourceReceipt
+        (receipt.transactions || receipt.sourceReceipt?.transactions)?.some((transaction: any) => 
           transaction.products?.some((product: any) => product.id === productId) &&
-          transaction.isAcknowledged === true &&
-          (transaction.renewalIntent === 'Renew' || transaction.nativePurchase?.autoRenewing === true)
+          transaction.nativePurchase?.autoRenewing === true &&
+          transaction.isAcknowledged === true
         )
       );
-
-      logger.log(`🔍 SVC.isOwned: Final result for ${productId} from verified receipts is ${hasVerifiedTransaction}`);
-      if (hasVerifiedTransaction) return true;
-    } else {
-        logger.log('⚠️ SVC.isOwned: this.store.receipts is not available for checking.');
+      
+      if (hasActiveSubscription) {
+        logger.log(`✅ SVC.isOwned: Found active subscription for ${productId} in receipts.`);
+        return true;
+      }
     }
     
-    logger.log(`🔍 SVC.isOwned: Final result for ${productId} is false`);
+    logger.log(`❌ SVC.isOwned: No active transaction found for ${productId}.`);
     return false;
   }
 
@@ -262,7 +275,19 @@ class PurchaseService {
     }
     logger.log('🔄 SVC.restorePurchases: Attempting to restore purchases...');
     await this.store.restore();
-    logger.log('✅ SVC.restorePurchases: Restore command sent.');
+    logger.log('✅ SVC.restorePurchases: Restore command sent. State will update on receipt/product events.');
+  }
+
+  public async forceCheck(): Promise<void> {
+    if (!this.store) {
+      logger.log('❌ SVC.forceCheck: Store not initialized');
+      throw new Error('Store not initialized');
+    }
+    logger.log('🔄 SVC.forceCheck: Manually forcing store update...');
+    await this.store.update();
+    this.receipts = this.store.receipts;
+    this.notifyListeners();
+    logger.log('✅ SVC.forceCheck: Update complete.');
   }
 }
 
