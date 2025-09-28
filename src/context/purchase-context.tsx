@@ -96,7 +96,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   // Show splash screen while the store is initializing for the first time
-  if (!isPurchaseInitialized && state.isLoading) {
+  if (!state.isInitialized && state.isLoading) {
     return <SplashScreen onAnimationComplete={() => {}} />;
   }
 
