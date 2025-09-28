@@ -15,13 +15,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ isValid: false, error: 'Missing required validation fields.' }, { status: 400 });
   }
 
-  try {
-    // The GoogleAuth library automatically finds credentials from the
-    // GOOGLE_APPLICATION_CREDENTIALS environment variable.
-    const auth = new google.auth.GoogleAuth({
-      scopes: ['https://www.googleapis.com/auth/androidpublisher'],
-    });
+  // Vercel/Serverless-specific authentication
+  // The google-auth-library automatically looks for GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY
+  // in the environment variables when running in a serverless environment.
+  if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+      console.error('Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY environment variables.');
+      return NextResponse.json({ isValid: false, error: 'Server authentication is not configured.' }, { status: 500 });
+  }
+      
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Ensure newlines are correctly formatted
+    },
+    scopes: ['https://www.googleapis.com/auth/androidpublisher'],
+  });
 
+  try {
     const androidPublisher = google.androidpublisher({
       version: 'v3',
       auth: auth,
