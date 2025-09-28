@@ -11,6 +11,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { logger } from '@/lib/in-app-logger';
 
+// Add global type declarations for Capacitor plugins
+declare global {
+  interface Window {
+    Capacitor?: any;
+    CdvPurchase?: any;
+  }
+}
 
 const features = [
   'Unlimited Daily Scans',
