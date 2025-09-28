@@ -1,4 +1,5 @@
 
+
 'use client';
 
 // This is the safest way to declare the plugin types for TypeScript
@@ -148,22 +149,22 @@ class PurchaseService {
     if (!this.store) return;
     const products = this.getProducts();
     const isPremium = this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly');
-    console.log('🔄 PurchaseService: State refreshed. isPremium:', isPremium, 'Products:', products.map(p => ({id: p.id, offers: p.offers})));
+    console.log('🔄 PurchaseService: State refreshed. isPremium:', isPremium);
     this.onUpdate?.(products, isPremium);
   };
   
   private setupListeners(): void {
     if (!this.store) return;
     console.log('👂 PurchaseService: Setting up event listeners...');
-
+  
     this.store.when().productUpdated(this.refreshState);
     this.store.when().approved((transaction: any) => {
-        console.log('✅ APPROVED: Transaction approved, starting verification...', transaction);
-        transaction.verify()
+      console.log('✅ APPROVED: Transaction approved, starting verification...', transaction);
+      transaction.verify();
     });
     this.store.when().verified((receipt: any) => {
-        console.log('✅ VERIFIED: Receipt verified, finishing transaction...', receipt);
-        receipt.finish()
+      console.log('✅ VERIFIED: Receipt verified, finishing transaction...', receipt);
+      receipt.finish();
     });
     this.store.when().finished(this.refreshState);
     
@@ -180,9 +181,9 @@ class PurchaseService {
         title: p.title,
         description: p.description,
         offers: p.offers || [],
-    }));
-    console.log('📦 PurchaseService.getProducts: Returning products', products.map(p => ({id: p.id, offersCount: p.offers.length, offers: p.offers})));
-    return products;
+      }));
+      console.log('📦 PurchaseService.getProducts: Returning products', products.map((p: Product) => ({id: p.id, offersCount: p.offers.length, offers: p.offers})));
+      return products;
   }
 
   public isOwned(productId: string): boolean {
