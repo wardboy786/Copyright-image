@@ -89,7 +89,7 @@ const SubscriptionDebugger = () => {
           <strong>Products:</strong>
           {debugInfo.products.map((p: any, i: number) => (
             <div key={i} className="text-[10px] my-0.5">
-              {p.id}: {p.valid ? '✅' : '❌'} {p.canPurchase ? '💳' : '🚫'}
+              {p.id}: {p.valid ? '✅' : '❌'} {p.canPurchase ? '💳' : '🚫'} ({p.state})
             </div>
           ))}
         </div>
