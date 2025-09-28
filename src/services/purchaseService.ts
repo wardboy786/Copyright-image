@@ -201,39 +201,34 @@ class PurchaseService {
 
   public isOwned(productId: string): boolean {
     logger.log(`🔍 SVC.isOwned: Checking ownership for ${productId}`);
-    logger.log(`🔍 Available data structures:`, {
-      storeOwned: this.store?.owned?.(productId),
-      applications: this.store?.applications,
-      receipts: this.store?.receipts,
-    });
-
-    // Add temporary hardcoded check based on your logs
-    const hasActiveSubscription = productId === 'photorights_monthly' || productId === 'photorights_yearly';
-    logger.log(`🔍 Temporary ownership result for ${productId}: ${hasActiveSubscription}`);
     
-    if(hasActiveSubscription && (this.store?.owned?.(productId) || this.store?.applications || this.store?.receipts)) {
-      return true;
-    }
-
-    // Check basic store owned
+    // Method 1: Check store.owned() which is the simplest check
     const basicOwned = this.store?.owned?.(productId);
     if (basicOwned) {
-      logger.log(`Basic owned check for ${productId} is TRUE`);
+      logger.log(`🔍 SVC.isOwned: Basic owned check for ${productId} is TRUE`);
       return true;
     }
+    logger.log(`🔍 SVC.isOwned: Basic owned check for ${productId} is false`);
 
-    // Check for verified receipts with matching product
-    const hasVerifiedTransaction = this.store?.receipts?.some((receipt: any) => 
-      receipt.transactions?.some((transaction: any) => 
-        transaction.products?.some((product: any) => product.id === productId) &&
-        transaction.nativePurchase?.autoRenewing === true &&
-        transaction.isAcknowledged === true
-      )
-    );
+    // Method 2: Check through all receipts for an active transaction.
+    // This is more robust and covers cases where the simple `owned` flag might not be updated yet.
+    if (this.store && this.store.receipts) {
+      const hasVerifiedTransaction = this.store.receipts.some((receipt: any) => 
+        receipt.transactions?.some((transaction: any) => 
+          transaction.products?.some((product: any) => product.id === productId) &&
+          transaction.isAcknowledged === true &&
+          (transaction.renewalIntent === 'Renew' || transaction.nativePurchase?.autoRenewing === true)
+        )
+      );
+
+      logger.log(`🔍 SVC.isOwned: Final result for ${productId} from verified receipts is ${hasVerifiedTransaction}`);
+      if (hasVerifiedTransaction) return true;
+    } else {
+        logger.log('⚠️ SVC.isOwned: this.store.receipts is not available for checking.');
+    }
     
-    logger.log(`Final ownership result for ${productId}: ${!!hasVerifiedTransaction}`);
-
-    return !!hasVerifiedTransaction;
+    logger.log(`🔍 SVC.isOwned: Final result for ${productId} is false`);
+    return false;
   }
 
 
