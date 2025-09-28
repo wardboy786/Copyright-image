@@ -1,5 +1,6 @@
 
 
+
 /**
  * @fileOverview Next.js API Route for server-side validation of Google Play purchases.
  * This follows the official Google Play Developer API guidelines.
@@ -23,13 +24,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ isValid: false, error: 'Server authentication is not configured.' }, { status: 500 });
   }
       
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      // Vercel stores newlines as \\n, so we need to replace them with \n
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    },
-    scopes: ['https://www.googleapis.com/auth/androidpublisher'],
+  const auth = new google.auth.JWT({
+      email: process.env.GOOGLE_CLIENT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/androidpublisher'],
   });
 
   try {
@@ -37,6 +35,9 @@ export async function POST(req: Request) {
       version: 'v3',
       auth: auth,
     });
+
+    await auth.authorize();
+
 
     // Verify the subscription with Google Play
     const res = await androidPublisher.purchases.subscriptions.get({
