@@ -1,9 +1,11 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { purchaseService } from '@/services/purchaseService';
 import { type Product } from '@/lib/types';
 import { SplashScreen } from '@/components/layout/splash-screen';
+import { logger } from '@/lib/in-app-logger';
 
 interface PurchaseContextState {
   isInitialized: boolean;
@@ -29,7 +31,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const handleStateUpdate = (event: Event) => {
       const { products, isPremium } = (event as CustomEvent).detail;
-      console.log('React Context: Received purchaseStateUpdated event', { products, isPremium });
+      logger.log('React Context: Received purchaseStateUpdated event', { products, isPremium });
       if (isMounted) {
         setState(prevState => ({
           ...prevState,
@@ -42,7 +44,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     const handleError = (event: Event) => {
         const { error } = (event as CustomEvent).detail;
-        console.error('React Context: Received purchaseError event', { error });
+        logger.log('❌ React Context: Received purchaseError event', { error });
         if (isMounted) {
             setState(prevState => ({
                 ...prevState,
@@ -52,19 +54,26 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
     };
 
+    const handlePurchaseVerified = () => {
+      logger.log('🎉 React Context: Purchase verified, forcing state dispatch.');
+      purchaseService.dispatchState(); // Force a state update
+    };
+
     window.addEventListener('purchaseStateUpdated', handleStateUpdate);
     window.addEventListener('purchaseError', handleError);
+    window.addEventListener('purchaseVerified', handlePurchaseVerified);
+
 
     const initialize = async () => {
       try {
         await purchaseService.initialize();
-        console.log('React Context: Purchase service initialization requested.');
+        logger.log('React Context: Purchase service initialization requested.');
         if (isMounted) {
             // Set initialized to true here. The isLoading flag will be handled by the event listener.
             setState(prevState => ({ ...prevState, isInitialized: true }));
         }
       } catch (e: any) {
-        console.error('React Context: Failed to initialize purchase provider', e);
+        logger.log('❌ React Context: Failed to initialize purchase provider', e);
         if (isMounted) {
             setState(prevState => ({
               ...prevState,
@@ -82,11 +91,12 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       isMounted = false;
       window.removeEventListener('purchaseStateUpdated', handleStateUpdate);
       window.removeEventListener('purchaseError', handleError);
+      window.removeEventListener('purchaseVerified', handlePurchaseVerified);
     };
   }, []);
 
   // Show splash screen while the store is initializing for the first time
-  if (state.isLoading) {
+  if (!isPurchaseInitialized && state.isLoading) {
     return <SplashScreen onAnimationComplete={() => {}} />;
   }
 
@@ -102,5 +112,7 @@ export const usePurchase = () => {
   if (context === undefined) {
     throw new Error('usePurchase must be used within a PurchaseProvider');
   }
-  return context;
+  // This helps when the context is initializing for the first time.
+  const isPurchaseInitialized = context.isInitialized;
+  return { ...context, isPurchaseInitialized };
 };

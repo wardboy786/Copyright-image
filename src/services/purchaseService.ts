@@ -136,7 +136,7 @@ class PurchaseService {
      }
   }
   
-  private dispatchState = () => {
+  public dispatchState = () => {
     logger.log('🔄 SVC: Dispatching state update...');
     if (!this.store) {
       logger.log('❌ SVC: Cannot dispatch state, store is null.');
@@ -162,6 +162,7 @@ class PurchaseService {
     });
     this.store.when().verified((receipt: any) => {
       logger.log('✅ SVC VERIFIED: Receipt verified, finishing...', { id: receipt.id });
+      window.dispatchEvent(new CustomEvent('purchaseVerified'));
       receipt.finish();
     });
     this.store.when().finished((transaction: any) => {
@@ -178,9 +179,8 @@ class PurchaseService {
         return [];
     }
 
-    const mappedProducts = this.store.products.map((p: any): Product => {
+    const mappedProducts: Product[] = this.store.products.map((p: any): Product => {
         const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
-            // Ensure pricingPhases exists and has at least one phase
             const firstPhase = o.pricingPhases && o.pricingPhases.length > 0 ? o.pricingPhases[0] : {};
             return {
                 id: o.id,
@@ -239,7 +239,7 @@ class PurchaseService {
       throw new Error('Store not initialized');
     }
     logger.log('🔄 SVC.restorePurchases: Restoring purchases...');
-    await this.store.restorePurchases();
+    await this.store.restore();
   }
 }
 

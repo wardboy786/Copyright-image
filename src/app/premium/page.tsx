@@ -126,7 +126,6 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
-  // *** FIX: Find offer by checking if the complex ID contains the simple ID ***
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
   const yearlyOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
 
@@ -160,7 +159,6 @@ export default function PremiumPage() {
     const offer = selectedPlan === 'monthly' ? monthlyOffer : yearlyOffer;
     const product = selectedPlan === 'monthly' ? monthlyProduct : yearlyProduct;
     
-    // *** FIX: Use the full offer ID from the found offer object ***
     const offerId = offer?.id;
     
     logger.log('🔍 Attempting purchase with:', { productId, offerId, product, offer });
