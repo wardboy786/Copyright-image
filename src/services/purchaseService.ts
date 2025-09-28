@@ -144,8 +144,10 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
+    // This is the corrected line
     this.store.when().productUpdated(() => this.dispatchState());
     this.store.when().receiptUpdated(() => this.dispatchState());
+
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', { id: transaction.id });
       transaction.verify();
