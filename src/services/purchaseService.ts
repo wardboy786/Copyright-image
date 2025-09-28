@@ -144,7 +144,7 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    // This is the corrected line
+    // Correctly wrap the call in a function
     this.store.when().productUpdated(() => this.dispatchState());
     this.store.when().receiptUpdated(() => this.dispatchState());
 
@@ -152,13 +152,18 @@ class PurchaseService {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', { id: transaction.id });
       transaction.verify();
     });
-    this.store.when().verified((receipt: any) => {
-      logger.log('✅ SVC VERIFIED: Receipt verified, finishing...', { id: receipt.id });
+
+    this.store.when().verified(async (receipt: any) => {
+      logger.log('✅ SVC VERIFIED: Receipt verified. Forcing store update...', { id: receipt.id });
+      // Force a refresh from the servers
+      await this.store.update();
+      logger.log('✅ SVC STORE UPDATED: Now finishing transaction.');
       window.dispatchEvent(new CustomEvent('purchaseVerified'));
       receipt.finish();
     });
+
     this.store.when().finished((transaction: any) => {
-      logger.log('✅ SVC FINISHED: Transaction finished.', { id: transaction.id });
+      logger.log('✅ SVC FINISHED: Transaction finished. Dispatching final state.', { id: transaction.id });
       this.dispatchState();
     });
     
