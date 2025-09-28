@@ -96,8 +96,9 @@ class PurchaseService {
 
         this.setupListeners();
         
+        // Disable the internal validator to rely on Google's flow and our own server if needed.
         this.store.validator = (request: any, callback: (result: any) => void) => {
-            logger.log('🔒 SVC: Bypassing validation. Auto-approving.');
+            logger.log('🔒 SVC: Bypassing internal validation. Auto-approving.');
             callback({
                 ok: true,
                 data: {
@@ -144,9 +145,11 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
+    // This is a general listener. When ANYTHING in the store changes, we redispatch state.
     this.store.when().productUpdated(() => this.dispatchState());
     this.store.when().receiptUpdated(() => this.dispatchState());
 
+    // This is the clean, recommended purchase flow.
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -159,6 +162,7 @@ class PurchaseService {
     
     this.store.when().finished(async (transaction: any) => {
       logger.log('✅ SVC FINISHED: Transaction finished. Forcing update and dispatching final state.', transaction);
+      // This is the crucial step. After a purchase is finished, we force a full state update.
       await this.dispatchState();
     });
     
@@ -197,7 +201,7 @@ class PurchaseService {
 
   public isOwned(productId: string): boolean {
     logger.log(`🔍 SVC.isOwned: Starting robust ownership check for ${productId}`);
-    
+
     // Method 1 (simple): Check what the plugin has flagged as 'owned'
     const basicOwned = this.store?.owned?.(productId) ?? false;
     if (basicOwned) {
@@ -205,25 +209,19 @@ class PurchaseService {
       return true;
     }
 
-    // Method 2 (robust): Manually check all transactions for an active subscription.
+    // Method 2 (robust): Manually check all verified receipts for an active subscription.
     // This is a fallback for when the 'owned' flag isn't updated quickly enough.
-    const product = this.store?.products?.find((p: any) => p.id === productId);
-    if (!product) {
-        logger.log(`SVC.isOwned: Product ${productId} not found in store for transaction check.`);
-        return false;
-    }
+    const hasVerifiedTransaction = this.store?.receipts?.some((receipt: any) => 
+        receipt.transactions?.some((transaction: any) => 
+          transaction.products?.some((product: any) => product.id === productId) &&
+          transaction.nativePurchase?.autoRenewing === true &&
+          transaction.isAcknowledged === true
+        )
+      );
 
-    const hasActiveTransaction = product.transactions?.some((t: any) => {
-        // An active subscription is one that has 'finished' and is 'autoRenewing'.
-        const isActive = t.state === 'finished' && t.nativePurchase?.autoRenewing;
-        if (isActive) {
-            logger.log(`SVC.isOwned: Found active transaction for ${productId}:`, t);
-        }
-        return isActive;
-    });
-    
-    logger.log(`🔍 SVC.isOwned: Final result for ${productId} is ${!!hasActiveTransaction}`);
-    return !!hasActiveTransaction;
+    const isOwned = !!hasVerifiedTransaction;
+    logger.log(`🔍 SVC.isOwned: Final result for ${productId} from verified receipts is ${isOwned}`);
+    return isOwned;
   }
 
 
