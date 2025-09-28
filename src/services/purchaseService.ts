@@ -6,6 +6,7 @@ import { logger } from '@/lib/in-app-logger';
 declare global {
   interface Window {
     CdvPurchase: any;
+    Capacitor?: any;
   }
 }
 
@@ -31,7 +32,7 @@ class PurchaseService {
   }
 
   public initialize(): Promise<any> {
-    logger.log('SVC: Initialize called.');
+    logger.log('🚀 SVC: Initialize called.');
     if (this.isInitialized) {
       logger.log('✅ SVC: Already initialized.');
       this.dispatchState();
@@ -178,22 +179,24 @@ class PurchaseService {
     }
 
     const mappedProducts = this.store.products.map((p: any): Product => {
-      const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
-        return {
-          id: o.id,
-          price: {
-            amount: o.priceMicros / 1000000,
-            formatted: o.pricingPhases[0]?.formattedPrice || '',
-          },
-        }
-      });
+        const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
+            // Ensure pricingPhases exists and has at least one phase
+            const firstPhase = o.pricingPhases && o.pricingPhases.length > 0 ? o.pricingPhases[0] : {};
+            return {
+                id: o.id,
+                price: {
+                    amount: firstPhase.priceAmountMicros ? firstPhase.priceAmountMicros / 1000000 : 0,
+                    formatted: firstPhase.formattedPrice || '',
+                },
+            };
+        });
       
-      return {
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        offers: offers,
-      };
+        return {
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            offers: offers,
+        };
     });
 
     logger.log('📦 SVC.getProducts: Returning products', mappedProducts);
