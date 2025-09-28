@@ -24,10 +24,6 @@ export async function POST(req: Request) {
   }
       
   const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Ensure newlines are correctly formatted
-    },
     scopes: ['https://www.googleapis.com/auth/androidpublisher'],
   });
 
@@ -75,3 +71,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ isValid: false, error: e.message || 'An unknown server error occurred during validation.' }, { status: 500 });
   }
 }
+
