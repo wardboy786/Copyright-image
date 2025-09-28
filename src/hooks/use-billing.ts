@@ -1,11 +1,15 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { purchaseService, type Product } from '@/services/purchaseService';
+import { purchaseService } from '@/services/purchaseService';
+import { type Product } from '@/lib/types';
 import { usePurchase } from '@/context/purchase-context';
 import { toast } from './use-toast';
 
 export const MONTHLY_PLAN_ID = 'photorights_monthly';
 export const YEARLY_PLAN_ID = 'photorights_yearly';
+export const MONTHLY_OFFER_ID = 'monthly-plan';
+export const YEARLY_OFFER_ID = 'yearly-free';
+
 
 export const useBilling = () => {
   const {
@@ -14,13 +18,12 @@ export const useBilling = () => {
     isPremium,
     products,
     error,
-    store,
   } = usePurchase();
 
   const [isPurchasing, setIsPurchasing] = useState(false);
 
-  const purchase = async (offer: any) => {
-    if (!isInitialized || !store) {
+  const purchase = async (productId: string, offerId: string) => {
+    if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
       console.error(errorMsg);
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
@@ -28,21 +31,20 @@ export const useBilling = () => {
     }
     setIsPurchasing(true);
     try {
-      await purchaseService.order(offer);
+      await purchaseService.order(productId, offerId);
+      // Success is now handled by event listeners in the context
     } catch (e: any) {
-      // The error is handled by the listener in the context, but we catch here too
       console.error('Purchase failed in hook', e);
-      // The user cancellation error for this plugin is code 6
-      if (e?.code !== 6) {
-        toast({ title: 'Purchase Failed', description: e.message || 'An error occurred during purchase.', variant: 'destructive' });
-      }
+      toast({ title: 'Purchase Failed', description: e.message || 'An error occurred during purchase.', variant: 'destructive' });
     } finally {
+      // It's safer to have the event listener set this to false
+      // but as a fallback, we'll do it here.
       setIsPurchasing(false);
     }
   };
 
   const restorePurchases = async () => {
-    if (!isInitialized || !store) {
+    if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
       console.error(errorMsg);
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });

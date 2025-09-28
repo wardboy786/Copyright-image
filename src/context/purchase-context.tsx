@@ -1,7 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { purchaseService, type Product } from '@/services/purchaseService';
+import { purchaseService } from '@/services/purchaseService';
+import { type Product } from '@/lib/types';
 import { SplashScreen } from '@/components/layout/splash-screen';
 
 interface PurchaseContextState {
@@ -10,7 +11,6 @@ interface PurchaseContextState {
   isPremium: boolean;
   products: Product[];
   error: string | null;
-  store: any | null; // The CdvPurchase.Store instance
 }
 
 const PurchaseContext = createContext<PurchaseContextState | undefined>(undefined);
@@ -22,59 +22,55 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     isPremium: false,
     products: [],
     error: null,
-    store: null,
   });
-
-  const onStoreUpdate = useCallback((products: Product[], isPremium: boolean) => {
-    console.log('PurchaseContext: Store updated', { products, isPremium });
-    setState(prevState => ({
-      ...prevState,
-      products,
-      isPremium,
-      isLoading: false, // Stop loading once we have an update
-    }));
-  }, []);
-
-  const onStoreError = useCallback((error: string) => {
-    console.error('PurchaseContext: Store error', error);
-    setState(prevState => ({
-      ...prevState,
-      error,
-      isLoading: false,
-    }));
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
-    const initialize = async () => {
-      try {
-        // The service now handles its own singleton logic.
-        // We just need to initialize it and set up our React-level listeners.
-        const storeInstance = await purchaseService.initialize(onStoreUpdate, onStoreError);
-        
+    const handleStateUpdate = (event: Event) => {
+      const { products, isPremium } = (event as CustomEvent).detail;
+      console.log('React Context: Received purchaseStateUpdated event', { products, isPremium });
+      if (isMounted) {
+        setState(prevState => ({
+          ...prevState,
+          products,
+          isPremium,
+          isLoading: false, // Stop loading on first successful update
+        }));
+      }
+    };
+    
+    const handleError = (event: Event) => {
+        const { error } = (event as CustomEvent).detail;
+        console.error('React Context: Received purchaseError event', { error });
         if (isMounted) {
-            console.log('Purchase service initialized successfully.');
-            const initialProducts = purchaseService.getProducts();
-            const initialPremiumStatus = purchaseService.isOwned('photorights_monthly') || purchaseService.isOwned('photorights_yearly');
-
             setState(prevState => ({
-              ...prevState,
-              store: storeInstance,
-              isInitialized: true,
-              isLoading: false,
-              products: initialProducts,
-              isPremium: initialPremiumStatus,
+                ...prevState,
+                error,
+                isLoading: false,
             }));
         }
+    };
+
+    window.addEventListener('purchaseStateUpdated', handleStateUpdate);
+    window.addEventListener('purchaseError', handleError);
+
+    const initialize = async () => {
+      try {
+        await purchaseService.initialize();
+        console.log('React Context: Purchase service initialization requested.');
+        if (isMounted) {
+            // Set initialized to true here. The isLoading flag will be handled by the event listener.
+            setState(prevState => ({ ...prevState, isInitialized: true }));
+        }
       } catch (e: any) {
-        console.error('Failed to initialize purchase provider', e);
+        console.error('React Context: Failed to initialize purchase provider', e);
         if (isMounted) {
             setState(prevState => ({
               ...prevState,
               error: e.message || 'Initialization failed.',
               isLoading: false,
-              isInitialized: true, // Mark as initialized even on failure to stop loading
+              isInitialized: true,
             }));
         }
       }
@@ -84,11 +80,12 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     return () => {
       isMounted = false;
-      // The service manages its own cleanup, so we don't need to call it here.
+      window.removeEventListener('purchaseStateUpdated', handleStateUpdate);
+      window.removeEventListener('purchaseError', handleError);
     };
-  }, [onStoreUpdate, onStoreError]);
+  }, []);
 
-  // Show splash screen while the store is initializing
+  // Show splash screen while the store is initializing for the first time
   if (state.isLoading) {
     return <SplashScreen onAnimationComplete={() => {}} />;
   }

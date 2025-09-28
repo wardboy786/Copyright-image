@@ -1,5 +1,3 @@
-
-
 'use client';
 
 // This is the safest way to declare the plugin types for TypeScript
@@ -10,13 +8,7 @@ declare global {
 }
 
 import { Capacitor } from '@capacitor/core';
-
-export type Product = {
-  id: string;
-  title: string;
-  description: string;
-  offers: any[];
-};
+import { type Product } from '@/lib/types';
 
 class PurchaseService {
   private static instance: PurchaseService;
@@ -24,9 +16,6 @@ class PurchaseService {
   private isInitializing = false;
   private isInitialized = false;
   private initPromise: Promise<any> | null = null;
-  
-  private onUpdate: ((products: Product[], isPremium: boolean) => void) | null = null;
-  private onError: ((error: string) => void) | null = null;
 
   // Private constructor to enforce singleton pattern
   private constructor() {}
@@ -39,16 +28,10 @@ class PurchaseService {
     return PurchaseService.instance;
   }
 
-  public initialize(
-    onUpdate: (products: Product[], isPremium: boolean) => void,
-    onError: (error: string) => void
-  ): Promise<any> {
-    this.onUpdate = onUpdate;
-    this.onError = onError;
-
+  public initialize(): Promise<any> {
     if (this.isInitialized) {
       console.log('✅ PurchaseService: Already initialized.');
-      this.refreshState();
+      this.dispatchState();
       return Promise.resolve(this.store);
     }
 
@@ -63,7 +46,7 @@ class PurchaseService {
     
     return this.initPromise;
   }
-  
+
   private async performInitialization(): Promise<any> {
      try {
         await new Promise<void>((resolve) => {
@@ -77,7 +60,7 @@ class PurchaseService {
         if (!Capacitor.isNativePlatform() || typeof window.CdvPurchase === 'undefined') {
           const errorMsg = 'In-app purchases are only available on a mobile device.';
           console.error(`❌ ${errorMsg}`);
-          this.onError?.(errorMsg);
+          window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: errorMsg }}));
           this.isInitializing = false;
           throw new Error(errorMsg);
         }
@@ -93,7 +76,7 @@ class PurchaseService {
         this.store.error((err: unknown) => {
             const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
             console.error('❌ Store Error:', errorMessage);
-            this.onError?.(`A store error occurred: ${errorMessage}`);
+            window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: `Store Error: ${errorMessage}` }}));
         });
 
         this.store.register([
@@ -132,32 +115,34 @@ class PurchaseService {
         this.isInitialized = true;
         this.isInitializing = false;
         console.log("🎉 PurchaseService: Initialization complete.");
-        this.refreshState();
+        this.dispatchState(); // Dispatch initial state
         return this.store;
 
      } catch (error: any) {
         console.error('❌ PurchaseService: Initialization failed.', error);
         this.isInitializing = false;
         this.initPromise = null;
-        this.onError?.(error.message || 'An unknown initialization error occurred.');
+        window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: error.message || 'An unknown initialization error occurred.' }}));
         throw error;
      }
   }
   
-  private refreshState = () => {
-    console.log('🔄 PurchaseService: Refreshing state...');
+  private dispatchState = () => {
+    console.log('🔄 PurchaseService: Dispatching state update...');
     if (!this.store) return;
     const products = this.getProducts();
     const isPremium = this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly');
-    console.log('🔄 PurchaseService: State refreshed. isPremium:', isPremium);
-    this.onUpdate?.(products, isPremium);
+    window.dispatchEvent(new CustomEvent('purchaseStateUpdated', {
+      detail: { products, isPremium }
+    }));
   };
   
   private setupListeners(): void {
     if (!this.store) return;
     console.log('👂 PurchaseService: Setting up event listeners...');
   
-    this.store.when().productUpdated(this.refreshState);
+    this.store.when().productUpdated(this.dispatchState);
+    this.store.when().receiptUpdated(this.dispatchState);
     this.store.when().approved((transaction: any) => {
       console.log('✅ APPROVED: Transaction approved, starting verification...', transaction);
       transaction.verify();
@@ -166,7 +151,10 @@ class PurchaseService {
       console.log('✅ VERIFIED: Receipt verified, finishing transaction...', receipt);
       receipt.finish();
     });
-    this.store.when().finished(this.refreshState);
+    this.store.when().finished((transaction: any) => {
+      console.log('✅ FINISHED: Transaction finished.', transaction);
+      this.dispatchState();
+    });
     
     console.log('✅ PurchaseService: Event listeners ready.');
   }
@@ -177,13 +165,13 @@ class PurchaseService {
         return [];
     }
     const products = this.store.products.map((p: any) => ({
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        offers: p.offers || [],
-      }));
-      console.log('📦 PurchaseService.getProducts: Returning products', products.map((p: Product) => ({id: p.id, offersCount: p.offers.length, offers: p.offers})));
-      return products;
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      offers: p.offers || [], // CRITICAL: Ensure offers are always included
+    }));
+    console.log('📦 PurchaseService.getProducts: Returning products', products.map((p: Product) => ({id: p.id, offersCount: p.offers.length, offers: p.offers})));
+    return products;
   }
 
   public isOwned(productId: string): boolean {
@@ -192,9 +180,20 @@ class PurchaseService {
     return owned;
   }
 
-  public async order(offer: any): Promise<void> {
+  public async order(productId: string, offerId: string): Promise<void> {
     if (!this.store) throw new Error('Store not initialized');
-    console.log('🛒 PurchaseService.order: Ordering offer...', offer);
+    console.log(`🛒 PurchaseService.order: Attempting to order product '${productId}' with offer '${offerId}'...`);
+    
+    const product = this.store.get(productId);
+    if (!product) {
+        throw new Error(`Product with ID '${productId}' not found.`);
+    }
+
+    const offer = product.getOffer(offerId);
+    if (!offer) {
+        throw new Error(`Offer with ID '${offerId}' not found for product '${productId}'.`);
+    }
+
     await this.store.order(offer);
   }
 

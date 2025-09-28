@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, Loader2, Star, ZapOff, AlertCircle } from 'lucide-react';
-import { useBilling } from '@/hooks/use-billing';
+import { useBilling, MONTHLY_PLAN_ID, YEARLY_PLAN_ID, MONTHLY_OFFER_ID, YEARLY_OFFER_ID } from '@/hooks/use-billing';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -32,30 +32,29 @@ export default function PremiumPage() {
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
 
-  const monthlyProduct = products.find(p => p.id === 'photorights_monthly');
-  const yearlyProduct = products.find(p => p.id === 'photorights_yearly');
+  const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
+  const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
+  
+  const monthlyOffer = monthlyProduct?.offers.find(o => o.id === MONTHLY_OFFER_ID);
+  const yearlyOffer = yearlyProduct?.offers.find(o => o.id === YEARLY_OFFER_ID);
 
-  const handlePurchase = async (offer: any | undefined) => {
-    if (!offer) {
-        toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available.', variant: 'destructive' });
+
+  const handlePurchase = async () => {
+    const productId = selectedPlan === 'monthly' ? MONTHLY_PLAN_ID : YEARLY_PLAN_ID;
+    const offerId = selectedPlan === 'monthly' ? MONTHLY_OFFER_ID : YEARLY_OFFER_ID;
+    const product = selectedPlan === 'monthly' ? monthlyProduct : yearlyProduct;
+    const offer = selectedPlan === 'monthly' ? monthlyOffer : yearlyOffer;
+
+    if (!product || !offer) {
+        toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available. It may be loading or not configured.', variant: 'destructive' });
         return;
     }
-    try {
-        await purchase(offer); 
-        toast({ title: 'Purchase Successful!', description: 'You are now a Premium member.' });
-    } catch (e: any) {
-        console.error('Purchase failed', e);
-        // User cancellation error code is 6 for this plugin
-        if (e?.code !== 6) { 
-            toast({ title: 'Purchase Failed', description: e.message || 'An error occurred during the purchase process.', variant: 'destructive' });
-        }
-    }
+    await purchase(productId, offerId); 
   };
   
   const handleRestore = async () => {
     try {
         await restorePurchases();
-        toast({ title: 'Purchases Restored', description: 'Your previous purchases have been restored.' });
     } catch (e: any) {
         toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
     }
@@ -162,9 +161,6 @@ export default function PremiumPage() {
         )
     }
     
-    const monthlyOffer = monthlyProduct?.offers.find(o => o.id === 'monthly-plan');
-    const yearlyOffer = yearlyProduct?.offers.find(o => o.id === 'yearly-free');
-    
     // Calculate discount only if both offers are valid
     const discount = (yearlyOffer && monthlyOffer && yearlyOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
         ? Math.round((1 - (yearlyOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
@@ -211,7 +207,7 @@ export default function PremiumPage() {
           <Button 
             className="w-full" 
             size="lg"
-            onClick={() => handlePurchase(selectedPlan === 'monthly' ? monthlyOffer : yearlyOffer)}
+            onClick={handlePurchase}
             disabled={isPurchasing || isLoading}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}

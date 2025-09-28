@@ -31,3 +31,21 @@ export interface ValidatePurchaseOutput {
   isValid: boolean;
   error?: string;
 }
+
+
+// Types for In-App Purchases
+export type Offer = {
+  id: string;
+  price: {
+    amount: number;
+    formatted: string;
+  };
+  // Add other properties as needed from the plugin
+};
+
+export type Product = {
+  id: string;
+  title: string;
+  description: string;
+  offers: Offer[];
+};
