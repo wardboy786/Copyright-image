@@ -15,9 +15,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ isValid: false, error: 'Missing required validation fields.' }, { status: 400 });
   }
 
-  // Vercel/Serverless-specific authentication
-  // The google-auth-library automatically looks for GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY
-  // in the environment variables when running in a serverless environment.
+  // This is the robust way to authenticate on Vercel.
+  // It relies on GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY environment variables.
   if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
       console.error('Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY environment variables.');
       return NextResponse.json({ isValid: false, error: 'Server authentication is not configured.' }, { status: 500 });
@@ -26,6 +25,7 @@ export async function POST(req: Request) {
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      // Vercel stores newlines as \\n, so we need to replace them with \n
       private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     },
     scopes: ['https://www.googleapis.com/auth/androidpublisher'],
