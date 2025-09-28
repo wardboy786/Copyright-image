@@ -1,3 +1,4 @@
+
 'use client';
 
 // This is the safest way to declare the plugin types for TypeScript
@@ -8,7 +9,7 @@ declare global {
 }
 
 import { Capacitor } from '@capacitor/core';
-import { type Product } from '@/lib/types';
+import { type Product, type Offer } from '@/lib/types';
 
 class PurchaseService {
   private static instance: PurchaseService;
@@ -164,15 +165,29 @@ class PurchaseService {
         console.warn('⚠️ PurchaseService.getProducts: Store or products not available.');
         return [];
     }
-    const products = this.store.products.map((p: any) => ({
-      id: p.id,
-      title: p.title,
-      description: p.description,
-      offers: p.offers || [], // CRITICAL: Ensure offers are always included
-    }));
-    console.log('📦 PurchaseService.getProducts: Returning products', products.map((p: Product) => ({id: p.id, offersCount: p.offers.length, offers: p.offers})));
-    return products;
+
+    // Meticulously map the product and offer data to the required structure.
+    const mappedProducts = this.store.products.map((p: any): Product => {
+      const offers: Offer[] = (p.offers || []).map((o: any): Offer => ({
+        id: o.id,
+        price: {
+          amount: o.priceMicros / 1000000,
+          formatted: o.pricingPhases[0]?.formattedPrice || '',
+        },
+      }));
+      
+      return {
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        offers: offers, // Use the correctly mapped offers array
+      };
+    });
+
+    console.log('📦 PurchaseService.getProducts: Returning products', JSON.stringify(mappedProducts, null, 2));
+    return mappedProducts;
   }
+
 
   public isOwned(productId: string): boolean {
     const owned = this.store?.owned(productId) ?? false;
