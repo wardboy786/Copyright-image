@@ -126,8 +126,11 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
+  // Find the offer that does NOT have the free trial ID in it.
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
-  const yearlyOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
+  const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_PLAN_ID) && !o.id.includes(YEARLY_OFFER_ID));
+  const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
+
 
   useEffect(() => {
     if (products.length > 0) {
@@ -143,27 +146,27 @@ export default function PremiumPage() {
       }
       if (yearlyProduct) {
         logger.log('Yearly product offers:', yearlyProduct.offers);
-        logger.log(`Searching for offer containing "${YEARLY_OFFER_ID}", found:`, yearlyOffer);
+        logger.log(`Searching for paid yearly offer (no "free"), found:`, yearlyPaidOffer);
+        logger.log(`Searching for free trial offer ("${YEARLY_OFFER_ID}"), found:`, yearlyFreeTrialOffer);
       } else {
         logger.log(`❌ Yearly product not found in:`, products.map(p => p.id));
       }
       logger.log('🔍 === END DEBUG ===');
     }
-  }, [products, monthlyProduct, yearlyProduct, monthlyOffer, yearlyOffer]);
+  }, [products, monthlyProduct, yearlyProduct, monthlyOffer, yearlyPaidOffer, yearlyFreeTrialOffer]);
 
 
   const handlePurchase = async () => {
     logger.log('🔍 handlePurchase called with selected plan:', selectedPlan);
 
-    const productId = selectedPlan === 'monthly' ? MONTHLY_PLAN_ID : YEARLY_PLAN_ID;
-    const offer = selectedPlan === 'monthly' ? monthlyOffer : yearlyOffer;
-    const product = selectedPlan === 'monthly' ? monthlyProduct : yearlyProduct;
+    const isYearly = selectedPlan === 'yearly';
+    const product = isYearly ? yearlyProduct : monthlyProduct;
+    // For yearly, prioritize the free trial offer if it exists. Otherwise use the paid one.
+    const offer = isYearly ? (yearlyFreeTrialOffer || yearlyPaidOffer) : monthlyOffer;
     
-    const offerId = offer?.id;
-    
-    logger.log('🔍 Attempting purchase with:', { productId, offerId, product, offer });
+    logger.log('🔍 Attempting purchase with:', { product, offer });
 
-    if (!product || !offer || !offerId) {
+    if (!product || !offer || !offer.id) {
         logger.log('❌ No product or offer found for purchase call.', { product, offer });
         toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available. It may be loading or not configured.', variant: 'destructive' });
         return;
@@ -171,7 +174,7 @@ export default function PremiumPage() {
     
     try {
         logger.log('🛒 Starting purchase for offer:', offer.id);
-        await purchase(productId, offer.id);
+        await purchase(product.id, offer.id);
         logger.log('✅ Purchase function completed.');
     } catch (e: any) {
         logger.log('❌ Purchase failed:', { message: e.message, code: e.code, stack: e.stack });
@@ -270,8 +273,8 @@ export default function PremiumPage() {
         );
     }
     
-    if (isInitialized && (!products || products.length === 0 || !monthlyOffer || !yearlyOffer)) {
-        const isKnownPropagationIssue = !monthlyOffer || !yearlyOffer;
+    if (isInitialized && (!products || products.length === 0 || !monthlyOffer || !(yearlyPaidOffer || yearlyFreeTrialOffer))) {
+        const isKnownPropagationIssue = !monthlyOffer || (!yearlyPaidOffer && !yearlyFreeTrialOffer);
          if (isKnownPropagationIssue) {
              return <PropagationErrorDisplay onRetry={() => window.location.reload()} />;
          }
@@ -293,9 +296,9 @@ export default function PremiumPage() {
         )
     }
     
-    // Calculate discount only if both offers are valid
-    const discount = (yearlyOffer && monthlyOffer && yearlyOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
-        ? Math.round((1 - (yearlyOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
+    // Calculate discount only if both offers are valid and prices are available
+    const discount = (yearlyPaidOffer && monthlyOffer && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
+        ? Math.round((1 - (yearlyPaidOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
         : 0;
 
     return (
@@ -313,16 +316,18 @@ export default function PremiumPage() {
                 <p className="text-xs text-muted-foreground">per month</p>
              </button>
              <button onClick={() => setSelectedPlan('yearly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'yearly' ? 'border-primary' : 'border-border')}>
-                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
-                    3-Day Free Trial
-                </div>
+                 {yearlyFreeTrialOffer && 
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                        3-Day Free Trial
+                    </div>
+                 }
                 {discount > 0 && 
                     <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
                         Save {discount}%
                     </div>
                 }
                 <p className="font-semibold">Yearly</p>
-                <p className="text-xl font-bold">{yearlyOffer?.price.formatted || '...'}</p>
+                <p className="text-xl font-bold">{yearlyPaidOffer?.price.formatted || '...'}</p>
                  <p className="text-xs text-muted-foreground">per year</p>
              </button>
           </div>

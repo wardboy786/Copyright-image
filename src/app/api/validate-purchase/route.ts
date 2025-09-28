@@ -15,9 +15,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ isValid: false, error: 'Missing required validation fields.' }, { status: 400 });
   }
 
-  // Vercel/Serverless-specific authentication
-  // The google-auth-library automatically looks for GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY
-  // in the environment variables when running in a serverless environment.
+  // This is the most reliable way to authenticate on Vercel.
+  // It automatically uses GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY from environment variables.
   if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
       console.error('Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY environment variables.');
       return NextResponse.json({ isValid: false, error: 'Server authentication is not configured.' }, { status: 500 });
@@ -63,12 +62,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ isValid: false, error: error.trim() });
     }
   } catch (e: any) {
-    console.error('Error validating purchase in API route:', e.message);
-    // Google API errors often have a code property
+    console.error('Error validating purchase in API route:', e.message, e.errors);
+    // Google API errors often have a code property and an errors array
     if (e.code && e.code >= 400 && e.code < 500) {
-      return NextResponse.json({ isValid: false, error: `Google API Error: ${e.message} (Code: ${e.code}).` }, { status: e.code });
+      const errorMessage = e.errors?.[0]?.message || e.message;
+      return NextResponse.json({ isValid: false, error: `Google API Error: ${errorMessage} (Code: ${e.code}).` }, { status: e.code });
     }
     return NextResponse.json({ isValid: false, error: e.message || 'An unknown server error occurred during validation.' }, { status: 500 });
   }
 }
-
