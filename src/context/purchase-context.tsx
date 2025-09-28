@@ -105,7 +105,5 @@ export const usePurchase = () => {
   if (context === undefined) {
     throw new Error('usePurchase must be used within a PurchaseProvider');
   }
-  // This helps when the context is initializing for the first time.
-  const isPurchaseInitialized = context.isInitialized;
-  return { ...context, isPurchaseInitialized };
+  return context;
 };

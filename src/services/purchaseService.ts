@@ -96,13 +96,11 @@ class PurchaseService {
 
         this.setupListeners();
         
-        logger.log('⚠️ SVC: Server-side validation is DISABLED. Auto-approving all transactions.');
         this.store.validator = (request: any, callback: (result: any) => void) => {
             logger.log('🔒 SVC: Bypassing validation. Auto-approving.');
             callback({
                 ok: true,
                 data: {
-                    // This mimics a successful validation structure
                     isValid: true
                 }
             });
@@ -144,10 +142,12 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    // Correctly wrap the call in a function
+    // When a product is updated (e.g., after loading), or a receipt is updated,
+    // dispatch the new state to the UI.
     this.store.when().productUpdated(() => this.dispatchState());
     this.store.when().receiptUpdated(() => this.dispatchState());
 
+    // This is the main transaction flow.
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -160,6 +160,8 @@ class PurchaseService {
     
     this.store.when().finished(async (transaction: any) => {
       logger.log('✅ SVC FINISHED: Transaction finished. Forcing update and dispatching final state.', transaction);
+      // After finishing, the ownership state is guaranteed to be settled.
+      // Force a store update and then dispatch the final state to the UI.
       await this.store.update();
       this.dispatchState();
     });
@@ -229,11 +231,12 @@ class PurchaseService {
 
   public async restorePurchases(): Promise<void> {
     if (!this.store) {
-      logger.log('❌ SVC.restore: Store not initialized');
+      logger.log('❌ SVC.restorePurchases: Store not initialized');
       throw new Error('Store not initialized');
     }
-    logger.log('🔄 SVC.restorePurchases: Restoring purchases...');
+    logger.log('🔄 SVC.restorePurchases: Attempting to restore purchases...');
     await this.store.restore();
+    logger.log('✅ SVC.restorePurchases: Restore command sent.');
   }
 }
 
