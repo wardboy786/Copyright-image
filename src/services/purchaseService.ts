@@ -149,12 +149,12 @@ class PurchaseService {
     this.store.when().receiptUpdated(() => this.dispatchState());
 
     this.store.when().approved((transaction: any) => {
-      logger.log('✅ SVC APPROVED: Transaction approved, verifying...', { id: transaction.id });
+      logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
     });
 
     this.store.when().verified(async (receipt: any) => {
-      logger.log('✅ SVC VERIFIED: Receipt verified. Forcing store update...', { id: receipt.id });
+      logger.log('✅ SVC VERIFIED: Receipt verified. Forcing store update...', receipt);
       // Force a refresh from the servers
       await this.store.update();
       logger.log('✅ SVC STORE UPDATED: Now finishing transaction.');
@@ -163,7 +163,7 @@ class PurchaseService {
     });
 
     this.store.when().finished((transaction: any) => {
-      logger.log('✅ SVC FINISHED: Transaction finished. Dispatching final state.', { id: transaction.id });
+      logger.log('✅ SVC FINISHED: Transaction finished. Dispatching final state.', transaction);
       this.dispatchState();
     });
     
