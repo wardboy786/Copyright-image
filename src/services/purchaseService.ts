@@ -96,7 +96,6 @@ class PurchaseService {
 
         this.setupListeners();
         
-        // Temporarily bypass server-side validation for diagnostics
         this.store.validator = (request: any, callback: (result: any) => void) => {
             logger.log('🔒 SVC: Bypassing validation. Auto-approving.');
             callback({
@@ -125,12 +124,14 @@ class PurchaseService {
      }
   }
   
-  public dispatchState = () => {
+  public dispatchState = async () => {
     logger.log('🔄 SVC: Dispatching state update...');
     if (!this.store) {
       logger.log('❌ SVC: Cannot dispatch state, store is null.');
       return;
     }
+    // Force a store update to get the latest data before dispatching
+    await this.store.update();
     const products = this.getProducts();
     const isPremium = this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly');
     logger.log('📬 SVC: Firing purchaseStateUpdated event.', { numProducts: products.length, isPremium });
@@ -143,12 +144,9 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    // When a product is updated (e.g., after loading), or a receipt is updated,
-    // dispatch the new state to the UI.
     this.store.when().productUpdated(() => this.dispatchState());
     this.store.when().receiptUpdated(() => this.dispatchState());
 
-    // This is the main transaction flow.
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -161,10 +159,7 @@ class PurchaseService {
     
     this.store.when().finished(async (transaction: any) => {
       logger.log('✅ SVC FINISHED: Transaction finished. Forcing update and dispatching final state.', transaction);
-      // After finishing, the ownership state is guaranteed to be settled.
-      // Force a store update and then dispatch the final state to the UI.
-      await this.store.update();
-      this.dispatchState();
+      await this.dispatchState();
     });
     
     logger.log('✅ SVC: Event listeners ready.');
@@ -202,14 +197,16 @@ class PurchaseService {
 
   public isOwned(productId: string): boolean {
     logger.log(`🔍 SVC.isOwned: Starting robust ownership check for ${productId}`);
-    // Fallback to the simple owned check first
+    
+    // Method 1 (simple): Check what the plugin has flagged as 'owned'
     const basicOwned = this.store?.owned?.(productId) ?? false;
     if (basicOwned) {
       logger.log(`🔍 SVC.isOwned: Basic check for ${productId} is TRUE.`);
       return true;
     }
 
-    // If basic check fails, perform the more robust transaction check
+    // Method 2 (robust): Manually check all transactions for an active subscription.
+    // This is a fallback for when the 'owned' flag isn't updated quickly enough.
     const product = this.store?.products?.find((p: any) => p.id === productId);
     if (!product) {
         logger.log(`SVC.isOwned: Product ${productId} not found in store for transaction check.`);
@@ -217,16 +214,18 @@ class PurchaseService {
     }
 
     const hasActiveTransaction = product.transactions?.some((t: any) => {
+        // An active subscription is one that has 'finished' and is 'autoRenewing'.
         const isActive = t.state === 'finished' && t.nativePurchase?.autoRenewing;
         if (isActive) {
             logger.log(`SVC.isOwned: Found active transaction for ${productId}:`, t);
         }
         return isActive;
     });
-
+    
     logger.log(`🔍 SVC.isOwned: Final result for ${productId} is ${!!hasActiveTransaction}`);
     return !!hasActiveTransaction;
   }
+
 
   public async order(productId: string, offerId: string): Promise<void> {
     if (!this.store) {
