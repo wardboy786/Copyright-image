@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ isValid: false, error: error.trim() });
     }
   } catch (e: any) {
-    console.error('Error validating purchase in API route:', e.message);
+    console.error('Error validating purchase in API route:', e);
     // Google API errors often have a code property
     if (e.code && e.code >= 400 && e.code < 500) {
       return NextResponse.json({ isValid: false, error: `Google API Error: ${e.message} (Code: ${e.code}).` }, { status: e.code });
@@ -75,4 +75,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ isValid: false, error: e.message || 'An unknown server error occurred during validation.' }, { status: 500 });
   }
 }
-
