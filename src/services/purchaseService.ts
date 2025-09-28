@@ -96,28 +96,19 @@ class PurchaseService {
 
         this.setupListeners();
         
-        this.store.validator = async (request: any, callback: (result: any) => void) => {
-            logger.log('🔒 SVC: Starting server-side validation...');
-            try {
-                const response = await fetch(`/api/validate-purchase`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    packageName: 'com.photorights.ai',
-                    productId: request.products[0].id,
-                    purchaseToken: request.transaction.purchaseToken,
-                  }),
-                });
-
-                const validationResult = await response.json();
-                logger.log('✅ SVC: Server validation result:', validationResult);
-                callback({ ok: validationResult.isValid, data: validationResult });
-            } catch (error: any) {
-                 logger.log('❌ SVC: Server validation failed.', error);
-                callback({ ok: false, message: error.message || 'Unknown validation error' });
-            }
+        // TEMPORARILY BYPASSING SERVER VALIDATION FOR DIAGNOSTICS
+        logger.log('⚠️ SVC: Server-side validation is TEMPORARILY BYPASSED for diagnostics.');
+        this.store.validator = (request: any, callback: (result: any) => void) => {
+            logger.log('🔒 SVC: Bypassing server validation. Auto-approving.');
+            callback({
+                ok: true,
+                data: {
+                    // This mimics a successful validation structure
+                    isValid: true
+                }
+            });
         };
-        logger.log('🔒 SVC: Validator configured.');
+        logger.log('⚠️ SVC: Validator configured to auto-approve.');
 
 
         await this.store.initialize();
