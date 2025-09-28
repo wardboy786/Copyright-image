@@ -6,9 +6,10 @@ import { Check, Loader2, Star, ZapOff, AlertCircle } from 'lucide-react';
 import { useBilling, MONTHLY_PLAN_ID, YEARLY_PLAN_ID, MONTHLY_OFFER_ID, YEARLY_OFFER_ID } from '@/hooks/use-billing';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { logger } from '@/lib/in-app-logger';
 
 
 const features = [
@@ -38,18 +39,52 @@ export default function PremiumPage() {
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id === MONTHLY_OFFER_ID);
   const yearlyOffer = yearlyProduct?.offers.find(o => o.id === YEARLY_OFFER_ID);
 
+  useEffect(() => {
+    if (products.length > 0) {
+      logger.log('🔍 === PRODUCT SELECTION DEBUG ===');
+      logger.log('Available products:', products);
+      logger.log(`Monthly product search for "${MONTHLY_PLAN_ID}":`, monthlyProduct);
+      logger.log(`Yearly product search for "${YEARLY_PLAN_ID}":`, yearlyProduct);
+      if (monthlyProduct) {
+        logger.log('Monthly product offers:', monthlyProduct.offers);
+      } else {
+        logger.log(`❌ Monthly product not found in:`, products.map(p => p.id));
+      }
+      if (yearlyProduct) {
+        logger.log('Yearly product offers:', yearlyProduct.offers);
+      } else {
+        logger.log(`❌ Yearly product not found in:`, products.map(p => p.id));
+      }
+      logger.log('🔍 === END DEBUG ===');
+    }
+  }, [products, monthlyProduct, yearlyProduct]);
+
 
   const handlePurchase = async () => {
+    logger.log('🔍 handlePurchase called with selected plan:', selectedPlan);
+
     const productId = selectedPlan === 'monthly' ? MONTHLY_PLAN_ID : YEARLY_PLAN_ID;
     const offerId = selectedPlan === 'monthly' ? MONTHLY_OFFER_ID : YEARLY_OFFER_ID;
     const product = selectedPlan === 'monthly' ? monthlyProduct : yearlyProduct;
     const offer = selectedPlan === 'monthly' ? monthlyOffer : yearlyOffer;
+    
+    logger.log('🔍 Attempting purchase with:', { productId, offerId, product, offer });
 
     if (!product || !offer) {
+        logger.log('❌ No product or offer found for purchase call.', { product, offer });
         toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available. It may be loading or not configured.', variant: 'destructive' });
         return;
     }
-    await purchase(productId, offerId); 
+    
+    try {
+        logger.log('🛒 Starting purchase for offer:', offer.id);
+        await purchase(productId, offer.id);
+        logger.log('✅ Purchase function completed.');
+    } catch (e: any) {
+        logger.log('❌ Purchase failed:', { message: e.message, code: e.code, stack: e.stack });
+        const errorMessage = e.code === 6 ? 'Purchase was cancelled by user' : e.message || 'An unknown error occurred during purchase.';
+        toast({ title: 'Purchase Failed', description: errorMessage, variant: 'destructive' });
+    }
   };
   
   const handleRestore = async () => {
