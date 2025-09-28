@@ -1,5 +1,6 @@
 
 'use client';
+import { logger } from '@/lib/in-app-logger';
 
 // This is the safest way to declare the plugin types for TypeScript
 declare global {
@@ -30,18 +31,19 @@ class PurchaseService {
   }
 
   public initialize(): Promise<any> {
+    logger.log('SVC: Initialize called.');
     if (this.isInitialized) {
-      console.log('✅ PurchaseService: Already initialized.');
+      logger.log('✅ SVC: Already initialized.');
       this.dispatchState();
       return Promise.resolve(this.store);
     }
 
     if (this.isInitializing && this.initPromise) {
-      console.log('⏳ PurchaseService: Initialization in progress, returning existing promise.');
+      logger.log('⏳ SVC: Initialization in progress, returning existing promise.');
       return this.initPromise;
     }
 
-    console.log('🚀 PurchaseService: Starting initialization.');
+    logger.log('🚀 SVC: Starting initialization.');
     this.isInitializing = true;
     this.initPromise = this.performInitialization();
     
@@ -51,32 +53,37 @@ class PurchaseService {
   private async performInitialization(): Promise<any> {
      try {
         await new Promise<void>((resolve) => {
+            logger.log('SVC: Waiting for deviceready...');
             if (Capacitor.isNativePlatform()) {
-                document.addEventListener('deviceready', () => resolve(), { once: true });
+                document.addEventListener('deviceready', () => {
+                    logger.log('📱 SVC: Device is ready.');
+                    resolve()
+                }, { once: true });
             } else {
+                logger.log('🖥️ SVC: Not native, resolving immediately.');
                 resolve();
             }
         });
 
         if (!Capacitor.isNativePlatform() || typeof window.CdvPurchase === 'undefined') {
           const errorMsg = 'In-app purchases are only available on a mobile device.';
-          console.error(`❌ ${errorMsg}`);
+          logger.log(`❌ SVC: ${errorMsg}`);
           window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: errorMsg }}));
           this.isInitializing = false;
           throw new Error(errorMsg);
         }
-        console.log('🔌 PurchaseService: Plugin is available.');
+        logger.log('🔌 SVC: Plugin is available.');
 
 
         this.store = window.CdvPurchase.store;
         const { ProductType, Platform, LogLevel } = window.CdvPurchase;
 
         this.store.verbosity = LogLevel.DEBUG;
-        console.log('🔧 PurchaseService: Verbosity set to DEBUG.');
+        logger.log('🔧 SVC: Verbosity set to DEBUG.');
         
         this.store.error((err: unknown) => {
             const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
-            console.error('❌ Store Error:', errorMessage);
+            logger.log('❌ SVC Store Error:', errorMessage);
             window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: `Store Error: ${errorMessage}` }}));
         });
 
@@ -84,12 +91,12 @@ class PurchaseService {
           { id: 'photorights_monthly', type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
           { id: 'photorights_yearly', type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
         ]);
-        console.log('📦 PurchaseService: Products registered.');
+        logger.log('📦 SVC: Products registered.', ['photorights_monthly', 'photorights_yearly']);
 
         this.setupListeners();
         
         this.store.validator = async (request: any, callback: (result: any) => void) => {
-            console.log('🔒 PurchaseService: Starting server-side validation...');
+            logger.log('🔒 SVC: Starting server-side validation...');
             try {
                 const response = await fetch(`/api/validate-purchase`, {
                   method: 'POST',
@@ -102,25 +109,25 @@ class PurchaseService {
                 });
 
                 const validationResult = await response.json();
-                console.log('✅ PurchaseService: Server validation result:', validationResult);
+                logger.log('✅ SVC: Server validation result:', validationResult);
                 callback({ ok: validationResult.isValid, data: validationResult });
             } catch (error: any) {
-                 console.error('❌ PurchaseService: Server validation failed.', error);
+                 logger.log('❌ SVC: Server validation failed.', error);
                 callback({ ok: false, message: error.message || 'Unknown validation error' });
             }
         };
-        console.log('🔒 PurchaseService: Validator configured.');
+        logger.log('🔒 SVC: Validator configured.');
 
 
         await this.store.initialize();
         this.isInitialized = true;
         this.isInitializing = false;
-        console.log("🎉 PurchaseService: Initialization complete.");
+        logger.log("🎉 SVC: Initialization complete.");
         this.dispatchState(); // Dispatch initial state
         return this.store;
 
      } catch (error: any) {
-        console.error('❌ PurchaseService: Initialization failed.', error);
+        logger.log('❌ SVC: Initialization failed.', error);
         this.isInitializing = false;
         this.initPromise = null;
         window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: error.message || 'An unknown initialization error occurred.' }}));
@@ -129,10 +136,14 @@ class PurchaseService {
   }
   
   private dispatchState = () => {
-    console.log('🔄 PurchaseService: Dispatching state update...');
-    if (!this.store) return;
+    logger.log('🔄 SVC: Dispatching state update...');
+    if (!this.store) {
+      logger.log('❌ SVC: Cannot dispatch state, store is null.');
+      return;
+    }
     const products = this.getProducts();
     const isPremium = this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly');
+    logger.log('📬 SVC: Firing purchaseStateUpdated event.', { numProducts: products.length, isPremium });
     window.dispatchEvent(new CustomEvent('purchaseStateUpdated', {
       detail: { products, isPremium }
     }));
@@ -140,81 +151,91 @@ class PurchaseService {
   
   private setupListeners(): void {
     if (!this.store) return;
-    console.log('👂 PurchaseService: Setting up event listeners...');
+    logger.log('👂 SVC: Setting up event listeners...');
   
     this.store.when().productUpdated(this.dispatchState);
     this.store.when().receiptUpdated(this.dispatchState);
     this.store.when().approved((transaction: any) => {
-      console.log('✅ APPROVED: Transaction approved, starting verification...', transaction);
+      logger.log('✅ SVC APPROVED: Transaction approved, verifying...', { id: transaction.id });
       transaction.verify();
     });
     this.store.when().verified((receipt: any) => {
-      console.log('✅ VERIFIED: Receipt verified, finishing transaction...', receipt);
+      logger.log('✅ SVC VERIFIED: Receipt verified, finishing...', { id: receipt.id });
       receipt.finish();
     });
     this.store.when().finished((transaction: any) => {
-      console.log('✅ FINISHED: Transaction finished.', transaction);
+      logger.log('✅ SVC FINISHED: Transaction finished.', { id: transaction.id });
       this.dispatchState();
     });
     
-    console.log('✅ PurchaseService: Event listeners ready.');
+    logger.log('✅ SVC: Event listeners ready.');
   }
   
   public getProducts(): Product[] {
     if (!this.store || !this.store.products) {
-        console.warn('⚠️ PurchaseService.getProducts: Store or products not available.');
+        logger.log('⚠️ SVC.getProducts: Store or products not available.');
         return [];
     }
 
-    // Meticulously map the product and offer data to the required structure.
     const mappedProducts = this.store.products.map((p: any): Product => {
-      const offers: Offer[] = (p.offers || []).map((o: any): Offer => ({
-        id: o.id,
-        price: {
-          amount: o.priceMicros / 1000000,
-          formatted: o.pricingPhases[0]?.formattedPrice || '',
-        },
-      }));
+      const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
+        return {
+          id: o.id,
+          price: {
+            amount: o.priceMicros / 1000000,
+            formatted: o.pricingPhases[0]?.formattedPrice || '',
+          },
+        }
+      });
       
       return {
         id: p.id,
         title: p.title,
         description: p.description,
-        offers: offers, // Use the correctly mapped offers array
+        offers: offers,
       };
     });
 
-    console.log('📦 PurchaseService.getProducts: Returning products', JSON.stringify(mappedProducts, null, 2));
+    logger.log('📦 SVC.getProducts: Returning products', mappedProducts);
     return mappedProducts;
   }
 
 
   public isOwned(productId: string): boolean {
     const owned = this.store?.owned(productId) ?? false;
-    console.log(`🔍 PurchaseService.isOwned: Checking ownership for ${productId}: ${owned}`);
+    logger.log(`🔍 SVC.isOwned: Checking ownership for ${productId}: ${owned}`);
     return owned;
   }
 
   public async order(productId: string, offerId: string): Promise<void> {
-    if (!this.store) throw new Error('Store not initialized');
-    console.log(`🛒 PurchaseService.order: Attempting to order product '${productId}' with offer '${offerId}'...`);
+    if (!this.store) {
+      logger.log('❌ SVC.order: Store not initialized');
+      throw new Error('Store not initialized');
+    }
+    logger.log(`🛒 SVC.order: Attempting to order product '${productId}' with offer '${offerId}'...`);
     
     const product = this.store.get(productId);
     if (!product) {
+        logger.log(`❌ SVC.order: Product with ID '${productId}' not found.`);
         throw new Error(`Product with ID '${productId}' not found.`);
     }
 
     const offer = product.getOffer(offerId);
     if (!offer) {
+        logger.log(`❌ SVC.order: Offer with ID '${offerId}' not found for product '${productId}'.`);
         throw new Error(`Offer with ID '${offerId}' not found for product '${productId}'.`);
     }
 
+    logger.log('✅ SVC.order: Product and offer found. Placing order...');
     await this.store.order(offer);
   }
 
   public async restorePurchases(): Promise<void> {
-    if (!this.store) throw new Error('Store not initialized');
-    console.log('🔄 PurchaseService.restorePurchases: Restoring purchases...');
+    if (!this.store) {
+      logger.log('❌ SVC.restore: Store not initialized');
+      throw new Error('Store not initialized');
+    }
+    logger.log('🔄 SVC.restorePurchases: Restoring purchases...');
     await this.store.restorePurchases();
   }
 }
