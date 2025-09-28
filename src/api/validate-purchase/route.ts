@@ -22,18 +22,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ isValid: false, error }, { status: 400 });
   }
 
-  // This is the robust way to authenticate on Vercel.
-  // It relies on GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY environment variables.
+  // Robust authentication using explicit credentials from environment variables.
+  // This is the most reliable method for serverless environments like Vercel.
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
   const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+  const projectId = process.env.GOOGLE_PROJECT_ID; // Added for cross-project authentication
 
   logger.log('🚀 VALIDATION: Reading environment variables...');
   logger.log(`🚀 VALIDATION: GOOGLE_CLIENT_EMAIL is ${clientEmail ? 'set' : 'NOT SET'}`);
   logger.log(`🚀 VALIDATION: GOOGLE_PRIVATE_KEY is ${privateKey ? 'set' : 'NOT SET'}`);
+  logger.log(`🚀 VALIDATION: GOOGLE_PROJECT_ID is ${projectId ? 'set' : 'NOT SET'}`);
 
 
-  if (!clientEmail || !privateKey) {
-      const error = 'Server authentication is not configured. Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY.';
+  if (!clientEmail || !privateKey || !projectId) {
+      const error = 'Server authentication is not configured. Missing GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, or GOOGLE_PROJECT_ID.';
       logger.log(`❌ VALIDATION: ${error}`);
       return NextResponse.json({ isValid: false, error }, { status: 500 });
   }
@@ -41,6 +43,9 @@ export async function POST(req: Request) {
   const auth = new google.auth.JWT({
       email: clientEmail,
       key: privateKey.replace(/\\n/g, '\n'),
+      // The keyId and projectId are not strictly required if the service account is in the same project,
+      // but explicitly providing them adds robustness, especially for cross-project scenarios.
+      projectId: projectId, 
       scopes: ['https://www.googleapis.com/auth/androidpublisher'],
   });
 
