@@ -18,6 +18,94 @@ const features = [
   'Priority Customer Support',
 ];
 
+// In-Page Debugger Component
+const SubscriptionDebugger = () => {
+  const [debugInfo, setDebugInfo] = useState<any>({});
+  const [lastCheck, setLastCheck] = useState<string>('');
+
+  const runDiagnostic = async () => {
+    logger.log('🔍 === SUBSCRIPTION DIAGNOSTIC ===');
+    
+    const info: any = {
+      timestamp: new Date().toLocaleString(),
+      platform: window.Capacitor?.getPlatform?.(),
+      pluginExists: !!window.CdvPurchase,
+      storeExists: !!window.CdvPurchase?.store,
+      storeReady: window.CdvPurchase?.store?.ready,
+      productsCount: window.CdvPurchase?.store?.products?.length || 0,
+      products: []
+    };
+
+    if (window.CdvPurchase?.store?.products) {
+      info.products = window.CdvPurchase.store.products.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        state: p.state,
+        valid: p.valid,
+        canPurchase: p.canPurchase,
+        price: p.displayPrice,
+        currency: p.currency,
+        offers: p.offers?.map((o: any) => ({
+            id: o.id,
+            price: o.price,
+            formattedPrice: o.pricingPhases[0]?.formattedPrice,
+        }))
+      }));
+    }
+
+    logger.log('🔍 Diagnostic Results:', info);
+    setDebugInfo(info);
+    setLastCheck(new Date().toLocaleString());
+
+    // Try to update store
+    try {
+      if (window.CdvPurchase?.store) {
+        await window.CdvPurchase.store.update();
+        logger.log('✅ Store update successful');
+      }
+    } catch (error) {
+      logger.log('❌ Store update failed:', error);
+    }
+  };
+
+  useEffect(() => {
+    runDiagnostic();
+    
+    const interval = setInterval(runDiagnostic, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="fixed top-20 right-2 bg-black/80 text-white p-2 rounded-md text-xs max-w-sm z-50 backdrop-blur-sm">
+      <h4 className="font-bold">🔍 Subscription Debug</h4>
+      <p><strong>Last Check:</strong> {lastCheck}</p>
+      <p><strong>Products Found:</strong> {debugInfo.productsCount}</p>
+      <p><strong>Store Ready:</strong> {debugInfo.storeReady ? '✅' : '❌'}</p>
+      
+      {debugInfo.products?.length > 0 && (
+        <div className="mt-1 border-t border-gray-600 pt-1">
+          <strong>Products:</strong>
+          {debugInfo.products.map((p: any, i: number) => (
+            <div key={i} className="text-[10px] my-0.5">
+              {p.id}: {p.valid ? '✅' : '❌'} {p.canPurchase ? '💳' : '🚫'}
+            </div>
+          ))}
+        </div>
+      )}
+      
+      <Button 
+        onClick={runDiagnostic}
+        size="sm"
+        variant="outline"
+        className="w-full h-auto text-xs mt-2 py-1 bg-primary/20"
+      >
+        Check Now
+      </Button>
+    </div>
+  );
+};
+
+
 export default function PremiumPage() {
   const { 
     isInitialized, 
@@ -122,7 +210,7 @@ export default function PremiumPage() {
                 Check Again
             </Button>
             <p className="text-xs text-muted-foreground/80">
-              If this persists after 24 hours, check your Play Console setup.
+              If this persists after 48 hours, check your Play Console setup.
             </p>
         </CardFooter>
       </Card>
@@ -178,6 +266,10 @@ export default function PremiumPage() {
     }
     
     if (isInitialized && (!products || products.length === 0)) {
+        const isKnownPropagationIssue = !monthlyOffer || !yearlyOffer;
+         if (isKnownPropagationIssue) {
+             return <PropagationErrorDisplay onRetry={() => window.location.reload()} />;
+         }
         return (
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
@@ -258,7 +350,9 @@ export default function PremiumPage() {
   
   return (
     <div className="flex justify-center items-start py-8">
+        <SubscriptionDebugger />
         {renderContent()}
     </div>
   );
 }
+
