@@ -1,3 +1,4 @@
+
 'use client';
 
 // This is the safest way to declare the plugin types for TypeScript
@@ -7,10 +8,6 @@ declare global {
   }
 }
 
-import {
-  MONTHLY_PLAN_ID,
-  YEARLY_PLAN_ID,
-} from '@/hooks/use-billing';
 import { Capacitor } from '@capacitor/core';
 
 export type Product = {
@@ -49,18 +46,17 @@ class PurchaseService {
     this.onError = onError;
 
     if (this.isInitialized) {
-      console.log('PurchaseService: Already initialized.');
-      // If already initialized, immediately send the current state
+      console.log('✅ PurchaseService: Already initialized.');
       this.refreshState();
       return Promise.resolve(this.store);
     }
 
     if (this.isInitializing && this.initPromise) {
-      console.log('PurchaseService: Initialization in progress, returning existing promise.');
+      console.log('⏳ PurchaseService: Initialization in progress, returning existing promise.');
       return this.initPromise;
     }
 
-    console.log('PurchaseService: Starting initialization.');
+    console.log('🚀 PurchaseService: Starting initialization.');
     this.isInitializing = true;
     this.initPromise = this.performInitialization();
     
@@ -79,30 +75,36 @@ class PurchaseService {
 
         if (!Capacitor.isNativePlatform() || typeof window.CdvPurchase === 'undefined') {
           const errorMsg = 'In-app purchases are only available on a mobile device.';
+          console.error(`❌ ${errorMsg}`);
           this.onError?.(errorMsg);
           this.isInitializing = false;
           throw new Error(errorMsg);
         }
+        console.log('🔌 PurchaseService: Plugin is available.');
+
 
         this.store = window.CdvPurchase.store;
         const { ProductType, Platform, LogLevel } = window.CdvPurchase;
 
         this.store.verbosity = LogLevel.DEBUG;
+        console.log('🔧 PurchaseService: Verbosity set to DEBUG.');
         
         this.store.error((err: unknown) => {
             const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
-            console.error('Store Error:', errorMessage);
+            console.error('❌ Store Error:', errorMessage);
             this.onError?.(`A store error occurred: ${errorMessage}`);
         });
 
         this.store.register([
-          { id: MONTHLY_PLAN_ID, type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
-          { id: YEARLY_PLAN_ID, type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
+          { id: 'photorights_monthly', type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
+          { id: 'photorights_yearly', type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
         ]);
-        
+        console.log('📦 PurchaseService: Products registered.');
+
         this.setupListeners();
         
         this.store.validator = async (request: any, callback: (result: any) => void) => {
+            console.log('🔒 PurchaseService: Starting server-side validation...');
             try {
                 const response = await fetch(`/api/validate-purchase`, {
                   method: 'POST',
@@ -115,20 +117,25 @@ class PurchaseService {
                 });
 
                 const validationResult = await response.json();
+                console.log('✅ PurchaseService: Server validation result:', validationResult);
                 callback({ ok: validationResult.isValid, data: validationResult });
             } catch (error: any) {
+                 console.error('❌ PurchaseService: Server validation failed.', error);
                 callback({ ok: false, message: error.message || 'Unknown validation error' });
             }
         };
+        console.log('🔒 PurchaseService: Validator configured.');
+
 
         await this.store.initialize();
         this.isInitialized = true;
         this.isInitializing = false;
-        console.log("PurchaseService: Initialization complete.");
+        console.log("🎉 PurchaseService: Initialization complete.");
+        this.refreshState();
         return this.store;
 
      } catch (error: any) {
-        console.error('PurchaseService: Initialization failed.', error);
+        console.error('❌ PurchaseService: Initialization failed.', error);
         this.isInitializing = false;
         this.initPromise = null;
         this.onError?.(error.message || 'An unknown initialization error occurred.');
@@ -137,42 +144,62 @@ class PurchaseService {
   }
   
   private refreshState = () => {
+    console.log('🔄 PurchaseService: Refreshing state...');
     if (!this.store) return;
     const products = this.getProducts();
-    const isPremium = this.isOwned(MONTHLY_PLAN_ID) || this.isOwned(YEARLY_PLAN_ID);
+    const isPremium = this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly');
+    console.log('🔄 PurchaseService: State refreshed. isPremium:', isPremium, 'Products:', products.map(p => ({id: p.id, offers: p.offers})));
     this.onUpdate?.(products, isPremium);
   };
   
   private setupListeners(): void {
     if (!this.store) return;
+    console.log('👂 PurchaseService: Setting up event listeners...');
 
     this.store.when().productUpdated(this.refreshState);
-    this.store.when().approved((transaction: any) => transaction.verify());
-    this.store.when().verified((receipt: any) => receipt.finish());
+    this.store.when().approved((transaction: any) => {
+        console.log('✅ APPROVED: Transaction approved, starting verification...', transaction);
+        transaction.verify()
+    });
+    this.store.when().verified((receipt: any) => {
+        console.log('✅ VERIFIED: Receipt verified, finishing transaction...', receipt);
+        receipt.finish()
+    });
     this.store.when().finished(this.refreshState);
+    
+    console.log('✅ PurchaseService: Event listeners ready.');
   }
   
   public getProducts(): Product[] {
-    if (!this.store || !this.store.products) return [];
-    return this.store.products.map((p: any) => ({
+    if (!this.store || !this.store.products) {
+        console.warn('⚠️ PurchaseService.getProducts: Store or products not available.');
+        return [];
+    }
+    const products = this.store.products.map((p: any) => ({
         id: p.id,
         title: p.title,
         description: p.description,
         offers: p.offers || [],
     }));
+    console.log('📦 PurchaseService.getProducts: Returning products', products.map(p => ({id: p.id, offersCount: p.offers.length, offers: p.offers})));
+    return products;
   }
 
   public isOwned(productId: string): boolean {
-    return this.store?.owned(productId) ?? false;
+    const owned = this.store?.owned(productId) ?? false;
+    console.log(`🔍 PurchaseService.isOwned: Checking ownership for ${productId}: ${owned}`);
+    return owned;
   }
 
   public async order(offer: any): Promise<void> {
     if (!this.store) throw new Error('Store not initialized');
+    console.log('🛒 PurchaseService.order: Ordering offer...', offer);
     await this.store.order(offer);
   }
 
   public async restorePurchases(): Promise<void> {
     if (!this.store) throw new Error('Store not initialized');
+    console.log('🔄 PurchaseService.restorePurchases: Restoring purchases...');
     await this.store.restorePurchases();
   }
 }

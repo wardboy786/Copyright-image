@@ -41,7 +41,7 @@ export default function PremiumPage() {
         return;
     }
     try {
-        await purchase(offer as any); 
+        await purchase(offer); 
         toast({ title: 'Purchase Successful!', description: 'You are now a Premium member.' });
     } catch (e: any) {
         console.error('Purchase failed', e);
@@ -60,6 +60,40 @@ export default function PremiumPage() {
         toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
     }
   }
+  
+  const PropagationErrorDisplay = ({ onRetry }: { onRetry: () => void; }) => (
+      <Card className="w-full max-w-md bg-amber-500/10 border-amber-500/20">
+        <CardHeader className="text-center">
+          <CardTitle className="text-lg text-amber-400">⏳ Subscriptions Loading</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center text-sm text-muted-foreground space-y-4">
+            <p>
+              Your subscription plans are being processed by Google Play.
+              This can sometimes take a few hours after activation in the console.
+            </p>
+            <div className="text-left bg-background/50 p-3 rounded-md">
+              <p className="font-bold text-foreground">What's happening:</p>
+              <ul className="list-disc list-inside text-xs mt-2 space-y-1">
+                <li>Google is syncing your plans across its servers.</li>
+                <li>Billing configurations are being validated.</li>
+                <li>This is a normal part of the process.</li>
+              </ul>
+            </div>
+             <p className="text-xs text-muted-foreground/80">
+              Last checked: {new Date().toLocaleTimeString()}
+            </p>
+        </CardContent>
+        <CardFooter className="flex-col gap-3">
+           <Button onClick={onRetry}>
+                Check Again
+            </Button>
+            <p className="text-xs text-muted-foreground/80">
+              If this persists after 24 hours, check your Play Console setup.
+            </p>
+        </CardFooter>
+      </Card>
+  );
+
 
   const renderContent = () => {
     if (isLoading && !isInitialized) {
@@ -92,6 +126,11 @@ export default function PremiumPage() {
     }
     
     if (error) {
+        const isPropagationError = error?.includes('not currently available') || error?.includes('not found') || error?.includes('not available');
+        if (isPropagationError) {
+             return <PropagationErrorDisplay onRetry={() => window.location.reload()} />;
+        }
+        
          return (
             <Alert variant="destructive" className="max-w-md">
                 <AlertCircle className="h-4 w-4" />
@@ -114,7 +153,7 @@ export default function PremiumPage() {
                         </div>
                     </div>
                     <CardTitle className="text-2xl">Billing Not Available</CardTitle>
-                    <CardDescription>Could not connect to the app store. Please ensure you are on a real mobile device, have a network connection, and have enabled Google Play Services.</CardDescription>
+                    <CardDescription>Could not find any products. Please ensure you are on a real mobile device, have a network connection, and have enabled Google Play Services.</CardDescription>
                 </CardHeader>
                  <CardFooter>
                     <Button variant="outline" onClick={() => window.location.reload()} className="w-full">Retry Connection</Button>
