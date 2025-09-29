@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
@@ -54,6 +55,14 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     setIsWatchingAd(false);
   };
   
+    const reset = () => {
+      setIsLoading(false);
+      setImagePreview(null);
+      setImageFile(null);
+      setIsAiGenerated(false);
+      setIsUserCreated(false);
+  }
+  
   const handleScan = async () => {
     if (!imageFile || !imagePreview) return;
 
@@ -77,7 +86,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
           description: 'Your results are ready.',
         });
         onScanComplete(result);
-        // Do not reset here, wait for navigation
+        reset();
       } else { // This is an error object
         toast({
           title: 'Scan Failed',
@@ -137,14 +146,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     multiple: false,
     disabled: isLoading,
   });
-  
-  const reset = () => {
-      setImagePreview(null);
-      setImageFile(null);
-      setIsAiGenerated(false);
-      setIsUserCreated(false);
-  }
-  
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
         <Card className="shadow-xl shadow-primary/10 relative overflow-hidden">
@@ -276,3 +278,5 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     </div>
   );
 }
+
+    
