@@ -111,6 +111,8 @@ class PurchaseService {
           const errorMsg = 'In-app purchases are only available on a mobile device.';
           logger.log(`❌ SVC: ${errorMsg}`);
           this.isInitializing = false;
+          // Dispatch a global event that the React context can listen for. This is user-facing.
+          window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: errorMsg }}));
           throw new Error(errorMsg);
         }
         logger.log('🔌 SVC: Plugin is available.');
@@ -118,16 +120,16 @@ class PurchaseService {
         this.store = window.CdvPurchase.store;
         const { ProductType, Platform, LogLevel } = window.CdvPurchase;
 
-        this.store.verbosity = LogLevel.DEBUG;
-        logger.log('🔧 SVC: Verbosity set to DEBUG.');
+        this.store.verbosity = LogLevel.INFO; // Use INFO for production, DEBUG for dev
+        logger.log('🔧 SVC: Verbosity set.');
         
         // Central error handler
         this.store.error((err: unknown) => {
             const error = err as any;
-            const errorMessage = error.message || JSON.stringify(err);
-            logger.log('❌ SVC Store Error:', errorMessage, err);
+            const errorMessage = `An unexpected store error occurred. Please try again later. (Code: ${error.code || 'N/A'})`;
+            logger.log('❌ SVC Store Error:', error.message, err);
             // Dispatch a global event that the React context can listen for
-            window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: `Store Error: ${errorMessage}` }}));
+            window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: errorMessage }}));
         });
 
         // Register the products
@@ -159,8 +161,8 @@ class PurchaseService {
         logger.log('❌ SVC: Initialization failed.', error);
         this.isInitializing = false;
         this.initPromise = null;
-        // Dispatch an error that our context can catch
-        window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: error.message || 'Initialization failed' }}));
+        const userFacingError = 'Could not connect to the app store. Please check your connection and try again.';
+        window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: userFacingError }}));
         throw error;
      }
   }
@@ -298,11 +300,10 @@ class PurchaseService {
         }
       }
     }
-    
-    // Fallback check on the product object itself
+
     const product = this.store?.get?.(productId);
-    if (product && (product.owned || product.state === 'owned')) {
-      logger.log(`✅ OWNED - via product.state check: ${product.state}`);
+    if (product && product.owned) {
+      logger.log(`✅ OWNED - via product.owned: ${product.owned}`);
       return true;
     }
   
@@ -363,10 +364,11 @@ class PurchaseService {
             }, 1000);
             
         } catch (error: any) {
+            const errorMessage = "Could not connect to the app store to restore purchases. Please check your connection.";
             logger.log('❌ Restore failed:', error);
              // Notify error
             window.dispatchEvent(new CustomEvent('purchaseRestored', {
-                detail: { success: false, error: error.message }
+                detail: { success: false, error: errorMessage }
             }));
             throw error;
         }

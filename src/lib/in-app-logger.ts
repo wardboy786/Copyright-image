@@ -2,6 +2,15 @@ type LogListener = (message: string) => void;
 
 class InAppLogger {
   private listeners: Set<LogListener> = new Set();
+  private isEnabled: boolean = false; // Set to false by default
+
+  public enable(): void {
+    this.isEnabled = true;
+  }
+  
+  public disable(): void {
+    this.isEnabled = false;
+  }
 
   public subscribe(listener: LogListener): void {
     this.listeners.add(listener);
@@ -12,6 +21,8 @@ class InAppLogger {
   }
 
   public log(message: string, ...args: any[]): void {
+    if (!this.isEnabled) return; // Do nothing if not enabled
+    
     const timestamp = new Date().toLocaleTimeString();
     const fullMessage = `[${timestamp}] ${message}`;
 
@@ -32,4 +43,5 @@ class InAppLogger {
   }
 }
 
+// The logger is created, but it will not do anything until `logger.enable()` is called.
 export const logger = new InAppLogger();

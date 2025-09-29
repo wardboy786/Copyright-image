@@ -143,22 +143,22 @@ export default function PremiumPage() {
           className="w-full max-w-md"
         >
           <Card className="w-full text-center overflow-hidden shadow-2xl shadow-primary/20">
-            <CardHeader className="bg-muted/30 p-8">
+            <CardHeader className="bg-muted/30 p-6 sm:p-8">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: 'spring', stiffness: 260, damping: 20 }}
-                className="relative w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border-8 border-background"
+                className="relative w-20 h-20 sm:w-24 sm:h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border-8 border-background"
               >
-                <Gem className="w-12 h-12 text-primary" />
+                <Gem className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
                 <motion.div
                     className="absolute inset-0 rounded-full border-2 border-primary/50"
                     animate={{ rotate: 360, scale: [1, 1.1, 1] }}
                     transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
                 />
               </motion.div>
-              <CardTitle className="text-3xl font-bold">You're a Premium Member!</CardTitle>
-              <CardDescription className="mt-2 text-lg">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">You're a Premium Member!</CardTitle>
+              <CardDescription className="mt-2 text-md sm:text-lg">
                 Welcome to the full Photorights AI experience.
               </CardDescription>
             </CardHeader>
@@ -180,7 +180,7 @@ export default function PremiumPage() {
               </ul>
             </CardContent>
             <CardFooter className="p-6 bg-muted/30">
-              <Button variant="outline" onClick={handleRestore} disabled={isLoading} className="w-full">
+              <Button variant="outline" onClick={handleRestore} disabled={!isInitialized || isLoading} className="w-full">
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Restore Subscription
               </Button>
@@ -276,7 +276,7 @@ export default function PremiumPage() {
   };
   
   return (
-    <div className="flex justify-center items-start py-8">
+    <div className="flex flex-col items-center justify-start py-8">
         {renderContent()}
     </div>
   );

@@ -59,9 +59,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const { isPremium } = usePurchase();
   
   // The total padding needed at the bottom of the main content area.
-  // For non-premium users, this is ad height (50px) + nav bar height (64px) = 114px.
-  // For premium users, it's just the nav bar height (64px).
-  const bottomPadding = !isPremium ? `114px` : `64px`;
+  // For non-premium users, this is ad height (50px) + nav bar height (64px) + extra space (16px) = 130px.
+  // For premium users, it's just the nav bar height (64px) + extra space (16px) = 80px.
+  const bottomPadding = !isPremium ? `130px` : `80px`;
 
 
   return (
