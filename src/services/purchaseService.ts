@@ -139,6 +139,7 @@ class PurchaseService {
 
         // Set up the event listeners
         this.setupListeners();
+        this.setupAppLifecycleListeners();
         
         // This validator can be used for server-side validation.
         // For this app, we will rely on client-side receipt verification.
@@ -165,6 +166,16 @@ class PurchaseService {
         window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: error.message || 'Initialization failed' }}));
         throw error;
      }
+  }
+
+  private setupAppLifecycleListeners(): void {
+    document.addEventListener('resume', () => {
+      logger.log('📱 App resumed, refreshing purchases...');
+      setTimeout(() => {
+        this.store?.update();
+        this.notifyListeners();
+      }, 500);
+    }, false);
   }
   
   /**
@@ -195,7 +206,10 @@ class PurchaseService {
   
     // Listen for any change in products or receipts. This is a catch-all.
     this.store.when().productUpdated(() => this.forceUpdateAndNotify());
-    this.store.when().receiptUpdated(() => this.forceUpdateAndNotify());
+    this.store.when().receiptUpdated((receipt: any) => {
+        logger.log('🧾 SVC: Receipt updated.', receipt);
+        this.forceUpdateAndNotify();
+    });
 
     // The Ideal Transaction Flow: approved -> verified -> finished
     this.store.when().approved((transaction: any) => {
@@ -205,6 +219,7 @@ class PurchaseService {
 
     this.store.when().verified((receipt: any) => {
       logger.log('✅ SVC VERIFIED: Receipt verified, finishing...', receipt);
+      this.receipts.push(receipt); // Add to our receipts cache
       receipt.finish();
     });
     
@@ -252,13 +267,89 @@ class PurchaseService {
   /**
    * Checks if a specific product is owned and active. This is the crucial logic.
    */
-  public isOwned(productId: string): boolean {
-    const product = this.store?.get(productId);
-    // The 'owned' property is the most reliable indicator after the store has been updated.
-    const isProductOwned = product?.owned || false;
-    logger.log(`🔍 SVC.isOwned: Final result for ${productId} is ${isProductOwned}`);
-    return isProductOwned;
-  }
+    public isOwned(productId: string): boolean {
+        logger.log(`\n🔍 === OWNERSHIP CHECK FOR ${productId} ===`);
+        
+        // Log everything we have
+        logger.log('📊 Available data:', {
+            hasStore: !!this.store,
+            receiptsCount: this.receipts?.length || 0,
+            storeProducts: this.store?.products?.length || 0
+        });
+
+        // Method 1: Check store.owned()
+        try {
+            const storeOwned = this.store?.owned?.(productId);
+            logger.log(`1️⃣ store.owned("${productId}"): ${storeOwned}`);
+            if (storeOwned) {
+            logger.log('✅ OWNED via store.owned()');
+            return true;
+            }
+        } catch (e) {
+            logger.log('❌ store.owned() failed:', e);
+        }
+
+        // Method 2: Check product.owned property
+        try {
+            const product = this.store?.get?.(productId);
+            logger.log(`2️⃣ Product object:`, {
+            exists: !!product,
+            id: product?.id,
+            state: product?.state,
+            owned: product?.owned,
+            valid: product?.valid
+            });
+            
+            if (product?.owned === true) {
+            logger.log('✅ OWNED via product.owned');
+            return true;
+            }
+            
+            if (product?.state === 'owned' || product?.state === 'approved') {
+            logger.log('✅ OWNED via product.state');
+            return true;
+            }
+        } catch (e) {
+            logger.log('❌ product check failed:', e);
+        }
+
+        // Method 3: Check receipts
+        logger.log(`3️⃣ Checking ${this.receipts?.length || 0} receipts...`);
+        if (this.receipts && this.receipts.length > 0) {
+            for (let i = 0; i < this.receipts.length; i++) {
+            const receipt = this.receipts[i];
+            logger.log(`   Receipt ${i}:`, {
+                hasSourceReceipt: !!receipt.sourceReceipt,
+                transactionsCount: receipt.sourceReceipt?.transactions?.length || 0
+            });
+            
+            const transactions = receipt.sourceReceipt?.transactions || [];
+            for (let j = 0; j < transactions.length; j++) {
+                const transaction = transactions[j];
+                const products = transaction.products || [];
+                const hasProduct = products.some((p: any) => p.id === productId);
+                
+                logger.log(`   Transaction ${j}:`, {
+                hasProduct,
+                productIds: products.map((p: any) => p.id),
+                autoRenewing: transaction.nativePurchase?.autoRenewing,
+                acknowledged: transaction.isAcknowledged,
+                state: transaction.state
+                });
+                
+                if (hasProduct && 
+                    transaction.nativePurchase?.autoRenewing === true && 
+                    transaction.isAcknowledged === true) {
+                logger.log('✅ OWNED via verified receipt');
+                return true;
+                }
+            }
+            }
+        }
+
+        logger.log('❌ NOT OWNED - no match found\n');
+        return false;
+    }
 
   /**
    * Initiates a purchase flow for a product.
@@ -289,15 +380,28 @@ class PurchaseService {
   /**
    * Initiates the flow to restore previous purchases.
    */
-  public async restorePurchases(): Promise<void> {
-    if (!this.store) {
-      logger.log('❌ SVC.restorePurchases: Store not initialized');
-      throw new Error('Store not initialized');
+    public async restorePurchases(): Promise<void> {
+        try {
+            logger.log('🔄 Starting restore purchases...');
+            
+            if (!this.store) {
+                throw new Error('Store not initialized');
+            }
+
+            // Refresh all products to get latest state
+            await this.store.update();
+            
+            // Force check ownership after refresh
+            setTimeout(() => {
+                this.notifyListeners();
+                logger.log('✅ Restore complete, state updated');
+            }, 1000);
+            
+        } catch (error) {
+            logger.log('❌ Restore failed:', error);
+            throw error;
+        }
     }
-    logger.log('🔄 SVC.restorePurchases: Attempting to restore purchases...');
-    await this.store.restore();
-    logger.log('✅ SVC.restorePurchases: Restore command sent. State will update on receipt/product events.');
-  }
 
   /**
    * Manually triggers a state refresh. Useful for "Check Again" buttons.
