@@ -60,7 +60,6 @@ export default function PremiumPage() {
 
     const isYearly = selectedPlan === 'yearly';
     const product = isYearly ? yearlyProduct : monthlyProduct;
-    // For yearly, prioritize the free trial offer if it exists. Otherwise use the paid one.
     const offer = isYearly ? (yearlyFreeTrialOffer || yearlyPaidOffer) : monthlyOffer;
     
     logger.log('🔍 Attempting purchase with:', { product, offer });
@@ -76,7 +75,7 @@ export default function PremiumPage() {
         await purchase(product.id, offer.id);
         logger.log('✅ Purchase function completed. Waiting for service events...');
     } catch (e: any) {
-        logger.log('❌ Purchase failed:', { message: e.message, code: e.code, stack: e.stack });
+        logger.log('❌ Purchase failed in Page:', { message: e.message, code: e.code, stack: e.stack });
         const errorMessage = e.code === 6 ? 'Purchase was cancelled by user' : e.message || 'An unknown error occurred during purchase.';
         toast({ title: 'Purchase Failed', description: errorMessage, variant: 'destructive' });
     }
@@ -165,7 +164,7 @@ export default function PremiumPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>An Error Occurred</AlertTitle>
                 <AlertDescription>
-                    {error} Please try again. If you have already purchased, please use the Restore Purchases button.
+                    {error} Please check your connection or try again later.
                      <Button variant="link" onClick={forceCheck} className="p-0 h-auto ml-2">Retry</Button>
                 </AlertDescription>
             </Alert>
@@ -176,7 +175,6 @@ export default function PremiumPage() {
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
-    // Calculate discount only if both offers are valid and prices are available
     const discount = (yearlyPaidOffer && monthlyOffer && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
         ? Math.round((1 - (yearlyPaidOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
         : 0;

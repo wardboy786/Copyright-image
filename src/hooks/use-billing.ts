@@ -5,6 +5,7 @@ import { purchaseService } from '@/services/purchaseService';
 import { type Product } from '@/lib/types';
 import { usePurchase } from '@/context/purchase-context';
 import { toast } from './use-toast';
+import { logger } from '@/lib/in-app-logger';
 
 export const MONTHLY_PLAN_ID = 'photorights_monthly';
 export const YEARLY_PLAN_ID = 'photorights_yearly';
@@ -15,7 +16,7 @@ export const YEARLY_OFFER_ID = 'yearly-free';
 export const useBilling = () => {
   const {
     isInitialized,
-    isLoading,
+    isLoading: isContextLoading,
     isPremium,
     products,
     error,
@@ -23,36 +24,36 @@ export const useBilling = () => {
 
   const [isPurchasing, setIsPurchasing] = useState(false);
   
-  // This effect will reset isPurchasing when the premium status changes OR when loading finishes
   useEffect(() => {
-      if (isPremium || !isLoading) {
+      if (!isContextLoading) {
           setIsPurchasing(false);
       }
-  }, [isPremium, isLoading]);
+  }, [isContextLoading]);
 
 
   const purchase = async (productId: string, offerId: string) => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
-      console.error(errorMsg);
+      logger.log(`❌ ${errorMsg}`);
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
     setIsPurchasing(true);
     try {
       await purchaseService.order(productId, offerId);
-      // Success is now handled by the service subscription in the context
+      logger.log('✅ Purchase function completed successfully.');
     } catch (e: any) {
-      console.error('Purchase failed in hook', e);
-      toast({ title: 'Purchase Failed', description: e.message || 'An error occurred during purchase.', variant: 'destructive' });
-      setIsPurchasing(false);
+      logger.log('❌ Purchase failed in useBilling hook', e);
+      // The specific error is now dispatched globally, but we can show a generic toast here.
+      toast({ title: 'Purchase Failed', description: e.message || 'An unknown error occurred.', variant: 'destructive' });
+      setIsPurchasing(false); // Ensure state is reset on error
     }
   };
 
   const restorePurchases = async () => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
-      console.error(errorMsg);
+      logger.log(`❌ ${errorMsg}`);
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
@@ -60,7 +61,7 @@ export const useBilling = () => {
       await purchaseService.restorePurchases();
       toast({ title: 'Restore Initialized', description: 'Checking for your previous purchases...' });
     } catch (e: any) {
-      console.error('Failed to restore purchases', e);
+      logger.log('❌ Failed to restore purchases', e);
       toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
     }
   };
@@ -73,7 +74,7 @@ export const useBilling = () => {
     }
     try {
       await purchaseService.forceCheck();
-      toast({ title: 'Sync Complete', description: 'Your subscription status has been updated.' });
+      toast({ title: 'Sync Started', description: 'Your subscription status is being updated...' });
     } catch (e: any) {
       toast({ title: 'Sync Failed', description: e.message || 'Could not sync status.', variant: 'destructive' });
     }
@@ -89,7 +90,7 @@ export const useBilling = () => {
 
   return {
     isInitialized,
-    isLoading: isLoading || isPurchasing, // Combine loading states for UI
+    isLoading: isContextLoading || isPurchasing,
     isPremium,
     isPurchasing,
     error,

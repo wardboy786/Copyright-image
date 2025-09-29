@@ -29,9 +29,19 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     let isMounted = true;
 
+    const handlePurchaseError = (event: Event) => {
+        if (isMounted) {
+            const customEvent = event as CustomEvent;
+            logger.log('❌ React Context: Received purchaseError event', customEvent.detail);
+            setState(prevState => ({ ...prevState, error: customEvent.detail.error, isLoading: false }));
+        }
+    };
+
     const initialize = async () => {
       try {
-        // The subscription handles the initial state and all subsequent updates.
+        window.addEventListener('purchaseError', handlePurchaseError);
+        logger.log('🎧 React Context: purchaseError event listener added.');
+
         const unsubscribe = purchaseService.subscribe((newState) => {
           if (isMounted) {
             logger.log('React Context: Received state update from service subscription.', newState);
@@ -39,17 +49,16 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               ...prevState,
               isPremium: newState.isPremium,
               products: newState.products,
-              isLoading: false, // No longer loading once we have state
+              isLoading: false, 
             }));
           }
         });
         
-        // Now, initialize the service. This will trigger the first state emission.
         await purchaseService.initialize();
         logger.log('React Context: Purchase service initialization requested.');
 
         if (isMounted) {
-          setState(prevState => ({ ...prevState, isInitialized: true }));
+          setState(prevState => ({ ...prevState, isInitialized: true, error: null }));
         }
 
         return unsubscribe;
@@ -61,10 +70,9 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               ...prevState,
               error: e.message || 'Initialization failed.',
               isLoading: false,
-              isInitialized: true, // Mark as initialized even on error
+              isInitialized: true,
             }));
         }
-        // Return a no-op unsubscribe function
         return () => {};
       }
     };
@@ -74,10 +82,11 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       isMounted = false;
       unsubscribePromise.then(unsubscribe => unsubscribe());
+      window.removeEventListener('purchaseError', handlePurchaseError);
+      logger.log('🎧 React Context: purchaseError event listener removed.');
     };
   }, []);
 
-  // Show splash screen while the store is initializing for the first time
   if (!state.isInitialized) {
     return <SplashScreen onAnimationComplete={() => {}} />;
   }

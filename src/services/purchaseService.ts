@@ -2,7 +2,6 @@
 'use client';
 import { logger } from '@/lib/in-app-logger';
 
-// This is the safest way to declare the plugin types for TypeScript
 declare global {
   interface Window {
     CdvPurchase: any;
@@ -29,11 +28,8 @@ class PurchaseService {
   public receipts: any[] = [];
   private listeners: Set<Listener> = new Set();
 
-
-  // Private constructor to enforce singleton pattern
   private constructor() {}
 
-  // Static method to get the singleton instance
   public static getInstance(): PurchaseService {
     if (!PurchaseService.instance) {
       PurchaseService.instance = new PurchaseService();
@@ -43,10 +39,9 @@ class PurchaseService {
 
   public subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
-    // Immediately notify the new subscriber with the current state
-    listener(this.getCurrentState());
-    
-    // Return an unsubscribe function
+    if (this.isInitialized) {
+      listener(this.getCurrentState());
+    }
     return () => {
       this.listeners.delete(listener);
     };
@@ -97,12 +92,10 @@ class PurchaseService {
         if (!Capacitor.isNativePlatform() || typeof window.CdvPurchase === 'undefined') {
           const errorMsg = 'In-app purchases are only available on a mobile device.';
           logger.log(`❌ SVC: ${errorMsg}`);
-          // We can't dispatch a window event here, so we will rely on the error being thrown
           this.isInitializing = false;
           throw new Error(errorMsg);
         }
         logger.log('🔌 SVC: Plugin is available.');
-
 
         this.store = window.CdvPurchase.store;
         const { ProductType, Platform, LogLevel } = window.CdvPurchase;
@@ -130,13 +123,12 @@ class PurchaseService {
         };
         logger.log('⚠️ SVC: Validator configured to auto-approve.');
 
-
         await this.store.initialize();
         this.isInitialized = true;
         this.isInitializing = false;
         logger.log("🎉 SVC: Initialization complete.");
-        this.receipts = this.store.receipts; // Store receipts initially
-        this.notifyListeners(); // Dispatch initial state to any subscribers
+        this.receipts = this.store.receipts;
+        this.notifyListeners();
         return this.store;
 
      } catch (error: any) {
@@ -158,7 +150,6 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    // When ANYTHING in the store changes, we force an update and re-dispatch state.
     const forceUpdateAndNotify = async () => {
         logger.log('🔄 SVC: Store change detected. Forcing update and notifying listeners.');
         await this.store.update();
@@ -169,7 +160,6 @@ class PurchaseService {
     this.store.when().productUpdated(forceUpdateAndNotify);
     this.store.when().receiptUpdated(forceUpdateAndNotify);
 
-    // Clean purchase flow: approved -> verified -> finished
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -180,11 +170,7 @@ class PurchaseService {
       receipt.finish();
     });
     
-    // After a transaction is truly finished, force one more update to be safe.
-    this.store.when().finished(async (transaction: any) => {
-      logger.log('✅ SVC FINISHED: Transaction finished. Forcing final update.', transaction);
-      await forceUpdateAndNotify();
-    });
+    this.store.when().finished(forceUpdateAndNotify);
     
     logger.log('✅ SVC: Event listeners ready.');
   }
@@ -221,13 +207,11 @@ class PurchaseService {
     const product = this.store?.get(productId);
     if (!product) return false;
 
-    // The plugin has an internal "owned" state, which is the most reliable check.
     if (product.owned) {
         logger.log(`✅ SVC.isOwned: Fast check TRUE for ${productId}`);
         return true;
     }
 
-    // As a fallback, check transactions manually.
     const hasFinishedTransaction = product.transactions.some((t: any) => t.state === 'finished' && t.nativePurchase?.autoRenewing);
     if (hasFinishedTransaction) {
         logger.log(`✅ SVC.isOwned: Found FINISHED transaction for ${productId}`);
@@ -237,7 +221,6 @@ class PurchaseService {
     logger.log(`❌ SVC.isOwned: No active ownership found for ${productId}.`);
     return false;
   }
-
 
   public async order(productId: string, offerId: string): Promise<void> {
     if (!this.store) {
