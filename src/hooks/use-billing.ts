@@ -110,11 +110,13 @@ export const useBilling = () => {
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
+    setIsLoading(true);
     try {
       await purchaseService.forceCheck();
       toast({ title: 'Sync Started', description: 'Your subscription status is being updated...' });
     } catch (e: any) {
       toast({ title: 'Sync Failed', description: e.message || 'Could not sync status.', variant: 'destructive' });
+      setIsLoading(false);
     }
   };
 

@@ -180,9 +180,9 @@ export default function PremiumPage() {
               </ul>
             </CardContent>
             <CardFooter className="p-6 bg-muted/30">
-              <Button variant="outline" onClick={forceCheck} disabled={isLoading} className="w-full">
+              <Button variant="outline" onClick={handleRestore} disabled={isLoading} className="w-full">
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Refresh Subscription Status
+                Restore Subscription
               </Button>
             </CardFooter>
           </Card>
