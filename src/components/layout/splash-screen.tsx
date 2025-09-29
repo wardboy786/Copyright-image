@@ -2,8 +2,8 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect } from 'react';
 import Image from 'next/image';
+import { useAppContext } from '@/hooks/use-app-context';
 
 const splashVariants = {
   initial: { opacity: 1 },
@@ -36,35 +36,32 @@ const textVariants = {
   },
 };
 
-export function SplashScreen({ onAnimationComplete }: { onAnimationComplete: () => void }) {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onAnimationComplete();
-    }, 2000); // Total splash screen time before starting fade-out
-
-    return () => clearTimeout(timer);
-  }, [onAnimationComplete]);
+export function SplashScreen() {
+  const { isInitialized } = useAppContext();
 
   return (
-    <AnimatePresence onExitComplete={onAnimationComplete}>
-      <motion.div
-        variants={splashVariants}
-        initial="initial"
-        exit="exit"
-        className="fixed inset-0 z-[101] flex flex-col items-center justify-center bg-background"
-      >
-        <motion.div variants={logoVariants} initial="initial" animate="animate">
-          <Image src="/images/logo.svg" alt="Photorights AI Logo" width={96} height={96} className="w-24 h-24 text-primary dark:brightness-0 dark:invert" />
-        </motion.div>
-        <motion.h1
-          variants={textVariants}
+    <AnimatePresence>
+      {!isInitialized && (
+        <motion.div
+          key="splash"
+          variants={splashVariants}
           initial="initial"
-          animate="animate"
-          className="text-3xl font-bold tracking-tight text-foreground mt-6"
+          exit="exit"
+          className="fixed inset-0 z-[101] flex flex-col items-center justify-center bg-background"
         >
-          Photorights AI
-        </motion.h1>
-      </motion.div>
+          <motion.div variants={logoVariants} initial="initial" animate="animate">
+            <Image src="/images/logo.svg" alt="Photorights AI Logo" width={96} height={96} className="w-24 h-24 text-primary dark:brightness-0 dark:invert" />
+          </motion.div>
+          <motion.h1
+            variants={textVariants}
+            initial="initial"
+            animate="animate"
+            className="text-3xl font-bold tracking-tight text-foreground mt-6"
+          >
+            Photorights AI
+          </motion.h1>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }

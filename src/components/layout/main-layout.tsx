@@ -5,10 +5,9 @@ import { Scan, History, Gem, Settings, Home } from 'lucide-react';
 import { Header } from './header';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import { useAppContext } from '@/hooks/use-app-context';
+import { usePurchase } from '@/context/purchase-context';
 import { ThemeProvider } from 'next-themes';
 import dynamic from 'next/dynamic';
-import { usePurchase } from '@/context/purchase-context';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -31,7 +30,6 @@ function BottomNavBar() {
       className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t"
       style={{
         paddingBottom: `env(safe-area-inset-bottom)`,
-        // The ad banner has a margin of 64px, so we don't need to offset the nav bar itself.
       }}
     >
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
@@ -55,35 +53,14 @@ function BottomNavBar() {
   );
 }
 
-function AppContent({ children }: { children: React.ReactNode }) {
-  const { isPremium } = usePurchase();
-  
-  // The total padding needed at the bottom of the main content area.
-  // For non-premium users, this is ad height (50px) + nav bar height (64px) + extra space (16px) = 130px.
-  // For premium users, it's just the nav bar height (64px) + extra space (16px) = 80px.
-  const bottomPadding = !isPremium ? `130px` : `80px`;
-
-
-  return (
-    <div className='flex min-h-screen w-full bg-background'>
-        <div className="flex flex-col flex-1">
-          <Header />
-          <main 
-            className="flex-1 p-4 md:p-6 lg:p-8"
-            style={{ paddingBottom: bottomPadding }}
-          >
-            {children}
-          </main>
-        </div>
-        <BottomNavBar />
-        <Toaster />
-        {!isPremium && <AdMobController />}
-      </div>
-  );
-}
-
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
+    const { isPremium } = usePurchase();
+
+    // The total padding needed at the bottom of the main content area.
+    // For non-premium users, this is ad height (50px) + nav bar height (64px) + extra space (16px) = 130px.
+    // For premium users, it's just the nav bar height (64px) + extra space (16px) = 80px.
+    const bottomPadding = !isPremium ? `130px` : `80px`;
 
   return (
     <ThemeProvider
@@ -92,7 +69,20 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <AppContent>{children}</AppContent>
+        <div className='flex min-h-screen w-full bg-background'>
+            <div className="flex flex-col flex-1">
+                <Header />
+                <main 
+                    className="flex-1 p-4 md:p-6 lg:p-8"
+                    style={{ paddingBottom: bottomPadding }}
+                >
+                    {children}
+                </main>
+            </div>
+            <BottomNavBar />
+            <Toaster />
+            {!isPremium && <AdMobController />}
+        </div>
     </ThemeProvider>
   );
 }

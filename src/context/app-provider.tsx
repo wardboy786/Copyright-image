@@ -2,7 +2,6 @@
 
 import { AppContext } from '@/hooks/use-app-context';
 import { useScans } from '@/hooks/use-scans';
-import { SplashScreen } from '@/components/layout/splash-screen';
 import { usePurchase } from './purchase-context';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -13,12 +12,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // The useScans hook and useBilling are now separated.
   // We will show the splash screen until all core services, including scans and billing,
   // have been initialized. This prevents race conditions.
-  if (!isScansInitialized || !isPurchaseInitialized) {
-    return <SplashScreen onAnimationComplete={() => {}} />;
-  }
+  const isFullyInitialized = isScansInitialized && isPurchaseInitialized;
 
   return (
-    <AppContext.Provider value={scansData}>
+    <AppContext.Provider value={{...scansData, isInitialized: isFullyInitialized }}>
       {children}
     </AppContext.Provider>
   );

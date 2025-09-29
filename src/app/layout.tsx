@@ -4,6 +4,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { Inter } from 'next/font/google';
 import { AppProvider } from '@/context/app-provider';
 import { PurchaseProvider } from '@/context/purchase-context';
+import { SplashScreen } from '@/components/layout/splash-screen';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,9 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        {/* The PurchaseProvider now wraps the AppProvider, ensuring purchase status is available everywhere */}
         <PurchaseProvider>
           <AppProvider>
+            <SplashScreen />
             <MainLayout>{children}</MainLayout>
           </AppProvider>
         </PurchaseProvider>
