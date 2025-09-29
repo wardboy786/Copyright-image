@@ -204,21 +204,23 @@ class PurchaseService {
   }
 
  public isOwned(productId: string): boolean {
-    const product = this.store?.get(productId);
-    if (!product) return false;
+    // Check basic store owned first
+    const basicOwned = this.store?.owned?.(productId);
+    if (basicOwned) return true;
 
-    if (product.owned) {
-        logger.log(`✅ SVC.isOwned: Fast check TRUE for ${productId}`);
-        return true;
+    // Check verified receipts - ensure receipts is an array before calling .some()
+    if (Array.isArray(this.receipts) && this.receipts.length > 0) {
+      const hasActiveSubscription = this.receipts.some((receipt: any) => 
+        receipt.sourceReceipt?.transactions?.some((transaction: any) => 
+          transaction.products?.some((product: any) => product.id === productId) &&
+          transaction.nativePurchase?.autoRenewing === true &&
+          transaction.isAcknowledged === true
+        )
+      );
+      
+      if (hasActiveSubscription) return true;
     }
 
-    const hasFinishedTransaction = product.transactions.some((t: any) => t.state === 'finished' && t.nativePurchase?.autoRenewing);
-    if (hasFinishedTransaction) {
-        logger.log(`✅ SVC.isOwned: Found FINISHED transaction for ${productId}`);
-        return true;
-    }
-    
-    logger.log(`❌ SVC.isOwned: No active ownership found for ${productId}.`);
     return false;
   }
 
