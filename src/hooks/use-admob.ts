@@ -1,3 +1,4 @@
+
 'use client';
 import { AdMob, AdMobRewardItem, RewardAdOptions, BannerAdOptions, BannerAdPosition, BannerAdSize, RewardAdPluginEvents, InterstitialAdPluginEvents, AdOptions } from '@capacitor-community/admob';
 import { Toast } from '@capacitor/toast';
@@ -12,11 +13,11 @@ const useAdMob = () => {
         return;
     }
     try {
+      // Production configuration: No testing devices specified.
       await AdMob.initialize({
-        testingDevices: ['63ea8cfd-404a-433d-8614-54595bf28c84'],
         initializeForTesting: false,
       });
-      console.log('AdMob: Initialized successfully on native platform.');
+      console.log('AdMob: Initialized successfully on native platform for production.');
     } catch (error) {
       console.error('AdMob: Initialization failed on native platform:', error);
     }
