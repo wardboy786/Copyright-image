@@ -268,10 +268,10 @@ class PurchaseService {
    * Checks if a specific product is owned and active. This is the crucial logic.
    */
   public isOwned(productId: string): boolean {
-    console.log(`\n🔍 === OWNERSHIP CHECK FOR ${productId} ===`);
+    logger.log(`\n🔍 === OWNERSHIP CHECK FOR ${productId} ===`);
     
     // Log everything we have
-    console.log('📊 Available data:', {
+    logger.log('📊 Available data:', {
         hasStore: !!this.store,
         receiptsCount: this.receipts?.length || 0,
         storeProducts: this.store?.products?.length || 0
@@ -280,19 +280,19 @@ class PurchaseService {
     // Method 1: Check store.owned()
     try {
         const storeOwned = this.store?.owned?.(productId);
-        console.log(`1️⃣ store.owned("${productId}"): ${storeOwned}`);
+        logger.log(`1️⃣ store.owned("${productId}"): ${storeOwned}`);
         if (storeOwned) {
-        console.log('✅ OWNED via store.owned()');
+        logger.log('✅ OWNED via store.owned()');
         return true;
         }
     } catch (e) {
-        console.log('❌ store.owned() failed:', e);
+        logger.log('❌ store.owned() failed:', e);
     }
 
     // Method 2: Check product.owned property
     try {
         const product = this.store?.get?.(productId);
-        console.log(`2️⃣ Product object:`, {
+        logger.log(`2️⃣ Product object:`, {
         exists: !!product,
         id: product?.id,
         state: product?.state,
@@ -301,24 +301,24 @@ class PurchaseService {
         });
         
         if (product?.owned === true) {
-        console.log('✅ OWNED via product.owned');
+        logger.log('✅ OWNED via product.owned');
         return true;
         }
         
         if (product?.state === 'owned' || product?.state === 'approved') {
-        console.log('✅ OWNED via product.state');
+        logger.log('✅ OWNED via product.state');
         return true;
         }
     } catch (e) {
-        console.log('❌ product check failed:', e);
+        logger.log('❌ product check failed:', e);
     }
 
     // Method 3: Check receipts
-    console.log(`3️⃣ Checking ${this.receipts?.length || 0} receipts...`);
+    logger.log(`3️⃣ Checking ${this.receipts?.length || 0} receipts...`);
     if (this.receipts && this.receipts.length > 0) {
         for (let i = 0; i < this.receipts.length; i++) {
         const receipt = this.receipts[i];
-        console.log(`   Receipt ${i}:`, {
+        logger.log(`   Receipt ${i}:`, {
             hasSourceReceipt: !!receipt.sourceReceipt,
             transactionsCount: receipt.sourceReceipt?.transactions?.length || 0
         });
@@ -329,7 +329,7 @@ class PurchaseService {
             const products = transaction.products || [];
             const hasProduct = products.some((p: any) => p.id === productId);
             
-            console.log(`   Transaction ${j}:`, {
+            logger.log(`   Transaction ${j}:`, {
             hasProduct,
             productIds: products.map((p: any) => p.id),
             autoRenewing: transaction.nativePurchase?.autoRenewing,
@@ -340,14 +340,14 @@ class PurchaseService {
             if (hasProduct && 
                 transaction.nativePurchase?.autoRenewing === true && 
                 transaction.isAcknowledged === true) {
-            console.log('✅ OWNED via verified receipt');
+            logger.log('✅ OWNED via verified receipt');
             return true;
             }
         }
         }
     }
 
-    console.log('❌ NOT OWNED - no match found\n');
+    logger.log('❌ NOT OWNED - no match found\n');
     return false;
   }
 
