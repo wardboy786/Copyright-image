@@ -75,7 +75,6 @@ export default function PremiumPage() {
         return;
     }
     
-    // The purchase function is now robust and will handle loading states
     await purchase(product.id, offer.id);
   };
   
@@ -85,7 +84,6 @@ export default function PremiumPage() {
   
   /**
    * A special UI to show when products haven't loaded from the store yet.
-   * This is common on first app load or if there are network issues.
    */
   const PropagationErrorDisplay = ({ onRetry }: { onRetry: () => void; }) => (
       <Card className="w-full max-w-md bg-amber-500/10 border-amber-500/20">
@@ -110,7 +108,8 @@ export default function PremiumPage() {
             </p>
         </CardContent>
         <CardFooter className="flex-col gap-3">
-           <Button onClick={onRetry}>
+           <Button onClick={onRetry} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Check Again
             </Button>
             <p className="text-xs text-muted-foreground/80">
@@ -147,7 +146,10 @@ export default function PremiumPage() {
                     <CardDescription>You have unlocked all features of Photorights AI.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center">
-                     <Button variant="outline" onClick={forceCheck}>Refresh Status</Button>
+                     <Button variant="outline" onClick={forceCheck} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Refresh Status
+                     </Button>
                 </CardContent>
             </Card>
         )
@@ -161,7 +163,9 @@ export default function PremiumPage() {
                 <AlertTitle>An Error Occurred</AlertTitle>
                 <AlertDescription>
                     {error} Please check your connection or try again later.
-                     <Button variant="link" onClick={forceCheck} className="p-0 h-auto ml-2">Retry</Button>
+                     <Button variant="link" onClick={forceCheck} className="p-0 h-auto ml-2" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Retry'}
+                     </Button>
                 </AlertDescription>
             </Alert>
         );
@@ -222,12 +226,13 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={handlePurchase}
-            disabled={isPurchasing || isLoading}
+            disabled={isLoading}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
           </Button>
-          <Button variant="ghost" onClick={handleRestore} disabled={isLoading || isPurchasing}>
+          <Button variant="ghost" onClick={handleRestore} disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Restore Purchases
           </Button>
         </CardFooter>

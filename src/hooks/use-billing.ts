@@ -27,10 +27,7 @@ export const useBilling = () => {
   // Local state to manage the "purchasing..." status of the button
   const [isPurchasing, setIsPurchasing] = useState(false);
   
-  // This effect ensures that the "isPurchasing" flag is correctly
-  // reset after a purchase attempt, regardless of success or failure.
   useEffect(() => {
-      // When the context is no longer loading, it means the purchase process has resolved.
       if (!isContextLoading) {
           setIsPurchasing(false);
       }
@@ -43,12 +40,12 @@ export const useBilling = () => {
         if (customEvent.detail.success) {
             toast({
                 title: 'Purchases Restored',
-                description: 'Your previous purchases have been successfully restored.',
+                description: 'Your premium status has been updated.',
             });
         } else {
             toast({
                 title: 'Restore Failed',
-                description: customEvent.detail.error || 'Could not find any previous purchases.',
+                description: customEvent.detail.error || 'Could not find any previous purchases to restore.',
                 variant: 'destructive',
             });
         }
@@ -74,13 +71,10 @@ export const useBilling = () => {
     try {
       await purchaseService.order(productId, offerId);
       logger.log('✅ Purchase function completed successfully.');
-      // Don't set isPurchasing to false here. Let the useEffect handle it
-      // based on the context's loading state.
     } catch (e: any) {
       logger.log('❌ Purchase failed in useBilling hook', e);
-      // The specific error is dispatched globally, but we can show a generic toast.
       toast({ title: 'Purchase Failed', description: e.message || 'An unknown error occurred.', variant: 'destructive' });
-      setIsPurchasing(false); // Ensure state is reset on any immediate error
+      setIsPurchasing(false);
     }
   };
 
@@ -89,12 +83,13 @@ export const useBilling = () => {
    */
   const restorePurchases = async () => {
     if (!isInitialized) {
-      const errorMsg = 'Billing service is not initialized.';
+      const errorMsg = 'Billing service is not ready. Please try again in a moment.';
       logger.log(`❌ ${errorMsg}`);
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
     try {
+      toast({ title: 'Restoring Purchases...', description: 'Checking for your previous subscriptions.' });
       await purchaseService.restorePurchases();
     } catch (e: any) {
       logger.log('❌ Failed to restore purchases', e);

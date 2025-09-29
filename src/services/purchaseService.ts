@@ -141,8 +141,6 @@ class PurchaseService {
         this.setupListeners();
         this.setupAppLifecycleListeners();
         
-        // This validator can be used for server-side validation.
-        // For this app, we will rely on client-side receipt verification.
         this.store.validator = (request: any, callback: (result: any) => void) => {
             logger.log('🔒 SVC: Bypassing internal validation. Auto-approving.');
             callback({ ok: true, data: { isValid: true } });
@@ -209,7 +207,6 @@ class PurchaseService {
         this.forceUpdateAndNotify();
     });
 
-    // The Ideal Transaction Flow: approved -> verified -> finished
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -218,28 +215,21 @@ class PurchaseService {
     this.store.when().verified((receipt: any) => {
         logger.log('✅ SVC VERIFIED: Receipt is verified, must finish now.', receipt);
 
-        // Prevent adding duplicate receipts
         const receiptExists = this.receipts.some(r => r.id === receipt.id);
         if (!receiptExists) {
             this.receipts.push(receipt);
         }
         
-        // CRITICAL: Acknowledge the purchase with Google
         receipt.finish();
         logger.log('🏁 SVC: Called receipt.finish() to acknowledge the purchase.');
         
-        // Notify the UI that the state has changed
         setTimeout(() => {
           this.notifyListeners();
         }, 1000);
     });
     
-    // When a transaction is fully finished, it's the ultimate source of truth.
-    // We force a final update to ensure all state is fresh.
     this.store.when().finished(() => {
         logger.log('🏁 SVC FINISHED: Transaction finished. Forcing final state update.');
-        
-        // Wait a moment for verification to complete
         setTimeout(() => {
           this.forceUpdateAndNotify();
         }, 500);
@@ -279,9 +269,6 @@ class PurchaseService {
     return mappedProducts;
   }
 
-  /**
-   * Checks if a specific product is owned and active. This is the crucial logic.
-   */
   public isOwned(productId: string): boolean {
     logger.log(`\n🔍 === OWNERSHIP CHECK FOR ${productId} ===`);
     
@@ -300,8 +287,6 @@ class PurchaseService {
                     acknowledged: transaction.isAcknowledged
                 });
                 
-                // An active subscription can be considered 'owned' if it's approved and set to auto-renew,
-                // even before it is formally 'acknowledged'.
                 if (hasProduct && isApproved && isRenewing) {
                     logger.log('✅ OWNED - approved subscription found');
                     return true;
@@ -310,7 +295,7 @@ class PurchaseService {
         }
     }
   
-    // Fallback to checking the product object directly as a secondary method
+    // Fallback check on the product object itself
     const product = this.store?.get?.(productId);
     if (product && (product.owned || product.state === 'owned')) {
       logger.log(`✅ OWNED - via product.state check: ${product.state}`);
@@ -354,14 +339,15 @@ class PurchaseService {
         try {
             logger.log('🔄 Starting restore purchases...');
             
-            if (!this.store) {
-                throw new Error('Store not initialized');
+            if (!this.store || !this.isInitialized) {
+                throw new Error('Store not initialized or ready. Please try again in a moment.');
             }
 
-            // Refresh all products to get latest state
+            // Refresh all products to get the latest state from the store.
             await this.store.update();
             
-            // Force check ownership after refresh
+            // The update call will trigger the listeners automatically.
+            // We can dispatch an event to let the UI know the process has completed.
             setTimeout(() => {
                 this.notifyListeners();
                 logger.log('✅ Restore complete, state updated');
