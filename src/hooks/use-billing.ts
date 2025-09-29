@@ -7,6 +7,7 @@ import { usePurchase } from '@/context/purchase-context';
 import { toast } from './use-toast';
 import { logger } from '@/lib/in-app-logger';
 
+// Product and Offer IDs used throughout the app
 export const MONTHLY_PLAN_ID = 'photorights_monthly';
 export const YEARLY_PLAN_ID = 'photorights_yearly';
 export const MONTHLY_OFFER_ID = 'monthly-plan';
@@ -14,6 +15,7 @@ export const YEARLY_OFFER_ID = 'yearly-free';
 
 
 export const useBilling = () => {
+  // Get the core state from our central React context
   const {
     isInitialized,
     isLoading: isContextLoading,
@@ -22,15 +24,22 @@ export const useBilling = () => {
     error,
   } = usePurchase();
 
+  // Local state to manage the "purchasing..." status of the button
   const [isPurchasing, setIsPurchasing] = useState(false);
   
+  // This effect ensures that the "isPurchasing" flag is correctly
+  // reset after a purchase attempt, regardless of success or failure.
   useEffect(() => {
+      // When the context is no longer loading, it means the purchase process has resolved.
       if (!isContextLoading) {
           setIsPurchasing(false);
       }
   }, [isContextLoading]);
 
 
+  /**
+   * Initiates a purchase.
+   */
   const purchase = async (productId: string, offerId: string) => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
@@ -38,18 +47,23 @@ export const useBilling = () => {
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
-    setIsPurchasing(true);
+    setIsPurchasing(true); // Set loading state for the UI
     try {
       await purchaseService.order(productId, offerId);
       logger.log('✅ Purchase function completed successfully.');
+      // Don't set isPurchasing to false here. Let the useEffect handle it
+      // based on the context's loading state.
     } catch (e: any) {
       logger.log('❌ Purchase failed in useBilling hook', e);
-      // The specific error is now dispatched globally, but we can show a generic toast here.
+      // The specific error is dispatched globally, but we can show a generic toast.
       toast({ title: 'Purchase Failed', description: e.message || 'An unknown error occurred.', variant: 'destructive' });
-      setIsPurchasing(false); // Ensure state is reset on error
+      setIsPurchasing(false); // Ensure state is reset on any immediate error
     }
   };
 
+  /**
+   * Initiates the restore purchases flow.
+   */
   const restorePurchases = async () => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
@@ -66,6 +80,9 @@ export const useBilling = () => {
     }
   };
   
+  /**
+   * Manually forces the service to check for updates.
+   */
    const forceCheck = async () => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
@@ -80,6 +97,7 @@ export const useBilling = () => {
     }
   };
 
+  // Memoized selectors for convenience
   const getMonthlyPlan = useCallback(() => {
     return products.find(p => p.id === MONTHLY_PLAN_ID);
   }, [products]);

@@ -12,11 +12,13 @@ declare global {
 import { Capacitor } from '@capacitor/core';
 import { type Product, type Offer } from '@/lib/types';
 
+// The shape of the state that our service will manage
 type State = {
   products: Product[];
   isPremium: boolean;
 };
 
+// The type for a listener function that wants to subscribe to state changes
 type Listener = (state: State) => void;
 
 class PurchaseService {
@@ -37,16 +39,26 @@ class PurchaseService {
     return PurchaseService.instance;
   }
 
+  /**
+   * Allows React components (or other parts of the app) to subscribe to state changes.
+   * @param listener A function that will be called with the new state.
+   * @returns An unsubscribe function.
+   */
   public subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
+    // If we're already initialized, give the new subscriber the current state immediately.
     if (this.isInitialized) {
       listener(this.getCurrentState());
     }
+    // Return a function to allow the subscriber to unsubscribe
     return () => {
       this.listeners.delete(listener);
     };
   }
 
+  /**
+   * Notifies all subscribed listeners with the latest state.
+   */
   private notifyListeners(): void {
     const state = this.getCurrentState();
     logger.log('📢 SVC: Notifying listeners with new state', state);
@@ -54,11 +66,15 @@ class PurchaseService {
   }
 
 
+  /**
+   * Initializes the in-app purchase plugin.
+   * This is safe to call multiple times.
+   */
   public initialize(): Promise<any> {
     logger.log('🚀 SVC: Initialize called.');
     if (this.isInitialized) {
       logger.log('✅ SVC: Already initialized.');
-      this.notifyListeners();
+      this.notifyListeners(); // Notify with current state in case a new listener subscribed
       return Promise.resolve(this.store);
     }
 
@@ -76,6 +92,7 @@ class PurchaseService {
 
   private async performInitialization(): Promise<any> {
      try {
+        // Wait for the native platform to be ready
         await new Promise<void>((resolve) => {
             logger.log('SVC: Waiting for deviceready...');
             if (Capacitor.isNativePlatform()) {
@@ -89,6 +106,7 @@ class PurchaseService {
             }
         });
 
+        // Check if the plugin is available
         if (!Capacitor.isNativePlatform() || typeof window.CdvPurchase === 'undefined') {
           const errorMsg = 'In-app purchases are only available on a mobile device.';
           logger.log(`❌ SVC: ${errorMsg}`);
@@ -103,46 +121,55 @@ class PurchaseService {
         this.store.verbosity = LogLevel.DEBUG;
         logger.log('🔧 SVC: Verbosity set to DEBUG.');
         
+        // Central error handler
         this.store.error((err: unknown) => {
             const error = err as any;
             const errorMessage = error.message || JSON.stringify(err);
             logger.log('❌ SVC Store Error:', errorMessage, err);
+            // Dispatch a global event that the React context can listen for
             window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: `Store Error: ${errorMessage}` }}));
         });
 
+        // Register the products
         this.store.register([
           { id: 'photorights_monthly', type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
           { id: 'photorights_yearly', type: ProductType.PAID_SUBSCRIPTION, platform: Platform.GOOGLE_PLAY },
         ]);
         logger.log('📦 SVC: Products registered.', ['photorights_monthly', 'photorights_yearly']);
 
+        // Set up the event listeners
         this.setupListeners();
         
-        // This validator should be replaced with your server-side validation logic.
-        // For this demo, we auto-approve to simplify the flow.
+        // This validator can be used for server-side validation.
+        // For this app, we will rely on client-side receipt verification.
         this.store.validator = (request: any, callback: (result: any) => void) => {
             logger.log('🔒 SVC: Bypassing internal validation. Auto-approving.');
             callback({ ok: true, data: { isValid: true } });
         };
         logger.log('⚠️ SVC: Validator configured to auto-approve.');
 
+        // Initialize the store
         await this.store.initialize();
         this.isInitialized = true;
         this.isInitializing = false;
         logger.log("🎉 SVC: Initialization complete.");
-        this.receipts = this.store.receipts;
-        this.notifyListeners();
+        this.receipts = this.store.receipts; // Store initial receipts
+        this.notifyListeners(); // Notify that initialization is done and send initial state
         return this.store;
 
      } catch (error: any) {
         logger.log('❌ SVC: Initialization failed.', error);
         this.isInitializing = false;
         this.initPromise = null;
+        // Dispatch an error that our context can catch
         window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: error.message || 'Initialization failed' }}));
         throw error;
      }
   }
   
+  /**
+   * Gets the current state of the service.
+   */
   public getCurrentState(): State {
       return {
           products: this.getProducts(),
@@ -150,6 +177,9 @@ class PurchaseService {
       };
   }
 
+  /**
+   * Forces the store to refresh its data from the native platform and notifies listeners.
+   */
   private async forceUpdateAndNotify() {
     if (!this.store) return;
     logger.log('🔄 SVC: Forcing store update...');
@@ -163,11 +193,11 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    // Listen for any change in products or receipts
+    // Listen for any change in products or receipts. This is a catch-all.
     this.store.when().productUpdated(() => this.forceUpdateAndNotify());
     this.store.when().receiptUpdated(() => this.forceUpdateAndNotify());
 
-    // This is the ideal transaction flow: approved -> verified -> finished
+    // The Ideal Transaction Flow: approved -> verified -> finished
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -188,6 +218,9 @@ class PurchaseService {
     logger.log('✅ SVC: Event listeners ready.');
   }
   
+  /**
+   * Maps the plugin's product format to our app's format.
+   */
   public getProducts(): Product[] {
     if (!this.store || !this.store.products) {
         logger.log('⚠️ SVC.getProducts: Store or products not available.');
@@ -216,7 +249,10 @@ class PurchaseService {
     return mappedProducts;
   }
 
- public isOwned(productId: string): boolean {
+  /**
+   * Checks if a specific product is owned and active. This is the crucial logic.
+   */
+  public isOwned(productId: string): boolean {
     const product = this.store?.get(productId);
     // The 'owned' property is the most reliable indicator after the store has been updated.
     const isProductOwned = product?.owned || false;
@@ -224,6 +260,9 @@ class PurchaseService {
     return isProductOwned;
   }
 
+  /**
+   * Initiates a purchase flow for a product.
+   */
   public async order(productId: string, offerId: string): Promise<void> {
     if (!this.store) {
       logger.log('❌ SVC.order: Store not initialized');
@@ -247,6 +286,9 @@ class PurchaseService {
     await this.store.order(offer);
   }
 
+  /**
+   * Initiates the flow to restore previous purchases.
+   */
   public async restorePurchases(): Promise<void> {
     if (!this.store) {
       logger.log('❌ SVC.restorePurchases: Store not initialized');
@@ -257,6 +299,9 @@ class PurchaseService {
     logger.log('✅ SVC.restorePurchases: Restore command sent. State will update on receipt/product events.');
   }
 
+  /**
+   * Manually triggers a state refresh. Useful for "Check Again" buttons.
+   */
   public async forceCheck(): Promise<void> {
     if (!this.store) {
       logger.log('❌ SVC.forceCheck: Store not initialized');
@@ -268,4 +313,5 @@ class PurchaseService {
   }
 }
 
+// Export a singleton instance of the service
 export const purchaseService = PurchaseService.getInstance();

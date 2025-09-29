@@ -18,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
+        {/* The PurchaseProvider now wraps the AppProvider, ensuring purchase status is available everywhere */}
         <PurchaseProvider>
           <AppProvider>
             <MainLayout>{children}</MainLayout>

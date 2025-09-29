@@ -2,11 +2,10 @@
 
 import { createContext, useContext } from 'react';
 import { type UseScansReturn as UseScansReturnBase } from '@/hooks/use-scans';
-import { type useBilling } from './use-billing';
 
-// We remove the `billing` property from the base scans return type,
-// as it's now handled by a separate context.
-export interface UseScansReturn extends Omit<UseScansReturnBase, 'billing'> {}
+// We no longer need to Omit the billing property as it was already removed.
+// This interface can just extend the base type directly.
+export interface UseScansReturn extends UseScansReturnBase {}
 
 export const AppContext = createContext<UseScansReturn | null>(null);
 

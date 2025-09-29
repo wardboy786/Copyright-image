@@ -34,15 +34,19 @@ export default function PremiumPage() {
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
 
+  // Safely find products and offers
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
+  // The paid offer for yearly is the one that does NOT include the free trial ID
   const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_PLAN_ID) && !o.id.includes(YEARLY_OFFER_ID));
+  // The free trial offer specifically contains the yearly offer ID
   const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
 
 
   useEffect(() => {
+    // Log product/offer availability when the component loads
     if (isInitialized && products.length > 0) {
       logger.log('🔍 PREMIUM PAGE: Products loaded.', {
         monthlyProduct: !!monthlyProduct,
@@ -60,6 +64,7 @@ export default function PremiumPage() {
 
     const isYearly = selectedPlan === 'yearly';
     const product = isYearly ? yearlyProduct : monthlyProduct;
+    // For yearly, prioritize the free trial offer if it exists, otherwise fall back to the paid offer
     const offer = isYearly ? (yearlyFreeTrialOffer || yearlyPaidOffer) : monthlyOffer;
     
     logger.log('🔍 Attempting purchase with:', { product, offer });
@@ -70,25 +75,18 @@ export default function PremiumPage() {
         return;
     }
     
-    try {
-        logger.log('🛒 Starting purchase for offer:', offer.id);
-        await purchase(product.id, offer.id);
-        logger.log('✅ Purchase function completed. Waiting for service events...');
-    } catch (e: any) {
-        logger.log('❌ Purchase failed in Page:', { message: e.message, code: e.code, stack: e.stack });
-        const errorMessage = e.code === 6 ? 'Purchase was cancelled by user' : e.message || 'An unknown error occurred during purchase.';
-        toast({ title: 'Purchase Failed', description: errorMessage, variant: 'destructive' });
-    }
+    // The purchase function is now robust and will handle loading states
+    await purchase(product.id, offer.id);
   };
   
   const handleRestore = async () => {
-    try {
-        await restorePurchases();
-    } catch (e: any) {
-        toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
-    }
+    await restorePurchases();
   }
   
+  /**
+   * A special UI to show when products haven't loaded from the store yet.
+   * This is common on first app load or if there are network issues.
+   */
   const PropagationErrorDisplay = ({ onRetry }: { onRetry: () => void; }) => (
       <Card className="w-full max-w-md bg-amber-500/10 border-amber-500/20">
         <CardHeader className="text-center">
@@ -96,14 +94,14 @@ export default function PremiumPage() {
         </CardHeader>
         <CardContent className="text-center text-sm text-muted-foreground space-y-4">
             <p>
-              Your subscription plans are being processed by Google Play.
-              This can sometimes take a few hours after activation in the console.
+              Your subscription plans are being loaded from the Google Play Store.
+              This can sometimes take a few moments.
             </p>
             <div className="text-left bg-background/50 p-3 rounded-md">
               <p className="font-bold text-foreground">What's happening:</p>
               <ul className="list-disc list-inside text-xs mt-2 space-y-1">
-                <li>Google is syncing your plans across its servers.</li>
-                <li>Billing configurations are being validated.</li>
+                <li>Connecting to the Google Play Store...</li>
+                <li>Fetching product details and pricing...</li>
                 <li>This is a normal part of the process.</li>
               </ul>
             </div>
@@ -116,7 +114,7 @@ export default function PremiumPage() {
                 Check Again
             </Button>
             <p className="text-xs text-muted-foreground/80">
-              If this persists after 48 hours, check your Play Console setup.
+              If this persists, please check your internet connection.
             </p>
         </CardFooter>
       </Card>
@@ -124,6 +122,7 @@ export default function PremiumPage() {
 
 
   const renderContent = () => {
+    // Show a loading skeleton while the context is initializing
     if (isLoading && !isInitialized) {
         return (
              <div className="w-full max-w-md space-y-4">
@@ -134,6 +133,7 @@ export default function PremiumPage() {
         )
     }
 
+    // Main "You are Premium" screen
     if (isPremium) {
         return (
             <Card className="w-full max-w-md text-center">
@@ -153,12 +153,8 @@ export default function PremiumPage() {
         )
     }
     
+    // Display any persistent errors
     if (error) {
-        const isPropagationError = error?.includes('not currently available') || error?.includes('not found') || error?.includes('not available');
-        if (isPropagationError && (!products || products.length === 0)) {
-             return <PropagationErrorDisplay onRetry={forceCheck} />;
-        }
-        
          return (
             <Alert variant="destructive" className="max-w-md">
                 <AlertCircle className="h-4 w-4" />
@@ -171,14 +167,17 @@ export default function PremiumPage() {
         );
     }
     
+    // Handle the case where initialization is done but no products are available
     if (isInitialized && (!products || products.length === 0 || !monthlyProduct || !yearlyProduct)) {
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
+    // Calculate discount percentage
     const discount = (yearlyPaidOffer && monthlyOffer && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
         ? Math.round((1 - (yearlyPaidOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
         : 0;
 
+    // The main subscription selection card
     return (
       <Card className="w-full max-w-md shadow-xl overflow-hidden">
         <CardHeader className="text-center p-6 bg-muted/30">
