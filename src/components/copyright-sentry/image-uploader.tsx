@@ -67,30 +67,33 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     }
     
     setIsLoading(true);
-    const result = await startScan(imageFile, isAiGenerated, isUserCreated, imagePreview);
     
-    setIsLoading(false);
-
-    if ('id' in result) { // This is a successful ScanResult
-      toast({
-        title: 'Scan Complete!',
-        description: 'Click here to view your results.',
-        duration: 10000, // Keep toast longer
-        action: (
-          <Button variant="outline" size="sm" onClick={() => router.push(`/scan?id=${result.id}`)}>
-            View
-          </Button>
-        ),
-      });
-      onScanComplete(result);
-      // Do not reset here, wait for navigation
-    } else { // This is an error object
-      toast({
-        title: 'Scan Failed',
-        description: result.error || 'An unknown error occurred.',
-        variant: 'destructive',
-      });
-       reset();
+    try {
+      const result = await startScan(imageFile, isAiGenerated, isUserCreated, imagePreview);
+      
+      if ('id' in result) { // This is a successful ScanResult
+        toast({
+          title: 'Scan Complete!',
+          description: 'Your results are ready.',
+        });
+        onScanComplete(result);
+        // Do not reset here, wait for navigation
+      } else { // This is an error object
+        toast({
+          title: 'Scan Failed',
+          description: result.error || 'An unknown error occurred.',
+          variant: 'destructive',
+        });
+        setIsLoading(false); // Stop loading on error
+      }
+    } catch (e) {
+        const error = e as Error;
+        toast({
+            title: 'Scan Failed',
+            description: error.message || 'An unexpected error occurred.',
+            variant: 'destructive'
+        });
+        setIsLoading(false); // Stop loading on error
     }
   };
   

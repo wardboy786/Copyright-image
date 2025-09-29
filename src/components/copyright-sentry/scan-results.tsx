@@ -166,7 +166,7 @@ export function ScanResults({ scan, onScanAnother }: ScanResultsProps) {
       </Card>
 
       {onScanAnother && (
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center pt-4 pb-20">
           <Button size="lg" onClick={onScanAnother} className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-8 shadow-lg shadow-accent/20">
             <RotateCcw className="mr-2 h-4 w-4" />
             Scan Another Image
