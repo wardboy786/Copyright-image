@@ -273,38 +273,43 @@ class PurchaseService {
     logger.log(`\n🔍 === OWNERSHIP CHECK FOR ${productId} ===`);
     
     if (this.receipts && this.receipts.length > 0) {
-        for (const receipt of this.receipts) {
-            const transactions = receipt.sourceReceipt?.transactions || [];
-            for (const transaction of transactions) {
-                const hasProduct = transaction.products?.some((p: any) => p.id === productId);
-                const isApproved = transaction.state === 'approved';
-                const isRenewing = transaction.nativePurchase?.autoRenewing === true;
-                
-                logger.log('Transaction check:', {
-                    hasProduct,
-                    state: transaction.state,
-                    autoRenewing: isRenewing,
-                    acknowledged: transaction.isAcknowledged
-                });
-                
-                if (hasProduct && isApproved && isRenewing) {
-                    logger.log('✅ OWNED - approved subscription found');
-                    return true;
-                }
-            }
+      for (const receipt of this.receipts) {
+        const transactions = receipt.sourceReceipt?.transactions || [];
+        
+        for (const transaction of transactions) {
+          const hasProduct = transaction.products?.some((p: any) => p.id === productId);
+          const state = transaction.state;
+          const isRenewing = transaction.nativePurchase?.autoRenewing === true;
+          
+          logger.log('Transaction check:', {
+            hasProduct,
+            state,
+            autoRenewing: isRenewing,
+            acknowledged: transaction.isAcknowledged
+          });
+          
+          // Accept BOTH "approved" AND "finished" states
+          if (hasProduct && 
+              (state === 'approved' || state === 'finished') && 
+              isRenewing) {
+            logger.log('✅ OWNED - active subscription found');
+            return true;
+          }
         }
+      }
     }
-  
+    
     // Fallback check on the product object itself
     const product = this.store?.get?.(productId);
     if (product && (product.owned || product.state === 'owned')) {
       logger.log(`✅ OWNED - via product.state check: ${product.state}`);
       return true;
     }
-
+  
     logger.log('❌ NOT OWNED - no active, approved subscription found');
     return false;
   }
+
 
   /**
    * Initiates a purchase flow for a product.
