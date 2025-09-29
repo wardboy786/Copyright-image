@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/hooks/use-app-context';
 import { type ScanResult } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, Loader2, Info, Image as ImageIcon, X, Video, ShieldCheck, CheckCircle } from 'lucide-react';
+import { UploadCloud, Loader2, Info, Image as ImageIcon, X, Video, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -17,6 +17,7 @@ import Link from 'next/link';
 import useAdMob from '@/hooks/use-admob';
 import { MAX_REWARDED_SCANS } from '@/hooks/use-scans';
 import { useRouter } from 'next/navigation';
+import { ScanOverlay } from './scan-overlay';
 
 
 export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanResult) => void; }) {
@@ -68,8 +69,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     setIsLoading(true);
     const result = await startScan(imageFile, isAiGenerated, isUserCreated, imagePreview);
     
-    // Reset the uploader UI
-    reset();
     setIsLoading(false);
 
     if ('id' in result) { // This is a successful ScanResult
@@ -84,12 +83,14 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
         ),
       });
       onScanComplete(result);
+      // Do not reset here, wait for navigation
     } else { // This is an error object
       toast({
         title: 'Scan Failed',
         description: result.error || 'An unknown error occurred.',
         variant: 'destructive',
       });
+       reset();
     }
   };
   
@@ -150,7 +151,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                     className={cn(
                     'w-full rounded-lg transition-colors flex flex-col items-center justify-center p-8 text-center cursor-pointer min-h-[250px] border-4 border-dashed relative overflow-hidden',
                     isDragActive ? 'bg-primary/10 border-primary' : 'border-border/50 hover:bg-muted/50 hover:border-muted-foreground/20',
-                    isLoading && 'cursor-not-allowed opacity-50'
+                    isLoading && 'cursor-not-allowed'
                     )}
                 >
                     <input {...getInputProps()} />
@@ -174,8 +175,9 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                             <p className="text-xs text-muted-foreground/70 mt-4">Supports: PNG, JPG, GIF, SVG</p>
                         </motion.div>
                     ) : (
-                         <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                         <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0">
                             <Image src={imagePreview} alt="Image preview" fill className="object-contain" />
+                            {isLoading && <ScanOverlay />}
                          </motion.div>
                     )}
                     </AnimatePresence>
