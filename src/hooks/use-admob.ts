@@ -29,7 +29,7 @@ const useAdMob = () => {
     }
     try {
       const options: BannerAdOptions = {
-        adId: 'ca-app-pub-8270549953677995/1980800386', // Test banner ad ID
+        adId: 'ca-app-pub-8270549953677995/1980800386', // Production Banner Ad ID
         position: BannerAdPosition.BOTTOM_CENTER,
         // This margin lifts the ad by the height of the bottom nav bar (64px)
         margin: 64, 
@@ -90,7 +90,8 @@ const useAdMob = () => {
       });
 
       const options: RewardAdOptions = {
-        adId: 'ca-app-pub-8270549953677995/9887135558', // Test rewarded ad ID
+        adId: 'ca-app-pub-8270549953677995/9887135558', // Production Rewarded Ad ID
+        isTesting: false,
       };
       
       console.log('AdMob: Preparing rewarded ad...');
@@ -114,7 +115,7 @@ const useAdMob = () => {
     }
     try {
         const options: AdOptions = {
-            adId: 'ca-app-pub-8270549953677995/3986929859', // Test interstitial ad ID
+            adId: 'ca-app-pub-8270549953677995/3986929859', // Production Interstitial Ad ID
             isTesting: false,
         };
         await AdMob.prepareInterstitial(options);
