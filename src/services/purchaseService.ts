@@ -218,16 +218,24 @@ class PurchaseService {
     });
 
     this.store.when().verified((receipt: any) => {
-      logger.log('✅ SVC VERIFIED: Receipt verified, finishing...', receipt);
-      this.receipts.push(receipt); // Add to our receipts cache
-      receipt.finish();
+      logger.log('✅ Receipt verified, adding to array...');
+      this.receipts.push(receipt);
+      
+      // CRITICAL: Dispatch state update AFTER adding receipt
+      this.notifyListeners();
+      
+      logger.log(`📦 Receipts array now has ${this.receipts.length} items`);
     });
     
     // When a transaction is fully finished, it's the ultimate source of truth.
     // We force a final update to ensure all state is fresh.
     this.store.when().finished(() => {
         logger.log('🏁 SVC FINISHED: Transaction finished. Forcing final state update.');
-        this.forceUpdateAndNotify();
+        
+        // Wait a moment for verification to complete
+        setTimeout(() => {
+          this.forceUpdateAndNotify();
+        }, 500);
     });
     
     logger.log('✅ SVC: Event listeners ready.');
