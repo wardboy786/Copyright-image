@@ -104,9 +104,10 @@ class PurchaseService {
         logger.log('🔧 SVC: Verbosity set to DEBUG.');
         
         this.store.error((err: unknown) => {
-            const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
-            logger.log('❌ SVC Store Error:', errorMessage);
-             window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: `Store Error: ${errorMessage}` }}));
+            const error = err as any;
+            const errorMessage = error.message || JSON.stringify(err);
+            logger.log('❌ SVC Store Error:', errorMessage, err);
+            window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: `Store Error: ${errorMessage}` }}));
         });
 
         this.store.register([
@@ -117,6 +118,8 @@ class PurchaseService {
 
         this.setupListeners();
         
+        // This validator should be replaced with your server-side validation logic.
+        // For this demo, we auto-approve to simplify the flow.
         this.store.validator = (request: any, callback: (result: any) => void) => {
             logger.log('🔒 SVC: Bypassing internal validation. Auto-approving.');
             callback({ ok: true, data: { isValid: true } });
@@ -135,6 +138,7 @@ class PurchaseService {
         logger.log('❌ SVC: Initialization failed.', error);
         this.isInitializing = false;
         this.initPromise = null;
+        window.dispatchEvent(new CustomEvent('purchaseError', { detail: { error: error.message || 'Initialization failed' }}));
         throw error;
      }
   }
@@ -146,20 +150,24 @@ class PurchaseService {
       };
   }
 
+  private async forceUpdateAndNotify() {
+    if (!this.store) return;
+    logger.log('🔄 SVC: Forcing store update...');
+    await this.store.update();
+    this.receipts = this.store.receipts || [];
+    logger.log('✅ SVC: Store update successful. Notifying listeners.');
+    this.notifyListeners();
+  }
+
   private setupListeners(): void {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    const forceUpdateAndNotify = async () => {
-        logger.log('🔄 SVC: Store change detected. Forcing update and notifying listeners.');
-        await this.store.update();
-        this.receipts = this.store.receipts;
-        this.notifyListeners();
-    }
-    
-    this.store.when().productUpdated(forceUpdateAndNotify);
-    this.store.when().receiptUpdated(forceUpdateAndNotify);
+    // Listen for any change in products or receipts
+    this.store.when().productUpdated(() => this.forceUpdateAndNotify());
+    this.store.when().receiptUpdated(() => this.forceUpdateAndNotify());
 
+    // This is the ideal transaction flow: approved -> verified -> finished
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -170,7 +178,12 @@ class PurchaseService {
       receipt.finish();
     });
     
-    this.store.when().finished(forceUpdateAndNotify);
+    // When a transaction is fully finished, it's the ultimate source of truth.
+    // We force a final update to ensure all state is fresh.
+    this.store.when().finished(() => {
+        logger.log('🏁 SVC FINISHED: Transaction finished. Forcing final state update.');
+        this.forceUpdateAndNotify();
+    });
     
     logger.log('✅ SVC: Event listeners ready.');
   }
@@ -204,24 +217,11 @@ class PurchaseService {
   }
 
  public isOwned(productId: string): boolean {
-    // Check basic store owned first
-    const basicOwned = this.store?.owned?.(productId);
-    if (basicOwned) return true;
-
-    // Check verified receipts - ensure receipts is an array before calling .some()
-    if (Array.isArray(this.receipts) && this.receipts.length > 0) {
-      const hasActiveSubscription = this.receipts.some((receipt: any) => 
-        receipt.sourceReceipt?.transactions?.some((transaction: any) => 
-          transaction.products?.some((product: any) => product.id === productId) &&
-          transaction.nativePurchase?.autoRenewing === true &&
-          transaction.isAcknowledged === true
-        )
-      );
-      
-      if (hasActiveSubscription) return true;
-    }
-
-    return false;
+    const product = this.store?.get(productId);
+    // The 'owned' property is the most reliable indicator after the store has been updated.
+    const isProductOwned = product?.owned || false;
+    logger.log(`🔍 SVC.isOwned: Final result for ${productId} is ${isProductOwned}`);
+    return isProductOwned;
   }
 
   public async order(productId: string, offerId: string): Promise<void> {
@@ -263,9 +263,7 @@ class PurchaseService {
       throw new Error('Store not initialized');
     }
     logger.log('🔄 SVC.forceCheck: Manually forcing store update...');
-    await this.store.update();
-    this.receipts = this.store.receipts;
-    this.notifyListeners();
+    await this.forceUpdateAndNotify();
     logger.log('✅ SVC.forceCheck: Update complete.');
   }
 }
