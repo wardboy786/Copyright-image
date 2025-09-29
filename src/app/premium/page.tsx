@@ -2,7 +2,7 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Loader2, Star, ZapOff, AlertCircle } from 'lucide-react';
+import { Check, Loader2, Star, ZapOff, AlertCircle, Gem } from 'lucide-react';
 import { useBilling, MONTHLY_PLAN_ID, YEARLY_PLAN_ID, MONTHLY_OFFER_ID, YEARLY_OFFER_ID } from '@/hooks/use-billing';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { logger } from '@/lib/in-app-logger';
+import { motion } from 'framer-motion';
 
 const features = [
   'Unlimited Daily Scans',
@@ -134,25 +135,59 @@ export default function PremiumPage() {
 
     // Main "You are Premium" screen
     if (isPremium) {
-        return (
-            <Card className="w-full max-w-md text-center">
-                <CardHeader>
-                    <div className="flex justify-center mb-4">
-                        <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center">
-                            <Check className="w-10 h-10 text-green-500"/>
-                        </div>
-                    </div>
-                    <CardTitle className="text-3xl">You are Premium!</CardTitle>
-                    <CardDescription>You have unlocked all features of Photorights AI.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center">
-                     <Button variant="outline" onClick={forceCheck} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Refresh Status
-                     </Button>
-                </CardContent>
-            </Card>
-        )
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, type: 'spring' }}
+          className="w-full max-w-md"
+        >
+          <Card className="w-full text-center overflow-hidden shadow-2xl shadow-primary/20">
+            <CardHeader className="bg-muted/30 p-8">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 260, damping: 20 }}
+                className="relative w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border-8 border-background"
+              >
+                <Gem className="w-12 h-12 text-primary" />
+                <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-primary/50"
+                    animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+                    transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
+                />
+              </motion.div>
+              <CardTitle className="text-3xl font-bold">You're a Premium Member!</CardTitle>
+              <CardDescription className="mt-2 text-lg">
+                Welcome to the full Photorights AI experience.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <h3 className="font-semibold text-left text-foreground">Your Unlocked Benefits:</h3>
+              <ul className="space-y-3 text-left">
+                {features.map((feature, index) => (
+                  <motion.li
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + index * 0.1 }}
+                    className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg"
+                  >
+                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                    <span className="text-foreground font-medium">{feature}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter className="p-6 bg-muted/30">
+              <Button variant="outline" onClick={forceCheck} disabled={isLoading} className="w-full">
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Refresh Subscription Status
+              </Button>
+            </CardFooter>
+          </Card>
+        </motion.div>
+      );
     }
     
     // Display any persistent errors
