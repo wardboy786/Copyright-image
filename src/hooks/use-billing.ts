@@ -24,18 +24,20 @@ export const useBilling = () => {
     error,
   } = usePurchase();
 
-  // Local state to manage the "purchasing..." status of the button
-  const [isPurchasing, setIsPurchasing] = useState(false);
+  // Local state to manage the "purchasing..." or "restoring..." status of buttons
+  const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
+      // If the context is no longer loading, our local loading state should also reset.
       if (!isContextLoading) {
-          setIsPurchasing(false);
+          setIsLoading(false);
       }
   }, [isContextLoading]);
   
-  // Listen for restore events
+  // Listen for restore events to show toasts
   useEffect(() => {
     const handleRestore = (event: Event) => {
+        setIsLoading(false); // Stop loading indicator on restore completion
         const customEvent = event as CustomEvent;
         if (customEvent.detail.success) {
             toast({
@@ -67,14 +69,14 @@ export const useBilling = () => {
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
-    setIsPurchasing(true); // Set loading state for the UI
+    setIsLoading(true); // Set loading state for the UI
     try {
       await purchaseService.order(productId, offerId);
       logger.log('✅ Purchase function completed successfully.');
     } catch (e: any) {
       logger.log('❌ Purchase failed in useBilling hook', e);
       toast({ title: 'Purchase Failed', description: e.message || 'An unknown error occurred.', variant: 'destructive' });
-      setIsPurchasing(false);
+      setIsLoading(false);
     }
   };
 
@@ -88,12 +90,14 @@ export const useBilling = () => {
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
+    setIsLoading(true); // Set loading for UI feedback
     try {
       toast({ title: 'Restoring Purchases...', description: 'Checking for your previous subscriptions.' });
       await purchaseService.restorePurchases();
     } catch (e: any) {
       logger.log('❌ Failed to restore purchases', e);
       toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
+      setIsLoading(false); // Reset loading on error
     }
   };
   
@@ -125,9 +129,9 @@ export const useBilling = () => {
 
   return {
     isInitialized,
-    isLoading: isContextLoading || isPurchasing,
+    isLoading: isContextLoading || isLoading, // Combine context loading with local loading
     isPremium,
-    isPurchasing,
+    isPurchasing: isLoading, // A more specific name for purchase button
     error,
     products,
     purchase,

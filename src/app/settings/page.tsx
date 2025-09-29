@@ -32,7 +32,7 @@ const complianceLinks = [
 
 export default function SettingsPage() {
   const { clearHistory } = useAppContext();
-  const { isPremium, isLoading, restorePurchases } = useBilling();
+  const { isPremium, isLoading, isInitialized, restorePurchases } = useBilling();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
 
@@ -81,7 +81,7 @@ export default function SettingsPage() {
                 <div>
                   <Label className="font-semibold">Premium Status</Label>
                   <p className="text-sm text-muted-foreground">
-                    {isLoading ? 'Loading...' : (isPremium ? 'Active' : 'Not Active')}
+                    {isLoading && !isPremium ? 'Checking...' : (isPremium ? 'Active' : 'Not Active')}
                   </p>
                 </div>
                 <Button asChild variant="secondary" size="sm">
@@ -91,7 +91,7 @@ export default function SettingsPage() {
                   </Link>
                 </Button>
             </div>
-             <Button onClick={restorePurchases} variant="outline" className="w-full" disabled={isLoading}>
+             <Button onClick={restorePurchases} variant="outline" className="w-full" disabled={!isInitialized || isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                 Restore Purchases
             </Button>

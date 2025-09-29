@@ -261,12 +261,12 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={handlePurchase}
-            disabled={isLoading}
+            disabled={!isInitialized || isLoading}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
           </Button>
-          <Button variant="ghost" onClick={handleRestore} disabled={isLoading}>
+          <Button variant="ghost" onClick={handleRestore} disabled={!isInitialized || isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Restore Purchases
           </Button>
