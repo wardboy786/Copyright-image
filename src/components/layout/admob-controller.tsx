@@ -9,13 +9,14 @@ const AD_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 export function AdMobController() {
   const { isPremium, isInitialized } = useAppContext();
+  const { initialize, showBanner, prepareInterstitial, showInterstitial } = useAdMob();
 
   useEffect(() => {
+    // Immediately exit if the app is not initialized, user is premium, or not on a native platform.
     if (!isInitialized || isPremium || !Capacitor.isNativePlatform()) {
       return;
     }
 
-    const { initialize, showBanner, prepareInterstitial, showInterstitial } = useAdMob();
     let adTimer: NodeJS.Timeout | null = null;
 
     const showAndScheduleAd = async () => {
@@ -48,7 +49,7 @@ export function AdMobController() {
     return () => {
       if (adTimer) clearTimeout(adTimer);
     };
-  }, [isInitialized, isPremium]);
+  }, [isInitialized, isPremium, initialize, showBanner, prepareInterstitial, showInterstitial]);
 
   return null; // This component does not render anything
 }
