@@ -158,18 +158,18 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    // When ANYTHING in the store changes, we redispatch state.
-    const forceUpdate = async () => {
+    // When ANYTHING in the store changes, we force an update and re-dispatch state.
+    const forceUpdateAndNotify = async () => {
         logger.log('🔄 SVC: Store change detected. Forcing update and notifying listeners.');
         await this.store.update();
         this.receipts = this.store.receipts;
         this.notifyListeners();
     }
     
-    this.store.when().productUpdated(forceUpdate);
-    this.store.when().receiptUpdated(forceUpdate);
+    this.store.when().productUpdated(forceUpdateAndNotify);
+    this.store.when().receiptUpdated(forceUpdateAndNotify);
 
-    // Clean purchase flow
+    // Clean purchase flow: approved -> verified -> finished
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC APPROVED: Transaction approved, verifying...', transaction);
       transaction.verify();
@@ -180,10 +180,10 @@ class PurchaseService {
       receipt.finish();
     });
     
-    // This is the single source of truth for a completed purchase.
+    // After a transaction is truly finished, force one more update to be safe.
     this.store.when().finished(async (transaction: any) => {
-      logger.log('✅ SVC FINISHED: Transaction finished. Forcing update and notifying final state.', transaction);
-      await forceUpdate();
+      logger.log('✅ SVC FINISHED: Transaction finished. Forcing final update.', transaction);
+      await forceUpdateAndNotify();
     });
     
     logger.log('✅ SVC: Event listeners ready.');
@@ -218,29 +218,23 @@ class PurchaseService {
   }
 
  public isOwned(productId: string): boolean {
-    const basicOwned = this.store?.owned?.(productId);
-    if (basicOwned) {
-      logger.log(`✅ SVC.isOwned: Basic owned check for ${productId} is TRUE`);
-      return true;
-    }
-    
-    if (this.receipts && this.receipts.length > 0) {
-      const hasActiveSubscription = this.receipts.some((receipt: any) => 
-        // The structure might be nested under sourceReceipt
-        (receipt.transactions || receipt.sourceReceipt?.transactions)?.some((transaction: any) => 
-          transaction.products?.some((product: any) => product.id === productId) &&
-          transaction.nativePurchase?.autoRenewing === true &&
-          transaction.isAcknowledged === true
-        )
-      );
-      
-      if (hasActiveSubscription) {
-        logger.log(`✅ SVC.isOwned: Found active subscription for ${productId} in receipts.`);
+    const product = this.store?.get(productId);
+    if (!product) return false;
+
+    // The plugin has an internal "owned" state, which is the most reliable check.
+    if (product.owned) {
+        logger.log(`✅ SVC.isOwned: Fast check TRUE for ${productId}`);
         return true;
-      }
+    }
+
+    // As a fallback, check transactions manually.
+    const hasFinishedTransaction = product.transactions.some((t: any) => t.state === 'finished' && t.nativePurchase?.autoRenewing);
+    if (hasFinishedTransaction) {
+        logger.log(`✅ SVC.isOwned: Found FINISHED transaction for ${productId}`);
+        return true;
     }
     
-    logger.log(`❌ SVC.isOwned: No active transaction found for ${productId}.`);
+    logger.log(`❌ SVC.isOwned: No active ownership found for ${productId}.`);
     return false;
   }
 

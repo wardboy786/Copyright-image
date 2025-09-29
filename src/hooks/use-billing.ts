@@ -23,12 +23,12 @@ export const useBilling = () => {
 
   const [isPurchasing, setIsPurchasing] = useState(false);
   
-  // This effect will reset isPurchasing when the premium status changes
+  // This effect will reset isPurchasing when the premium status changes OR when loading finishes
   useEffect(() => {
-      if (isPremium) {
+      if (isPremium || !isLoading) {
           setIsPurchasing(false);
       }
-  }, [isPremium]);
+  }, [isPremium, isLoading]);
 
 
   const purchase = async (productId: string, offerId: string) => {
@@ -89,7 +89,7 @@ export const useBilling = () => {
 
   return {
     isInitialized,
-    isLoading,
+    isLoading: isLoading || isPurchasing, // Combine loading states for UI
     isPremium,
     isPurchasing,
     error,
