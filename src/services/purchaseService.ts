@@ -154,7 +154,6 @@ class PurchaseService {
         this.isInitialized = true;
         this.isInitializing = false;
         logger.log("🎉 SVC: Initialization complete.");
-        // DO NOT reset the receipts array here.
         this.notifyListeners(); // Notify that initialization is done and send initial state
         return this.store;
 
@@ -195,7 +194,6 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('🔄 SVC: Forcing store update...');
     await this.store.update();
-    // Do not re-assign receipts here. The verified listener handles it.
     logger.log('✅ SVC: Store update successful. Notifying listeners.');
     this.notifyListeners();
   }
@@ -218,18 +216,22 @@ class PurchaseService {
     });
 
     this.store.when().verified((receipt: any) => {
-        logger.log('✅ Receipt verified, adding to array...');
-        
+        logger.log('✅ SVC VERIFIED: Receipt is verified, must finish now.', receipt);
+
         // Prevent adding duplicate receipts
         const receiptExists = this.receipts.some(r => r.id === receipt.id);
         if (!receiptExists) {
             this.receipts.push(receipt);
         }
         
-        // CRITICAL: Dispatch state update AFTER adding receipt
-        this.notifyListeners();
+        // CRITICAL: Acknowledge the purchase with Google
+        receipt.finish();
+        logger.log('🏁 SVC: Called receipt.finish() to acknowledge the purchase.');
         
-        logger.log(`📦 Receipts array now has ${this.receipts.length} items`);
+        // Notify the UI that the state has changed
+        setTimeout(() => {
+          this.notifyListeners();
+        }, 1000);
     });
     
     // When a transaction is fully finished, it's the ultimate source of truth.
@@ -283,84 +285,39 @@ class PurchaseService {
   public isOwned(productId: string): boolean {
     logger.log(`\n🔍 === OWNERSHIP CHECK FOR ${productId} ===`);
     
-    // Log everything we have
-    logger.log('📊 Available data:', {
-        hasStore: !!this.store,
-        receiptsCount: this.receipts?.length || 0,
-        storeProducts: this.store?.products?.length || 0
-    });
-
-    // Method 1: Check store.owned()
-    try {
-        const storeOwned = this.store?.owned?.(productId);
-        logger.log(`1️⃣ store.owned("${productId}"): ${storeOwned}`);
-        if (storeOwned) {
-        logger.log('✅ OWNED via store.owned()');
-        return true;
-        }
-    } catch (e) {
-        logger.log('❌ store.owned() failed:', e);
-    }
-
-    // Method 2: Check product.owned property
-    try {
-        const product = this.store?.get?.(productId);
-        logger.log(`2️⃣ Product object:`, {
-        exists: !!product,
-        id: product?.id,
-        state: product?.state,
-        owned: product?.owned,
-        valid: product?.valid
-        });
-        
-        if (product?.owned === true) {
-        logger.log('✅ OWNED via product.owned');
-        return true;
-        }
-        
-        if (product?.state === 'owned' || product?.state === 'approved') {
-        logger.log('✅ OWNED via product.state');
-        return true;
-        }
-    } catch (e) {
-        logger.log('❌ product check failed:', e);
-    }
-
-    // Method 3: Check receipts
-    logger.log(`3️⃣ Checking ${this.receipts?.length || 0} receipts...`);
     if (this.receipts && this.receipts.length > 0) {
-        for (let i = 0; i < this.receipts.length; i++) {
-        const receipt = this.receipts[i];
-        logger.log(`   Receipt ${i}:`, {
-            hasSourceReceipt: !!receipt.sourceReceipt,
-            transactionsCount: receipt.sourceReceipt?.transactions?.length || 0
-        });
-        
-        const transactions = receipt.sourceReceipt?.transactions || [];
-        for (let j = 0; j < transactions.length; j++) {
-            const transaction = transactions[j];
-            const products = transaction.products || [];
-            const hasProduct = products.some((p: any) => p.id === productId);
-            
-            logger.log(`   Transaction ${j}:`, {
-            hasProduct,
-            productIds: products.map((p: any) => p.id),
-            autoRenewing: transaction.nativePurchase?.autoRenewing,
-            acknowledged: transaction.isAcknowledged,
-            state: transaction.state
-            });
-            
-            if (hasProduct && 
-                transaction.nativePurchase?.autoRenewing === true && 
-                transaction.isAcknowledged === true) {
-            logger.log('✅ OWNED via verified receipt');
-            return true;
+        for (const receipt of this.receipts) {
+            const transactions = receipt.sourceReceipt?.transactions || [];
+            for (const transaction of transactions) {
+                const hasProduct = transaction.products?.some((p: any) => p.id === productId);
+                const isApproved = transaction.state === 'approved';
+                const isRenewing = transaction.nativePurchase?.autoRenewing === true;
+                
+                logger.log('Transaction check:', {
+                    hasProduct,
+                    state: transaction.state,
+                    autoRenewing: isRenewing,
+                    acknowledged: transaction.isAcknowledged
+                });
+                
+                // An active subscription can be considered 'owned' if it's approved and set to auto-renew,
+                // even before it is formally 'acknowledged'.
+                if (hasProduct && isApproved && isRenewing) {
+                    logger.log('✅ OWNED - approved subscription found');
+                    return true;
+                }
             }
         }
-        }
+    }
+  
+    // Fallback to checking the product object directly as a secondary method
+    const product = this.store?.get?.(productId);
+    if (product && (product.owned || product.state === 'owned')) {
+      logger.log(`✅ OWNED - via product.state check: ${product.state}`);
+      return true;
     }
 
-    logger.log('❌ NOT OWNED - no match found\n');
+    logger.log('❌ NOT OWNED - no active, approved subscription found');
     return false;
   }
 
