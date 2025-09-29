@@ -35,6 +35,29 @@ export const useBilling = () => {
           setIsPurchasing(false);
       }
   }, [isContextLoading]);
+  
+  // Listen for restore events
+  useEffect(() => {
+    const handleRestore = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail.success) {
+            toast({
+                title: 'Purchases Restored',
+                description: 'Your previous purchases have been successfully restored.',
+            });
+        } else {
+            toast({
+                title: 'Restore Failed',
+                description: customEvent.detail.error || 'Could not find any previous purchases.',
+                variant: 'destructive',
+            });
+        }
+    };
+    window.addEventListener('purchaseRestored', handleRestore);
+    return () => {
+        window.removeEventListener('purchaseRestored', handleRestore);
+    };
+  }, []);
 
 
   /**
@@ -73,7 +96,6 @@ export const useBilling = () => {
     }
     try {
       await purchaseService.restorePurchases();
-      toast({ title: 'Restore Initialized', description: 'Checking for your previous purchases...' });
     } catch (e: any) {
       logger.log('❌ Failed to restore purchases', e);
       toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
