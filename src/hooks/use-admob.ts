@@ -14,7 +14,7 @@ const useAdMob = () => {
     try {
       await AdMob.initialize({
         testingDevices: ['63ea8cfd-404a-433d-8614-54595bf28c84'],
-        initializeForTesting: true,
+        initializeForTesting: false,
       });
       console.log('AdMob: Initialized successfully on native platform.');
     } catch (error) {
@@ -29,12 +29,12 @@ const useAdMob = () => {
     }
     try {
       const options: BannerAdOptions = {
-        adId: 'ca-app-pub-3940256099942544/6300978111', // Test banner ad ID
+        adId: 'ca-app-pub-8270549953677995/1980800386', // Test banner ad ID
         position: BannerAdPosition.BOTTOM_CENTER,
         // This margin lifts the ad by the height of the bottom nav bar (64px)
         margin: 64, 
         adSize: BannerAdSize.BANNER,
-        isTesting: true,
+        isTesting: false,
       };
       await AdMob.showBanner(options);
       console.log('AdMob: Banner ad shown successfully.');
@@ -90,7 +90,7 @@ const useAdMob = () => {
       });
 
       const options: RewardAdOptions = {
-        adId: 'ca-app-pub-3940256099942544/5224354917', // Test rewarded ad ID
+        adId: 'ca-app-pub-8270549953677995/9887135558', // Test rewarded ad ID
       };
       
       console.log('AdMob: Preparing rewarded ad...');
@@ -114,8 +114,8 @@ const useAdMob = () => {
     }
     try {
         const options: AdOptions = {
-            adId: 'ca-app-pub-3940256099942544/1033173712', // Test interstitial ad ID
-            isTesting: true,
+            adId: 'ca-app-pub-8270549953677995/3986929859', // Test interstitial ad ID
+            isTesting: false,
         };
         await AdMob.prepareInterstitial(options);
         console.log('AdMob: Interstitial ad prepared successfully.');
