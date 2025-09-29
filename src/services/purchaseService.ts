@@ -154,7 +154,7 @@ class PurchaseService {
         this.isInitialized = true;
         this.isInitializing = false;
         logger.log("🎉 SVC: Initialization complete.");
-        this.receipts = this.store.receipts; // Store initial receipts
+        // DO NOT reset the receipts array here.
         this.notifyListeners(); // Notify that initialization is done and send initial state
         return this.store;
 
@@ -195,7 +195,7 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('🔄 SVC: Forcing store update...');
     await this.store.update();
-    this.receipts = this.store.receipts || [];
+    // Do not re-assign receipts here. The verified listener handles it.
     logger.log('✅ SVC: Store update successful. Notifying listeners.');
     this.notifyListeners();
   }
@@ -218,13 +218,18 @@ class PurchaseService {
     });
 
     this.store.when().verified((receipt: any) => {
-      logger.log('✅ Receipt verified, adding to array...');
-      this.receipts.push(receipt);
-      
-      // CRITICAL: Dispatch state update AFTER adding receipt
-      this.notifyListeners();
-      
-      logger.log(`📦 Receipts array now has ${this.receipts.length} items`);
+        logger.log('✅ Receipt verified, adding to array...');
+        
+        // Prevent adding duplicate receipts
+        const receiptExists = this.receipts.some(r => r.id === receipt.id);
+        if (!receiptExists) {
+            this.receipts.push(receipt);
+        }
+        
+        // CRITICAL: Dispatch state update AFTER adding receipt
+        this.notifyListeners();
+        
+        logger.log(`📦 Receipts array now has ${this.receipts.length} items`);
     });
     
     // When a transaction is fully finished, it's the ultimate source of truth.
