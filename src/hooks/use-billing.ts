@@ -5,7 +5,6 @@ import { purchaseService } from '@/services/purchaseService';
 import { type Product } from '@/lib/types';
 import { usePurchase } from '@/context/purchase-context';
 import { toast } from './use-toast';
-import { logger } from '@/lib/in-app-logger';
 
 // Product and Offer IDs used throughout the app
 export const MONTHLY_PLAN_ID = 'photorights_monthly';
@@ -65,14 +64,12 @@ export const useBilling = () => {
   const purchase = async (productId: string, offerId: string) => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
-      logger.log(`❌ ${errorMsg}`);
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
     setIsLoading(true); // Set loading state for the UI
     try {
       const transaction = await purchaseService.order(productId, offerId);
-      logger.log('✅ Purchase order placed.', transaction);
        if (!transaction) {
         toast({
             title: 'Purchase Canceled',
@@ -81,7 +78,6 @@ export const useBilling = () => {
       }
       setIsLoading(false);
     } catch (e: any) {
-      logger.log('❌ Purchase failed in useBilling hook', e);
       // The service now handles dispatching the error event, so we just stop loading.
       setIsLoading(false);
     }
@@ -93,7 +89,6 @@ export const useBilling = () => {
   const restorePurchases = async () => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not ready. Please try again in a moment.';
-      logger.log(`❌ ${errorMsg}`);
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
@@ -102,7 +97,6 @@ export const useBilling = () => {
       toast({ title: 'Restoring Purchases...', description: 'Checking for your previous subscriptions.' });
       await purchaseService.restorePurchases();
     } catch (e: any) {
-      logger.log('❌ Failed to restore purchases', e);
       toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
       setIsLoading(false); // Reset loading on error
     }

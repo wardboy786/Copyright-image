@@ -5,7 +5,6 @@ import { Inter } from 'next/font/google';
 import { AppProvider } from '@/context/app-provider';
 import { PurchaseProvider } from '@/context/purchase-context';
 import { SplashScreen } from '@/components/layout/splash-screen';
-import { DebugOverlay } from '@/components/layout/debug-overlay';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,7 +24,6 @@ export default function RootLayout({
             <SplashScreen />
             <MainLayout>
               {children}
-              <DebugOverlay />
             </MainLayout>
           </AppProvider>
         </PurchaseProvider>

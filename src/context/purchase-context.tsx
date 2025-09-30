@@ -4,7 +4,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { purchaseService } from '@/services/purchaseService';
 import { type Product } from '@/lib/types';
-import { logger } from '@/lib/in-app-logger';
 
 interface PurchaseContextState {
   isInitialized: boolean;
@@ -31,7 +30,6 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const handlePurchaseError = (event: Event) => {
         if (isMounted) {
             const customEvent = event as CustomEvent;
-            logger.log('❌ React Context: Received purchaseError event', customEvent.detail);
             setState(prevState => ({ ...prevState, error: customEvent.detail.error, isLoading: false }));
         }
     };
@@ -39,11 +37,9 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const initialize = async () => {
       try {
         window.addEventListener('purchaseError', handlePurchaseError);
-        logger.log('🎧 React Context: purchaseError event listener added.');
 
         const unsubscribe = purchaseService.subscribe((newState) => {
           if (isMounted) {
-            logger.log('React Context: Received state update from service subscription.', newState);
             setState(prevState => ({
               ...prevState,
               isPremium: newState.isPremium,
@@ -55,12 +51,10 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
         
         await purchaseService.initialize();
-        logger.log('React Context: Purchase service initialization requested.');
 
         return unsubscribe;
 
       } catch (e: any) {
-        logger.log('❌ React Context: Failed to initialize purchase provider', e);
         if (isMounted) {
             setState(prevState => ({
               ...prevState,
@@ -79,7 +73,6 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       isMounted = false;
       unsubscribePromise.then(unsubscribe => unsubscribe());
       window.removeEventListener('purchaseError', handlePurchaseError);
-      logger.log('🎧 React Context: purchaseError event listener removed.');
     };
   }, []);
 

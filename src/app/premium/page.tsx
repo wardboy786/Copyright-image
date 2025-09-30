@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { logger } from '@/lib/in-app-logger';
 import { motion } from 'framer-motion';
 import { type Offer } from '@/lib/types';
 
@@ -45,37 +44,13 @@ export default function PremiumPage() {
   const yearlyPaidOffer = yearlyOffers.find(o => !o.id.includes(YEARLY_OFFER_ID));
 
 
-  useEffect(() => {
-    logger.log('PREMIUM_PAGE: State Update', { isInitialized, isLoading, isPremium, productCount: products.length, error });
-
-    if (isInitialized && products.length > 0) {
-      logger.log('PREMIUM_PAGE: Products loaded. Dumping FULL product structures...');
-      logger.log('PREMIUM_PAGE: Raw Monthly Product', JSON.stringify(monthlyProduct, null, 2));
-      logger.log('PREMIUM_PAGE: Raw Yearly Product', JSON.stringify(yearlyProduct, null, 2));
-      
-      logger.log('PREMIUM_PAGE: Derived Offers check', {
-          monthlyOffer: !!monthlyOffer,
-          yearlyPaidOffer: !!yearlyPaidOffer,
-          yearlyFreeTrialOffer: !!yearlyFreeTrialOffer,
-      });
-    } else if (isInitialized) {
-        logger.log('PREMIUM_PAGE: Initialized but no products found.');
-    }
-  }, [isInitialized, products, isLoading, isPremium, error, monthlyProduct, yearlyProduct, monthlyOffer, yearlyPaidOffer, yearlyFreeTrialOffer]);
-
-
   const handlePurchase = async () => {
-    logger.log('PREMIUM_PAGE: handlePurchase called with plan:', selectedPlan);
-
     const isYearly = selectedPlan === 'yearly';
     const product = isYearly ? yearlyProduct : monthlyProduct;
     const offer = isYearly ? (yearlyFreeTrialOffer || yearlyPaidOffer) : monthlyOffer;
     
-    logger.log('PREMIUM_PAGE: Attempting purchase with derived objects:', { product: !!product, offer: !!offer });
-
     if (!product || !offer || !offer.id) {
         const errorMsg = 'Plan not available. It may still be loading or is not configured correctly.';
-        logger.log(`❌ PREMIUM_PAGE: Purchase failed - ${errorMsg}`);
         toast({ title: 'Plan Not Available', description: errorMsg, variant: 'destructive' });
         return;
     }
@@ -213,7 +188,6 @@ export default function PremiumPage() {
     }
     
     if (isInitialized && (!products || products.length === 0 || !monthlyProduct || !yearlyProduct)) {
-         logger.log('PREMIUM_PAGE: Rendering PropagationErrorDisplay because products are missing after init.');
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
@@ -293,4 +267,3 @@ export default function PremiumPage() {
     </div>
   );
 }
-
