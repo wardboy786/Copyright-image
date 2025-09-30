@@ -2,9 +2,10 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { purchaseService } from '@/services/purchaseService';
-import { type Product } from '@/lib/types';
+import { type Product, type Offer } from '@/lib/types';
 import { usePurchase } from '@/context/purchase-context';
 import { toast } from './use-toast';
+import { logger } from '@/lib/in-app-logger';
 
 // Product and Offer IDs used throughout the app
 export const MONTHLY_PLAN_ID = 'photorights_monthly';
@@ -70,14 +71,20 @@ export const useBilling = () => {
     setIsLoading(true); // Set loading state for the UI
     try {
       const transaction = await purchaseService.order(productId, offerId);
-       if (!transaction) {
+       if (transaction) {
+         logger.log('✅ Purchase function completed successfully.', transaction);
+       } else {
+        // This case is typically when the user cancels.
+        // The service now handles the USER_CANCELLED error code silently.
+        // We show a gentle toast here.
         toast({
             title: 'Purchase Canceled',
             description: 'The purchase process was not completed.',
         });
-      }
+       }
       setIsLoading(false);
     } catch (e: any) {
+      logger.log('❌ Purchase failed in useBilling hook', e);
       // The service now handles dispatching most error events, but we catch cancellations here.
       // If the error isn't a USER_CANCELLED one (which is now ignored by the service), it might be something else.
       if (!e.message?.includes('USER_CANCELLED')) {

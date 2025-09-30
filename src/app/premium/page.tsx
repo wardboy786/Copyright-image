@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { motion } from 'framer-motion';
 import { type Offer } from '@/lib/types';
+import { logger } from '@/lib/in-app-logger';
 
 const features = [
   'Unlimited Daily Scans',
@@ -47,13 +48,23 @@ export default function PremiumPage() {
   const handlePurchase = async () => {
     const isYearly = selectedPlan === 'yearly';
     const product = isYearly ? yearlyProduct : monthlyProduct;
-    const offer = isYearly ? (yearlyFreeTrialOffer || yearlyPaidOffer) : monthlyOffer;
+    let offer: Offer | undefined;
+
+    if (isYearly) {
+        offer = yearlyFreeTrialOffer || yearlyPaidOffer;
+    } else {
+        offer = monthlyOffer;
+    }
+    
+    logger.log('PREMIUM_PAGE: handlePurchase called with plan:', { selectedPlan });
     
     if (!product || !offer || !offer.id) {
         const errorMsg = 'Plan not available. It may still be loading or is not configured correctly.';
+        logger.log('PREMIUM_PAGE: Purchase failed - plan not available.', { product: !!product, offer: !!offer });
         toast({ title: 'Plan Not Available', description: errorMsg, variant: 'destructive' });
         return;
     }
+    logger.log('PREMIUM_PAGE: Attempting purchase with derived objects:', { product: !!product, offer: !!offer });
     
     await purchase(product.id, offer.id);
   };
