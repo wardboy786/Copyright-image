@@ -62,7 +62,7 @@ export default function PremiumPage() {
     } else if (isInitialized) {
         logger.log('PREMIUM_PAGE: Initialized but no products found.');
     }
-  }, [isInitialized, products, isLoading, isPremium, error, monthlyProduct, yearlyProduct]);
+  }, [isInitialized, products, isLoading, isPremium, error, monthlyProduct, yearlyProduct, monthlyOffer, yearlyPaidOffer, yearlyFreeTrialOffer]);
 
 
   const handlePurchase = async () => {

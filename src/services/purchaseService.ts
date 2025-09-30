@@ -199,13 +199,16 @@ class PurchaseService {
     }
 
     const mappedProducts: Product[] = this.store.products.map((p: any): Product => {
-        logger.log(`SVC: Mapping product: ${p.id}`, JSON.stringify(p, null, 2));
-
         const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
             const firstPhase = o.pricingPhases && o.pricingPhases.length > 0 ? o.pricingPhases[0] : {};
-            logger.log(`SVC:   - Mapping offer: ${o.id}`, JSON.stringify(o, null, 2));
+            
+            // The offer ID from the plugin is often composite, e.g., "productId@offerId"
+            // We split it to get the base offer ID for easier matching in the UI.
+            const offerIdParts = o.id.split('@');
+            const baseOfferId = offerIdParts[offerIdParts.length - 1];
+
             return {
-                id: o.id,
+                id: baseOfferId, // Use the base ID
                 price: {
                     amount: firstPhase.priceAmountMicros ? firstPhase.priceAmountMicros / 1000000 : 0,
                     formatted: firstPhase.formattedPrice || '',
