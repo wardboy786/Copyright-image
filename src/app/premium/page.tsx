@@ -6,12 +6,12 @@ import { Check, Loader2, Star, AlertCircle, Gem } from 'lucide-react';
 import { useBilling, MONTHLY_PLAN_ID, YEARLY_PLAN_ID, MONTHLY_OFFER_ID, YEARLY_OFFER_ID } from '@/hooks/use-billing';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { motion } from 'framer-motion';
 import { type Offer } from '@/lib/types';
-import { logger } from '@/lib/in-app-logger';
+
 
 const features = [
   'Unlimited Daily Scans',
@@ -28,6 +28,7 @@ export default function PremiumPage() {
     products, 
     isPurchasing, 
     error,
+    clearError,
     purchase, 
     restorePurchases,
     forceCheck
@@ -42,7 +43,7 @@ export default function PremiumPage() {
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
   const yearlyOffers = yearlyProduct?.offers || [];
   const yearlyFreeTrialOffer = yearlyOffers.find(o => o.id.includes(YEARLY_OFFER_ID));
-  const yearlyPaidOffer = yearlyOffers.find(o => !o.id.includes(YEARLY_OFFER_ID));
+  const yearlyPaidOffer = yearlyOffers.find(o => !o.id.includes(YEARLY_OFFER_ID) && !o.id.includes('trial'));
 
 
   const handlePurchase = async () => {
@@ -56,15 +57,11 @@ export default function PremiumPage() {
         offer = monthlyOffer;
     }
     
-    logger.log('PREMIUM_PAGE: handlePurchase called with plan:', { selectedPlan });
-    
     if (!product || !offer || !offer.id) {
         const errorMsg = 'Plan not available. It may still be loading or is not configured correctly.';
-        logger.log('PREMIUM_PAGE: Purchase failed - plan not available.', { product: !!product, offer: !!offer });
         toast({ title: 'Plan Not Available', description: errorMsg, variant: 'destructive' });
         return;
     }
-    logger.log('PREMIUM_PAGE: Attempting purchase with derived objects:', { product: !!product, offer: !!offer });
     
     await purchase(product.id, offer.id);
   };
@@ -73,11 +70,15 @@ export default function PremiumPage() {
     await restorePurchases();
   }
 
+  const handleRetry = () => {
+    clearError();
+    forceCheck();
+  }
+
   const getDisplayPrice = (offer?: Offer) => {
     if (offer?.price?.formatted && offer.price.amount > 0) {
         return offer.price.formatted;
     }
-    // Professional fallback for when prices aren't returned by the API
     return 'View in checkout';
   };
   
@@ -189,8 +190,8 @@ export default function PremiumPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>An Error Occurred</AlertTitle>
                 <AlertDescription>
-                    {error} Please check your connection or try again later.
-                     <Button variant="link" onClick={forceCheck} className="p-0 h-auto ml-2" disabled={isLoading}>
+                    {error}
+                     <Button variant="link" onClick={handleRetry} className="p-0 h-auto ml-2" disabled={isLoading}>
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Retry'}
                      </Button>
                 </AlertDescription>
@@ -217,10 +218,10 @@ export default function PremiumPage() {
           <div className="grid grid-cols-2 gap-3">
              <button onClick={() => setSelectedPlan('monthly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'monthly' ? 'border-primary' : 'border-border')}>
                 <p className="font-semibold">Monthly</p>
-                {isInitialized && monthlyProduct ? (
-                    <p className="text-xl font-bold">{getDisplayPrice(monthlyOffer)}</p>
-                ) : (
+                {!isInitialized || (isLoading && !products.length) ? (
                     <Skeleton className="h-7 w-16 mx-auto my-1" />
+                ) : (
+                    <p className="text-xl font-bold">{getDisplayPrice(monthlyOffer)}</p>
                 )}
                 <p className="text-xs text-muted-foreground">per month</p>
              </button>
@@ -236,10 +237,10 @@ export default function PremiumPage() {
                     </div>
                 }
                 <p className="font-semibold">Yearly</p>
-                {isInitialized && yearlyProduct ? (
-                    <p className="text-xl font-bold">{getDisplayPrice(yearlyFreeTrialOffer || yearlyPaidOffer)}</p>
-                ) : (
+                 {!isInitialized || (isLoading && !products.length) ? (
                     <Skeleton className="h-7 w-20 mx-auto my-1" />
+                ) : (
+                    <p className="text-xl font-bold">{getDisplayPrice(yearlyFreeTrialOffer || yearlyPaidOffer)}</p>
                 )}
                  <p className="text-xs text-muted-foreground">per year</p>
              </button>

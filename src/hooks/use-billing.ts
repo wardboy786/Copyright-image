@@ -5,9 +5,7 @@ import { purchaseService } from '@/services/purchaseService';
 import { type Product, type Offer } from '@/lib/types';
 import { usePurchase } from '@/context/purchase-context';
 import { toast } from './use-toast';
-import { logger } from '@/lib/in-app-logger';
 
-// Product and Offer IDs used throughout the app
 export const MONTHLY_PLAN_ID = 'photorights_monthly';
 export const YEARLY_PLAN_ID = 'photorights_yearly';
 export const MONTHLY_OFFER_ID = 'monthly-plan';
@@ -15,7 +13,6 @@ export const YEARLY_OFFER_ID = 'yearly-free';
 
 
 export const useBilling = () => {
-  // Get the core state from our central React context
   const {
     isInitialized,
     isLoading: isContextLoading,
@@ -24,20 +21,17 @@ export const useBilling = () => {
     error,
   } = usePurchase();
 
-  // Local state to manage the "purchasing..." or "restoring..." status of buttons
   const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
-      // If the context is no longer loading, our local loading state should also reset.
       if (!isContextLoading) {
           setIsLoading(false);
       }
   }, [isContextLoading]);
   
-  // Listen for restore events to show toasts
   useEffect(() => {
     const handleRestore = (event: Event) => {
-        setIsLoading(false); // Stop loading indicator on restore completion
+        setIsLoading(false);
         const customEvent = event as CustomEvent;
         if (customEvent.detail.success) {
             toast({
@@ -59,24 +53,20 @@ export const useBilling = () => {
   }, []);
 
 
-  /**
-   * Initiates a purchase.
-   */
   const purchase = async (productId: string, offerId: string) => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
-    setIsLoading(true); // Set loading state for the UI
+    setIsLoading(true);
     try {
       const transaction = await purchaseService.order(productId, offerId);
        if (transaction) {
-         logger.log('✅ Purchase function completed successfully.', transaction);
+         // Purchase successful and verified by service
        } else {
-        // This case is typically when the user cancels.
-        // The service now handles the USER_CANCELLED error code silently.
-        // We show a gentle toast here.
+        // This case is now for user cancellations, which are handled silently by the service.
+        // We show a gentle toast here for feedback.
         toast({
             title: 'Purchase Canceled',
             description: 'The purchase process was not completed.',
@@ -84,40 +74,29 @@ export const useBilling = () => {
        }
       setIsLoading(false);
     } catch (e: any) {
-      logger.log('❌ Purchase failed in useBilling hook', e);
-      // The service now handles dispatching most error events, but we catch cancellations here.
-      // If the error isn't a USER_CANCELLED one (which is now ignored by the service), it might be something else.
       if (!e.message?.includes('USER_CANCELLED')) {
          toast({ title: 'Purchase Failed', description: e.message, variant: 'destructive' });
-      } else {
-         toast({ title: 'Purchase Canceled', description: 'The purchase process was not completed.' });
       }
       setIsLoading(false);
     }
   };
 
-  /**
-   * Initiates the restore purchases flow.
-   */
   const restorePurchases = async () => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not ready. Please try again in a moment.';
       toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       return;
     }
-    setIsLoading(true); // Set loading for UI feedback
+    setIsLoading(true);
     try {
       toast({ title: 'Restoring Purchases...', description: 'Checking for your previous subscriptions.' });
       await purchaseService.restorePurchases();
     } catch (e: any) {
       toast({ title: 'Restore Failed', description: e.message || 'Could not restore purchases.', variant: 'destructive' });
-      setIsLoading(false); // Reset loading on error
+      setIsLoading(false);
     }
   };
   
-  /**
-   * Manually forces the service to check for updates.
-   */
    const forceCheck = async () => {
     if (!isInitialized) {
       const errorMsg = 'Billing service is not initialized.';
@@ -134,7 +113,10 @@ export const useBilling = () => {
     }
   };
 
-  // Memoized selectors for convenience
+  const clearError = () => {
+    purchaseService.clearError();
+  }
+
   const getMonthlyPlan = useCallback(() => {
     return products.find(p => p.id === MONTHLY_PLAN_ID);
   }, [products]);
@@ -145,14 +127,15 @@ export const useBilling = () => {
 
   return {
     isInitialized,
-    isLoading: isContextLoading || isLoading, // Combine context loading with local loading
+    isLoading: isContextLoading || isLoading,
     isPremium,
-    isPurchasing: isLoading, // A more specific name for purchase button
+    isPurchasing: isLoading,
     error,
     products,
     purchase,
     restorePurchases,
     forceCheck,
+    clearError,
     getMonthlyPlan,
     getYearlyPlan,
   };

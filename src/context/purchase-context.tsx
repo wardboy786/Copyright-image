@@ -30,7 +30,12 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const handlePurchaseError = (event: Event) => {
         if (isMounted) {
             const customEvent = event as CustomEvent;
-            setState(prevState => ({ ...prevState, error: customEvent.detail.error, isLoading: false }));
+            // A null error means we should clear the error message
+            if (customEvent.detail.error === null) {
+              setState(prevState => ({ ...prevState, error: null }));
+            } else {
+              setState(prevState => ({ ...prevState, error: customEvent.detail.error, isLoading: false }));
+            }
         }
     };
 
@@ -45,7 +50,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               isPremium: newState.isPremium,
               products: newState.products,
               isLoading: false, 
-              isInitialized: true, // Mark as initialized on first state update
+              isInitialized: true,
             }));
           }
         });
