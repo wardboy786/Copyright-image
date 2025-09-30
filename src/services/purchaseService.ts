@@ -196,23 +196,16 @@ class PurchaseService {
 
     const mappedProducts: Product[] = this.store.products.map((p: any): Product => {
         const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
-            let formattedPrice = '';
-            let priceAmountMicros = 0;
-
-            const firstPhase = o.pricingPhases && o.pricingPhases.length > 0 ? o.pricingPhases[0] : null;
-
-            if (firstPhase && firstPhase.formattedPrice) {
-                formattedPrice = firstPhase.formattedPrice;
-                priceAmountMicros = firstPhase.priceAmountMicros || 0;
-            } else if (o.price) {
-                formattedPrice = o.price;
-                priceAmountMicros = o.priceAmountMicros || 0;
-            }
+            // Robustly find the first valid pricing phase with a formatted price.
+            const firstPhase = o.pricingPhases?.find((phase: any) => phase.formattedPrice);
+            
+            const formattedPrice = firstPhase?.formattedPrice || '';
+            const priceAmountMicros = firstPhase?.priceAmountMicros || 0;
             
             logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId: o.id, formattedPrice, priceAmountMicros });
 
             return {
-                id: o.id,
+                id: o.id, // Keep the full offer ID for ordering
                 price: {
                     amount: priceAmountMicros / 1000000,
                     formatted: formattedPrice,

@@ -39,13 +39,11 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
-  // Logic to find specific offers within products
-  // The offer ID from the plugin is the full string, e.g., "photorights_monthly@monthly-plan"
-  // We need to check if the desired offer ID is part of the full ID string.
+  // Logic to find specific offers within products.
+  // The offer ID from the plugin is the full string, so we check if our desired base ID is part of it.
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
   const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
-  // The paid offer is any other offer for the yearly product that isn't the free trial.
-  const yearlyPaidOffer = yearlyProduct?.offers.find(o => !o.id.includes(YEARLY_OFFER_ID) && o.id);
+  const yearlyPaidOffer = yearlyProduct?.offers.find(o => !o.id.includes(YEARLY_OFFER_ID) && o.id.includes(YEARLY_PLAN_ID));
 
 
   useEffect(() => {
@@ -91,7 +89,8 @@ export default function PremiumPage() {
     await restorePurchases();
   }
   
-  const isOfferReady = (offer?: Offer) => !!offer?.price?.formatted;
+  // A plan is ready if an offer has been found and it has a formatted price.
+  const isPlanReady = (offer?: Offer) => !!offer?.price?.formatted;
 
   const PropagationErrorDisplay = ({ onRetry }: { onRetry: () => void; }) => (
       <Card className="w-full max-w-md bg-amber-500/10 border-amber-500/20">
@@ -129,8 +128,8 @@ export default function PremiumPage() {
 
 
   const renderContent = () => {
-    // Show a loading skeleton while the context is initializing
-    if (isLoading && !isInitialized) {
+    // Show a loading skeleton only while the entire context is initializing for the first time
+    if (!isInitialized && isLoading) {
         return (
              <div className="w-full max-w-md space-y-4">
                 <Skeleton className="h-64 w-full" />
@@ -218,9 +217,8 @@ export default function PremiumPage() {
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
-    const isMonthlyReady = isOfferReady(monthlyOffer);
-    // The yearly plan is ready if either the free trial OR the paid offer has a valid price
-    const isYearlyReady = isOfferReady(yearlyFreeTrialOffer) || isOfferReady(yearlyPaidOffer);
+    const isMonthlyReady = isPlanReady(monthlyOffer);
+    const isYearlyReady = isPlanReady(yearlyFreeTrialOffer) || isPlanReady(yearlyPaidOffer);
     
     logger.log('PREMIUM_PAGE: Price readiness check', { isMonthlyReady, isYearlyReady });
 
@@ -280,7 +278,7 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={handlePurchase}
-            disabled={isPurchasing || isLoading || !isInitialized || (selectedPlan === 'monthly' && !monthlyOffer) || (selectedPlan === 'yearly' && !yearlyPaidOffer && !yearlyFreeTrialOffer)}
+            disabled={isPurchasing || !isInitialized || !products.length}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
