@@ -40,10 +40,11 @@ export default function PremiumPage() {
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
   // Logic to find specific offers within products.
-  // The offer ID from the plugin is the full string, so we check if our desired base ID is part of it.
-  const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
-  const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
-  const yearlyPaidOffer = yearlyProduct?.offers.find(o => !o.id.includes(YEARLY_OFFER_ID) && o.id.includes(YEARLY_PLAN_ID));
+  // The offer ID from the plugin is the full string, so we use the full ID now.
+  const monthlyOffer = monthlyProduct?.offers[0];
+  const yearlyOffers = yearlyProduct?.offers || [];
+  const yearlyFreeTrialOffer = yearlyOffers.find(o => o.id.includes(YEARLY_OFFER_ID));
+  const yearlyPaidOffer = yearlyOffers.find(o => !o.id.includes(YEARLY_OFFER_ID));
 
 
   useEffect(() => {
@@ -82,6 +83,7 @@ export default function PremiumPage() {
         return;
     }
     
+    // Pass the FULL offer ID to the purchase method
     await purchase(product.id, offer.id);
   };
   

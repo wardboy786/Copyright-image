@@ -197,15 +197,15 @@ class PurchaseService {
     const mappedProducts: Product[] = this.store.products.map((p: any): Product => {
         const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
             // Robustly find the first valid pricing phase with a formatted price.
-            const firstPhase = o.pricingPhases?.find((phase: any) => phase.formattedPrice);
+            const pricing = o.pricingPhases?.find((phase: any) => phase.formattedPrice);
             
-            const formattedPrice = firstPhase?.formattedPrice || '';
-            const priceAmountMicros = firstPhase?.priceAmountMicros || 0;
+            const formattedPrice = pricing?.formattedPrice || pricing?.price || '';
+            const priceAmountMicros = pricing?.priceAmountMicros || 0;
             
             logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId: o.id, formattedPrice, priceAmountMicros });
 
             return {
-                id: o.id, // Keep the full offer ID for ordering
+                id: o.id, // CRITICAL: Keep the FULL offer ID
                 price: {
                     amount: priceAmountMicros / 1000000,
                     formatted: formattedPrice,
@@ -249,14 +249,18 @@ class PurchaseService {
         throw new Error(`Product with ID '${productId}' not found.`);
     }
 
+    // Use the offer ID exactly as provided by the UI, which should be the full ID
     const offer = product.getOffer(offerId);
     if (!offer) {
         logger.log(`❌ SVC.order: Offer with ID '${offerId}' not found for product '${productId}'.`);
+        logger.log('Available offers:', product.offers?.map((o: any) => o.id));
         throw new Error(`Offer with ID '${offerId}' not found for product '${productId}'.`);
     }
 
     logger.log('✅ SVC.order: Product and offer found. Placing order...');
-    return offer.order();
+    const transaction = await offer.order();
+    logger.log('✅ SVC.order: Order call completed.');
+    return transaction;
   }
 
     public async restorePurchases(): Promise<void> {
