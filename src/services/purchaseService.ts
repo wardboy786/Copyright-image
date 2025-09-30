@@ -98,17 +98,17 @@ class PurchaseService {
         logger.log('🔌 SVC: Plugin is available.');
 
         this.store = window.CdvPurchase.store;
-        const { ProductType, Platform, LogLevel } = window.CdvPurchase;
+        const { ProductType, Platform, LogLevel, ErrorCode } = window.CdvPurchase;
 
         this.store.verbosity = LogLevel.DEBUG;
         logger.log('🔧 SVC: Verbosity set.');
         
         this.store.error((err: unknown) => {
             const error = err as any;
-            const userCancelled = error.code === window.CdvPurchase.ErrorCode.USER_CANCELLED;
-            if (userCancelled) {
+            // User cancelled is a normal flow, not a critical error.
+            if (error.code === ErrorCode.USER_CANCELLED) {
               logger.log('✅ SVC: User cancelled purchase flow. This is not an error.');
-              return; // Do not treat user cancellation as a critical error
+              return;
             }
             const errorMessage = `An unexpected store error occurred. Please try again later. (Code: ${error.code || 'N/A'})`;
             logger.log('❌ SVC Store Error:', error.message, err);
@@ -167,22 +167,26 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
+    // Add listeners to automatically update state when products or receipts change.
     this.store.when().productUpdated(() => this.forceUpdateAndNotify());
     this.store.when().receiptUpdated(() => this.forceUpdateAndNotify());
 
+    // When a purchase is approved, we must verify it.
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC: Transaction approved, verifying...', transaction);
       transaction.verify();
     });
 
+    // When a receipt is verified, we must finish the transaction.
     this.store.when().verified((receipt: any) => {
       logger.log('✅ SVC: Receipt verified, finishing transaction...', receipt);
       receipt.finish();
     });
 
+    // When a transaction is finished, force a final state update to ensure UI consistency.
     this.store.when().finished(() => {
         logger.log('🏁 SVC: Transaction finished. Forcing final state update.');
-        setTimeout(() => this.forceUpdateAndNotify(), 500); // Delay to allow store to settle
+        setTimeout(() => this.forceUpdateAndNotify(), 500);
     });
     
     logger.log('✅ SVC: Event listeners ready.');
@@ -245,6 +249,7 @@ class PurchaseService {
         throw new Error(`Product with ID '${productId}' not found.`);
     }
 
+    // This is how to correctly get an offer from a product in cordova-plugin-purchase
     const offer = product.getOffer(offerId);
     if (!offer) {
         logger.log(`❌ SVC.order: Offer with ID '${offerId}' not found for product '${productId}'.`);
@@ -256,8 +261,8 @@ class PurchaseService {
         await offer.order();
         logger.log('✅ SVC.order: Order call completed.');
     } catch (err) {
+        // This is logged here for context but will be handled by the global store.error handler.
         logger.log('❌ SVC.order: offer.order() threw an error.', err);
-        // The global error handler will catch this, but we log it here for context.
     }
   }
 
@@ -270,8 +275,10 @@ class PurchaseService {
                 throw new Error('Store not initialized or ready. Please try again in a moment.');
             }
 
+            // store.update() is the modern equivalent of store.refresh()
             await this.store.update();
             
+            // Allow time for the store update to process and then notify UI
             setTimeout(() => {
                 this.notifyListeners();
                 logger.log('✅ SVC: Restore complete, state updated');

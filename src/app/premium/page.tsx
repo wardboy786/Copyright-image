@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { logger } from '@/lib/in-app-logger';
 import { motion } from 'framer-motion';
+import { type Offer } from '@/lib/types';
 
 const features = [
   'Unlimited Daily Scans',
@@ -35,38 +36,33 @@ export default function PremiumPage() {
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
 
-  // Safely find products and offers
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
-  // This logic is likely incorrect and is what we need to debug.
-  // The purchaseService now handles the mapping, so this should be simpler.
-  const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
-  const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
-  const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id && !o.id.includes(YEARLY_OFFER_ID));
+  // Correctly find offers based on the now-simplified structure from purchaseService
+  const monthlyOffer = monthlyProduct?.offers.find(o => o.id === MONTHLY_OFFER_ID);
+  const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id === YEARLY_OFFER_ID);
+  // The paid yearly offer is any offer that isn't the free trial one.
+  const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id !== YEARLY_OFFER_ID);
 
 
   useEffect(() => {
     logger.log('PREMIUM_PAGE: State Update', { isInitialized, isLoading, isPremium, productCount: products.length, error });
 
     if (isInitialized && products.length > 0) {
-      logger.log('PREMIUM_PAGE: Products loaded. Dumping structures...');
+      logger.log('PREMIUM_PAGE: Products loaded. Dumping FULL product structures...');
       logger.log('PREMIUM_PAGE: Raw Monthly Product', JSON.stringify(monthlyProduct, null, 2));
       logger.log('PREMIUM_PAGE: Raw Yearly Product', JSON.stringify(yearlyProduct, null, 2));
       
-      logger.log('PREMIUM_PAGE: Derived Offers', {
+      logger.log('PREMIUM_PAGE: Derived Offers check', {
           monthlyOffer: !!monthlyOffer,
           yearlyPaidOffer: !!yearlyPaidOffer,
           yearlyFreeTrialOffer: !!yearlyFreeTrialOffer,
       });
-
-      logger.log('PREMIUM_PAGE: Monthly Offer Details', JSON.stringify(monthlyOffer, null, 2));
-      logger.log('PREMIUM_PAGE: Yearly Paid Offer Details', JSON.stringify(yearlyPaidOffer, null, 2));
-      logger.log('PREMIUM_PAGE: Yearly Free Trial Offer Details', JSON.stringify(yearlyFreeTrialOffer, null, 2));
     } else if (isInitialized) {
         logger.log('PREMIUM_PAGE: Initialized but no products found.');
     }
-  }, [isInitialized, products, isLoading, isPremium, error, monthlyProduct, yearlyProduct, monthlyOffer, yearlyPaidOffer, yearlyFreeTrialOffer]);
+  }, [isInitialized, products, isLoading, isPremium, error, monthlyProduct, yearlyProduct]);
 
 
   const handlePurchase = async () => {
@@ -93,7 +89,8 @@ export default function PremiumPage() {
     await restorePurchases();
   }
   
-  const isPriceReady = (offer: any) => offer?.price?.formatted && offer.price.formatted !== '';
+  // This check is now robust because purchaseService guarantees the price structure
+  const isPriceReady = (offer?: Offer) => !!offer?.price?.formatted && offer.price.formatted !== '';
 
   const PropagationErrorDisplay = ({ onRetry }: { onRetry: () => void; }) => (
       <Card className="w-full max-w-md bg-amber-500/10 border-amber-500/20">
@@ -220,14 +217,15 @@ export default function PremiumPage() {
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
+    const isMonthlyReady = isPriceReady(monthlyOffer);
+    // The yearly plan is ready if either the free trial OR the paid offer has a valid price
+    const isYearlyReady = isPriceReady(yearlyFreeTrialOffer) || isPriceReady(yearlyPaidOffer);
+    
+    logger.log('PREMIUM_PAGE: Price readiness check', { isMonthlyReady, isYearlyReady });
+
     const discount = (yearlyPaidOffer && monthlyOffer && isPriceReady(yearlyPaidOffer) && isPriceReady(monthlyOffer) && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
         ? Math.round((1 - (yearlyPaidOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
         : 0;
-
-    const isMonthlyReady = isPriceReady(monthlyOffer);
-    const isYearlyReady = isPriceReady(yearlyPaidOffer) || isPriceReady(yearlyFreeTrialOffer);
-
-    logger.log('PREMIUM_PAGE: Price readiness check', { isMonthlyReady, isYearlyReady });
 
     return (
       <Card className="w-full max-w-md shadow-xl overflow-hidden">
@@ -301,3 +299,4 @@ export default function PremiumPage() {
     </div>
   );
 }
+
