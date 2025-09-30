@@ -280,7 +280,7 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={handlePurchase}
-            disabled={isPurchasing || isLoading || !isInitialized || !isMonthlyReady && !isYearlyReady}
+            disabled={isPurchasing || isLoading || !isInitialized || (selectedPlan === 'monthly' && !monthlyOffer) || (selectedPlan === 'yearly' && !yearlyPaidOffer && !yearlyFreeTrialOffer)}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
