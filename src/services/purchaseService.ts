@@ -200,11 +200,6 @@ class PurchaseService {
 
     const mappedProducts: Product[] = this.store.products.map((p: any): Product => {
         const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
-            // The offer ID from the plugin is often composite, e.g., "productId@offerId"
-            // We split it to get the base offer ID for easier matching in the UI.
-            const offerIdParts = o.id.split('@');
-            const baseOfferId = offerIdParts[offerIdParts.length - 1];
-
             // Robust price finding logic. The plugin can be inconsistent.
             let formattedPrice = '';
             let priceAmountMicros = 0;
@@ -219,10 +214,10 @@ class PurchaseService {
                 priceAmountMicros = o.priceAmountMicros || 0;
             }
 
-            logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId, formattedPrice, priceAmountMicros });
+            logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId: o.id, formattedPrice, priceAmountMicros });
 
             return {
-                id: baseOfferId,
+                id: o.id, // Return the full, original offer ID
                 price: {
                     amount: priceAmountMicros / 1000000,
                     formatted: formattedPrice,

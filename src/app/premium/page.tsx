@@ -39,9 +39,11 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
-  const monthlyOffer = monthlyProduct?.offers.find(o => o.id === MONTHLY_OFFER_ID);
-  const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id === YEARLY_OFFER_ID);
-  const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id !== YEARLY_OFFER_ID && o.id);
+  // Logic to find specific offers within products
+  const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
+  const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
+  // The paid offer is any other offer for the yearly product that isn't the free trial.
+  const yearlyPaidOffer = yearlyProduct?.offers.find(o => !o.id.includes(YEARLY_OFFER_ID) && o.id);
 
 
   useEffect(() => {
@@ -276,7 +278,7 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={handlePurchase}
-            disabled={isPurchasing || !monthlyOffer || !yearlyProduct}
+            disabled={isPurchasing || isLoading || !isInitialized || !products || products.length === 0}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
