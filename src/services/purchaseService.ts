@@ -200,18 +200,32 @@ class PurchaseService {
 
     const mappedProducts: Product[] = this.store.products.map((p: any): Product => {
         const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
-            const firstPhase = o.pricingPhases && o.pricingPhases.length > 0 ? o.pricingPhases[0] : {};
-            
             // The offer ID from the plugin is often composite, e.g., "productId@offerId"
             // We split it to get the base offer ID for easier matching in the UI.
             const offerIdParts = o.id.split('@');
             const baseOfferId = offerIdParts[offerIdParts.length - 1];
 
+            // Robust price finding logic. The plugin can be inconsistent.
+            let formattedPrice = '';
+            let priceAmountMicros = 0;
+
+            const firstPhase = o.pricingPhases && o.pricingPhases.length > 0 ? o.pricingPhases[0] : null;
+
+            if (firstPhase && firstPhase.formattedPrice) {
+                formattedPrice = firstPhase.formattedPrice;
+                priceAmountMicros = firstPhase.priceAmountMicros || 0;
+            } else if (o.price) { // Fallback to a top-level price object
+                formattedPrice = o.price;
+                priceAmountMicros = o.priceAmountMicros || 0;
+            }
+
+            logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId, formattedPrice, priceAmountMicros });
+
             return {
-                id: baseOfferId, // Use the base ID
+                id: baseOfferId,
                 price: {
-                    amount: firstPhase.priceAmountMicros ? firstPhase.priceAmountMicros / 1000000 : 0,
-                    formatted: firstPhase.formattedPrice || '',
+                    amount: priceAmountMicros / 1000000,
+                    formatted: formattedPrice,
                 },
             };
         });
@@ -313,5 +327,3 @@ class PurchaseService {
 }
 
 export const purchaseService = PurchaseService.getInstance();
-
-    

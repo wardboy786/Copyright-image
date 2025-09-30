@@ -39,11 +39,9 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
-  // Correctly find offers based on the now-simplified structure from purchaseService
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id === MONTHLY_OFFER_ID);
   const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id === YEARLY_OFFER_ID);
-  // The paid yearly offer is any offer that isn't the free trial one.
-  const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id !== YEARLY_OFFER_ID);
+  const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id !== YEARLY_OFFER_ID && o.id);
 
 
   useEffect(() => {
@@ -89,8 +87,7 @@ export default function PremiumPage() {
     await restorePurchases();
   }
   
-  // This check is now robust because purchaseService guarantees the price structure
-  const isPriceReady = (offer?: Offer) => !!offer?.price?.formatted && offer.price.formatted !== '';
+  const isOfferReady = (offer?: Offer) => !!offer?.price?.formatted;
 
   const PropagationErrorDisplay = ({ onRetry }: { onRetry: () => void; }) => (
       <Card className="w-full max-w-md bg-amber-500/10 border-amber-500/20">
@@ -217,13 +214,13 @@ export default function PremiumPage() {
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
-    const isMonthlyReady = isPriceReady(monthlyOffer);
+    const isMonthlyReady = isOfferReady(monthlyOffer);
     // The yearly plan is ready if either the free trial OR the paid offer has a valid price
-    const isYearlyReady = isPriceReady(yearlyFreeTrialOffer) || isPriceReady(yearlyPaidOffer);
+    const isYearlyReady = isOfferReady(yearlyFreeTrialOffer) || isOfferReady(yearlyPaidOffer);
     
     logger.log('PREMIUM_PAGE: Price readiness check', { isMonthlyReady, isYearlyReady });
 
-    const discount = (yearlyPaidOffer && monthlyOffer && isPriceReady(yearlyPaidOffer) && isPriceReady(monthlyOffer) && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
+    const discount = (yearlyPaidOffer && monthlyOffer && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
         ? Math.round((1 - (yearlyPaidOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
         : 0;
 
@@ -279,7 +276,7 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={handlePurchase}
-            disabled={!isInitialized || isLoading || isPurchasing || (selectedPlan === 'monthly' && !isMonthlyReady) || (selectedPlan === 'yearly' && !isYearlyReady)}
+            disabled={isPurchasing || !monthlyOffer || !yearlyProduct}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
@@ -299,7 +296,3 @@ export default function PremiumPage() {
     </div>
   );
 }
-
-
-
-    
