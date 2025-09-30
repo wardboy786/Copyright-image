@@ -235,7 +235,7 @@ class PurchaseService {
     return owned;
   }
 
-  public async order(productId: string, offerId: string): Promise<void> {
+  public async order(productId: string, offerId: string): Promise<any> {
     await this.initialize();
     if (!this.store) {
       logger.log('❌ SVC.order: Store not initialized');
@@ -256,12 +256,7 @@ class PurchaseService {
     }
 
     logger.log('✅ SVC.order: Product and offer found. Placing order...');
-    try {
-        await offer.order();
-        logger.log('✅ SVC.order: Order call completed.');
-    } catch (err) {
-        logger.log('❌ SVC.order: offer.order() threw an error. This will be handled by the global error handler.', err);
-    }
+    return offer.order();
   }
 
     public async restorePurchases(): Promise<void> {

@@ -71,11 +71,18 @@ export const useBilling = () => {
     }
     setIsLoading(true); // Set loading state for the UI
     try {
-      await purchaseService.order(productId, offerId);
-      logger.log('✅ Purchase function completed successfully.');
+      const transaction = await purchaseService.order(productId, offerId);
+      logger.log('✅ Purchase order placed.', transaction);
+       if (!transaction) {
+        toast({
+            title: 'Purchase Canceled',
+            description: 'The purchase process was not completed.',
+        });
+      }
+      setIsLoading(false);
     } catch (e: any) {
       logger.log('❌ Purchase failed in useBilling hook', e);
-      toast({ title: 'Purchase Failed', description: e.message || 'An unknown error occurred.', variant: 'destructive' });
+      // The service now handles dispatching the error event, so we just stop loading.
       setIsLoading(false);
     }
   };
