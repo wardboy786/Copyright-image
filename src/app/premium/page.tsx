@@ -39,39 +39,50 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
+  // This logic is likely incorrect and is what we need to debug.
+  // The purchaseService now handles the mapping, so this should be simpler.
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
-  const yearlyPaidOffer = yearlyProduct?.offers.find(o => !o.id.includes(YEARLY_OFFER_ID));
   const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
+  const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id && !o.id.includes(YEARLY_OFFER_ID));
 
 
   useEffect(() => {
+    logger.log('PREMIUM_PAGE: State Update', { isInitialized, isLoading, isPremium, productCount: products.length, error });
+
     if (isInitialized && products.length > 0) {
-      logger.log('🔍 PREMIUM PAGE: Products loaded.', {
-        monthlyProduct: !!monthlyProduct,
-        yearlyProduct: !!yearlyProduct,
-        monthlyOffer: !!monthlyOffer,
-        yearlyPaidOffer: !!yearlyPaidOffer,
-        yearlyFreeTrialOffer: !!yearlyFreeTrialOffer,
-        fullMonthly: JSON.stringify(monthlyProduct),
-        fullYearly: JSON.stringify(yearlyProduct),
+      logger.log('PREMIUM_PAGE: Products loaded. Dumping structures...');
+      logger.log('PREMIUM_PAGE: Raw Monthly Product', JSON.stringify(monthlyProduct, null, 2));
+      logger.log('PREMIUM_PAGE: Raw Yearly Product', JSON.stringify(yearlyProduct, null, 2));
+      
+      logger.log('PREMIUM_PAGE: Derived Offers', {
+          monthlyOffer: !!monthlyOffer,
+          yearlyPaidOffer: !!yearlyPaidOffer,
+          yearlyFreeTrialOffer: !!yearlyFreeTrialOffer,
       });
+
+      logger.log('PREMIUM_PAGE: Monthly Offer Details', JSON.stringify(monthlyOffer, null, 2));
+      logger.log('PREMIUM_PAGE: Yearly Paid Offer Details', JSON.stringify(yearlyPaidOffer, null, 2));
+      logger.log('PREMIUM_PAGE: Yearly Free Trial Offer Details', JSON.stringify(yearlyFreeTrialOffer, null, 2));
+    } else if (isInitialized) {
+        logger.log('PREMIUM_PAGE: Initialized but no products found.');
     }
-  }, [isInitialized, products, monthlyProduct, yearlyProduct, monthlyOffer, yearlyPaidOffer, yearlyFreeTrialOffer]);
+  }, [isInitialized, products, isLoading, isPremium, error, monthlyProduct, yearlyProduct, monthlyOffer, yearlyPaidOffer, yearlyFreeTrialOffer]);
 
 
   const handlePurchase = async () => {
-    logger.log('🔍 handlePurchase called with selected plan:', selectedPlan);
+    logger.log('PREMIUM_PAGE: handlePurchase called with plan:', selectedPlan);
 
     const isYearly = selectedPlan === 'yearly';
     const product = isYearly ? yearlyProduct : monthlyProduct;
     // For yearly, prioritize the free trial offer if it exists, otherwise fall back to the paid offer
     const offer = isYearly ? (yearlyFreeTrialOffer || yearlyPaidOffer) : monthlyOffer;
     
-    logger.log('🔍 Attempting purchase with:', { product, offer });
+    logger.log('PREMIUM_PAGE: Attempting purchase with derived objects:', { product: !!product, offer: !!offer });
 
     if (!product || !offer || !offer.id) {
-        logger.log('❌ No product or offer found for purchase call.', { product, offer });
-        toast({ title: 'Plan Not Available', description: 'This subscription plan is not currently available. It may be loading or not configured.', variant: 'destructive' });
+        const errorMsg = 'Plan not available. It may still be loading or is not configured correctly.';
+        logger.log(`❌ PREMIUM_PAGE: Purchase failed - ${errorMsg}`);
+        toast({ title: 'Plan Not Available', description: errorMsg, variant: 'destructive' });
         return;
     }
     
@@ -202,7 +213,10 @@ export default function PremiumPage() {
         );
     }
     
+    // Show this if products are missing after initialization.
+    // This is a sign of a propagation issue or misconfiguration in the store.
     if (isInitialized && (!products || products.length === 0 || !monthlyProduct || !yearlyProduct)) {
+         logger.log('PREMIUM_PAGE: Rendering PropagationErrorDisplay because products are missing after init.');
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
@@ -212,6 +226,8 @@ export default function PremiumPage() {
 
     const isMonthlyReady = isPriceReady(monthlyOffer);
     const isYearlyReady = isPriceReady(yearlyPaidOffer) || isPriceReady(yearlyFreeTrialOffer);
+
+    logger.log('PREMIUM_PAGE: Price readiness check', { isMonthlyReady, isYearlyReady });
 
     return (
       <Card className="w-full max-w-md shadow-xl overflow-hidden">
@@ -285,5 +301,3 @@ export default function PremiumPage() {
     </div>
   );
 }
-
-    

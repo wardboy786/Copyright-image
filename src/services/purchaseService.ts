@@ -147,9 +147,11 @@ class PurchaseService {
   }
 
   public getCurrentState(): State {
+      const isPremium = this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly');
+      logger.log(`SVC: getCurrentState called. isPremium: ${isPremium}`);
       return {
           products: this.getProducts(),
-          isPremium: this.isOwned('photorights_monthly') || this.isOwned('photorights_yearly'),
+          isPremium: isPremium,
       };
   }
 
@@ -193,8 +195,11 @@ class PurchaseService {
     }
 
     const mappedProducts: Product[] = this.store.products.map((p: any): Product => {
+        logger.log(`SVC: Mapping product: ${p.id}`, JSON.stringify(p, null, 2));
+
         const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
             const firstPhase = o.pricingPhases && o.pricingPhases.length > 0 ? o.pricingPhases[0] : {};
+            logger.log(`SVC:   - Mapping offer: ${o.id}`, JSON.stringify(o, null, 2));
             return {
                 id: o.id,
                 price: {
@@ -211,16 +216,19 @@ class PurchaseService {
             offers: offers,
         };
     });
-    logger.log('맵핑된 제품 (Mapped Products):', mappedProducts);
+    logger.log('📦 SVC.getProducts: Mapped products complete.', mappedProducts);
     return mappedProducts;
   }
 
   public isOwned(productId: string): boolean {
-    const product = this.store?.get(productId);
-    if (product?.owned) {
-        return true;
+    if (!this.store) {
+      logger.log(`SVC.isOwned(${productId}): Store not ready.`);
+      return false;
     }
-    return false;
+    const product = this.store.get(productId);
+    const owned = !!product?.owned;
+    logger.log(`SVC.isOwned(${productId}): Product.owned = ${owned}`);
+    return owned;
   }
 
   public async order(productId: string, offerId: string): Promise<void> {
@@ -244,12 +252,18 @@ class PurchaseService {
     }
 
     logger.log('✅ SVC.order: Product and offer found. Placing order...');
-    await offer.order();
+    try {
+        await offer.order();
+        logger.log('✅ SVC.order: Order call completed.');
+    } catch (err) {
+        logger.log('❌ SVC.order: offer.order() threw an error.', err);
+        // The global error handler will catch this, but we log it here for context.
+    }
   }
 
     public async restorePurchases(): Promise<void> {
         try {
-            logger.log('🔄 Starting restore purchases...');
+            logger.log('🔄 SVC: Starting restore purchases...');
             await this.initialize();
             
             if (!this.store || !this.isInitialized) {
@@ -260,7 +274,7 @@ class PurchaseService {
             
             setTimeout(() => {
                 this.notifyListeners();
-                logger.log('✅ Restore complete, state updated');
+                logger.log('✅ SVC: Restore complete, state updated');
                 window.dispatchEvent(new CustomEvent('purchaseRestored', {
                     detail: { success: true }
                 }));
@@ -268,7 +282,7 @@ class PurchaseService {
             
         } catch (error: any) {
             const errorMessage = "Could not connect to the app store to restore purchases. Please check your connection.";
-            logger.log('❌ Restore failed:', error);
+            logger.log('❌ SVC: Restore failed:', error);
             window.dispatchEvent(new CustomEvent('purchaseRestored', {
                 detail: { success: false, error: errorMessage }
             }));
@@ -289,5 +303,3 @@ class PurchaseService {
 }
 
 export const purchaseService = PurchaseService.getInstance();
-
-    

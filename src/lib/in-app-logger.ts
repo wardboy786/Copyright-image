@@ -5,10 +5,14 @@ class InAppLogger {
   private isEnabled: boolean = false; // Set to false by default
 
   public enable(): void {
+    if (this.isEnabled) return;
     this.isEnabled = true;
+    this.log("LOGGER_SVC: Logging enabled.");
   }
   
   public disable(): void {
+    if (!this.isEnabled) return;
+    this.log("LOGGER_SVC: Logging disabled.");
     this.isEnabled = false;
   }
 
@@ -21,16 +25,17 @@ class InAppLogger {
   }
 
   public log(message: string, ...args: any[]): void {
-    if (!this.isEnabled) return; // Do nothing if not enabled
-    
     const timestamp = new Date().toLocaleTimeString();
     const fullMessage = `[${timestamp}] ${message}`;
 
-    // Also log to the standard console for good measure
+    // Always log to the standard console regardless of whether the in-app logger is enabled
     console.log(fullMessage, ...args);
 
+    // Only broadcast to in-app listeners if enabled
+    if (!this.isEnabled) return;
+    
     // Format for in-app display
-    const displayArgs = args.length > 0 ? ` | ${JSON.stringify(args)}` : '';
+    const displayArgs = args.length > 0 ? `\n${JSON.stringify(args, null, 2)}` : '';
     const displayMessage = `${fullMessage}${displayArgs}`;
     
     this.listeners.forEach(listener => {
