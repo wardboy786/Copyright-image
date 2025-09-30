@@ -310,3 +310,5 @@ class PurchaseService {
 }
 
 export const purchaseService = PurchaseService.getInstance();
+
+    
