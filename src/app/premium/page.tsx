@@ -39,9 +39,7 @@ export default function PremiumPage() {
   const monthlyProduct = products.find(p => p.id === MONTHLY_PLAN_ID);
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
-  // Logic to find specific offers within products.
-  // The offer ID from the plugin is the full string, so we use the full ID now.
-  const monthlyOffer = monthlyProduct?.offers[0];
+  const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
   const yearlyOffers = yearlyProduct?.offers || [];
   const yearlyFreeTrialOffer = yearlyOffers.find(o => o.id.includes(YEARLY_OFFER_ID));
   const yearlyPaidOffer = yearlyOffers.find(o => !o.id.includes(YEARLY_OFFER_ID));
@@ -71,7 +69,6 @@ export default function PremiumPage() {
 
     const isYearly = selectedPlan === 'yearly';
     const product = isYearly ? yearlyProduct : monthlyProduct;
-    // For yearly, prioritize the free trial offer if it exists, otherwise fall back to the paid offer
     const offer = isYearly ? (yearlyFreeTrialOffer || yearlyPaidOffer) : monthlyOffer;
     
     logger.log('PREMIUM_PAGE: Attempting purchase with derived objects:', { product: !!product, offer: !!offer });
@@ -83,17 +80,21 @@ export default function PremiumPage() {
         return;
     }
     
-    // Pass the FULL offer ID to the purchase method
     await purchase(product.id, offer.id);
   };
   
   const handleRestore = async () => {
     await restorePurchases();
   }
-  
-  // A plan is ready if an offer has been found and it has a formatted price.
-  const isPlanReady = (offer?: Offer) => !!offer?.price?.formatted;
 
+  const getDisplayPrice = (offer?: Offer) => {
+    if (offer?.price?.formatted && offer.price.amount > 0) {
+        return offer.price.formatted;
+    }
+    // Professional fallback for when prices aren't returned by the API
+    return 'View in checkout';
+  };
+  
   const PropagationErrorDisplay = ({ onRetry }: { onRetry: () => void; }) => (
       <Card className="w-full max-w-md bg-amber-500/10 border-amber-500/20">
         <CardHeader className="text-center">
@@ -130,7 +131,6 @@ export default function PremiumPage() {
 
 
   const renderContent = () => {
-    // Show a loading skeleton only while the entire context is initializing for the first time
     if (!isInitialized && isLoading) {
         return (
              <div className="w-full max-w-md space-y-4">
@@ -212,19 +212,12 @@ export default function PremiumPage() {
         );
     }
     
-    // Show this if products are missing after initialization.
-    // This is a sign of a propagation issue or misconfiguration in the store.
     if (isInitialized && (!products || products.length === 0 || !monthlyProduct || !yearlyProduct)) {
          logger.log('PREMIUM_PAGE: Rendering PropagationErrorDisplay because products are missing after init.');
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
-    const isMonthlyReady = isPlanReady(monthlyOffer);
-    const isYearlyReady = isPlanReady(yearlyFreeTrialOffer) || isPlanReady(yearlyPaidOffer);
-    
-    logger.log('PREMIUM_PAGE: Price readiness check', { isMonthlyReady, isYearlyReady });
-
-    const discount = (yearlyPaidOffer && monthlyOffer && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
+    const discount = (yearlyPaidOffer?.price?.amount && monthlyOffer?.price?.amount && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
         ? Math.round((1 - (yearlyPaidOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
         : 0;
 
@@ -239,27 +232,27 @@ export default function PremiumPage() {
           <div className="grid grid-cols-2 gap-3">
              <button onClick={() => setSelectedPlan('monthly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'monthly' ? 'border-primary' : 'border-border')}>
                 <p className="font-semibold">Monthly</p>
-                {isMonthlyReady ? (
-                    <p className="text-xl font-bold">{monthlyOffer?.price.formatted}</p>
+                {isInitialized && monthlyProduct ? (
+                    <p className="text-xl font-bold">{getDisplayPrice(monthlyOffer)}</p>
                 ) : (
                     <Skeleton className="h-7 w-16 mx-auto my-1" />
                 )}
                 <p className="text-xs text-muted-foreground">per month</p>
              </button>
              <button onClick={() => setSelectedPlan('yearly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'yearly' ? 'border-primary' : 'border-border')}>
-                 {yearlyFreeTrialOffer && isYearlyReady &&
+                 {yearlyFreeTrialOffer &&
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
                         3-Day Free Trial
                     </div>
                  }
-                {discount > 0 && !yearlyFreeTrialOffer && isYearlyReady &&
+                {discount > 0 && !yearlyFreeTrialOffer &&
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
                         Save {discount}%
                     </div>
                 }
                 <p className="font-semibold">Yearly</p>
-                {isYearlyReady ? (
-                    <p className="text-xl font-bold">{(yearlyFreeTrialOffer || yearlyPaidOffer)?.price.formatted}</p>
+                {isInitialized && yearlyProduct ? (
+                    <p className="text-xl font-bold">{getDisplayPrice(yearlyFreeTrialOffer || yearlyPaidOffer)}</p>
                 ) : (
                     <Skeleton className="h-7 w-20 mx-auto my-1" />
                 )}
@@ -300,3 +293,4 @@ export default function PremiumPage() {
     </div>
   );
 }
+
