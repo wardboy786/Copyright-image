@@ -2,7 +2,7 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Loader2, Star, ZapOff, AlertCircle, Gem } from 'lucide-react';
+import { Check, Loader2, Star, AlertCircle, Gem } from 'lucide-react';
 import { useBilling, MONTHLY_PLAN_ID, YEARLY_PLAN_ID, MONTHLY_OFFER_ID, YEARLY_OFFER_ID } from '@/hooks/use-billing';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -40,14 +40,11 @@ export default function PremiumPage() {
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
-  // The paid offer for yearly is the one that does NOT include the free trial ID
-  const yearlyPaidOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_PLAN_ID) && !o.id.includes(YEARLY_OFFER_ID));
-  // The free trial offer specifically contains the yearly offer ID
+  const yearlyPaidOffer = yearlyProduct?.offers.find(o => !o.id.includes(YEARLY_OFFER_ID));
   const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
 
 
   useEffect(() => {
-    // Log product/offer availability when the component loads
     if (isInitialized && products.length > 0) {
       logger.log('🔍 PREMIUM PAGE: Products loaded.', {
         monthlyProduct: !!monthlyProduct,
@@ -55,6 +52,8 @@ export default function PremiumPage() {
         monthlyOffer: !!monthlyOffer,
         yearlyPaidOffer: !!yearlyPaidOffer,
         yearlyFreeTrialOffer: !!yearlyFreeTrialOffer,
+        fullMonthly: JSON.stringify(monthlyProduct),
+        fullYearly: JSON.stringify(yearlyProduct),
       });
     }
   }, [isInitialized, products, monthlyProduct, yearlyProduct, monthlyOffer, yearlyPaidOffer, yearlyFreeTrialOffer]);
@@ -83,9 +82,8 @@ export default function PremiumPage() {
     await restorePurchases();
   }
   
-  /**
-   * A special UI to show when products haven't loaded from the store yet.
-   */
+  const isPriceReady = (offer: any) => offer?.price?.formatted && offer.price.formatted !== '';
+
   const PropagationErrorDisplay = ({ onRetry }: { onRetry: () => void; }) => (
       <Card className="w-full max-w-md bg-amber-500/10 border-amber-500/20">
         <CardHeader className="text-center">
@@ -133,7 +131,6 @@ export default function PremiumPage() {
         )
     }
 
-    // Main "You are Premium" screen
     if (isPremium) {
       return (
         <motion.div
@@ -190,7 +187,6 @@ export default function PremiumPage() {
       );
     }
     
-    // Display any persistent errors
     if (error) {
          return (
             <Alert variant="destructive" className="max-w-md">
@@ -206,17 +202,17 @@ export default function PremiumPage() {
         );
     }
     
-    // Handle the case where initialization is done but no products are available
     if (isInitialized && (!products || products.length === 0 || !monthlyProduct || !yearlyProduct)) {
          return <PropagationErrorDisplay onRetry={forceCheck} />;
     }
     
-    // Calculate discount percentage
-    const discount = (yearlyPaidOffer && monthlyOffer && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
+    const discount = (yearlyPaidOffer && monthlyOffer && isPriceReady(yearlyPaidOffer) && isPriceReady(monthlyOffer) && yearlyPaidOffer.price.amount > 0 && monthlyOffer.price.amount > 0) 
         ? Math.round((1 - (yearlyPaidOffer.price.amount / (monthlyOffer.price.amount * 12))) * 100) 
         : 0;
 
-    // The main subscription selection card
+    const isMonthlyReady = isPriceReady(monthlyOffer);
+    const isYearlyReady = isPriceReady(yearlyPaidOffer) || isPriceReady(yearlyFreeTrialOffer);
+
     return (
       <Card className="w-full max-w-md shadow-xl overflow-hidden">
         <CardHeader className="text-center p-6 bg-muted/30">
@@ -228,22 +224,30 @@ export default function PremiumPage() {
           <div className="grid grid-cols-2 gap-3">
              <button onClick={() => setSelectedPlan('monthly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'monthly' ? 'border-primary' : 'border-border')}>
                 <p className="font-semibold">Monthly</p>
-                <p className="text-xl font-bold">{monthlyOffer?.price.formatted || '...'}</p>
+                {isMonthlyReady ? (
+                    <p className="text-xl font-bold">{monthlyOffer?.price.formatted}</p>
+                ) : (
+                    <Skeleton className="h-7 w-16 mx-auto my-1" />
+                )}
                 <p className="text-xs text-muted-foreground">per month</p>
              </button>
              <button onClick={() => setSelectedPlan('yearly')} className={cn("border-2 rounded-lg p-4 text-center relative", selectedPlan === 'yearly' ? 'border-primary' : 'border-border')}>
-                 {yearlyFreeTrialOffer && 
+                 {yearlyFreeTrialOffer && isYearlyReady &&
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
                         3-Day Free Trial
                     </div>
                  }
-                {discount > 0 && !yearlyFreeTrialOffer &&
+                {discount > 0 && !yearlyFreeTrialOffer && isYearlyReady &&
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
                         Save {discount}%
                     </div>
                 }
                 <p className="font-semibold">Yearly</p>
-                <p className="text-xl font-bold">{yearlyPaidOffer?.price.formatted || '...'}</p>
+                {isYearlyReady ? (
+                    <p className="text-xl font-bold">{(yearlyFreeTrialOffer || yearlyPaidOffer)?.price.formatted}</p>
+                ) : (
+                    <Skeleton className="h-7 w-20 mx-auto my-1" />
+                )}
                  <p className="text-xs text-muted-foreground">per year</p>
              </button>
           </div>
@@ -261,7 +265,7 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={handlePurchase}
-            disabled={!isInitialized || isLoading || isPurchasing}
+            disabled={!isInitialized || isLoading || isPurchasing || (selectedPlan === 'monthly' && !isMonthlyReady) || (selectedPlan === 'yearly' && !isYearlyReady)}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
@@ -281,3 +285,5 @@ export default function PremiumPage() {
     </div>
   );
 }
+
+    
