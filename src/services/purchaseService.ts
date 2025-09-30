@@ -213,11 +213,13 @@ class PurchaseService {
                 formattedPrice = o.price;
                 priceAmountMicros = o.priceAmountMicros || 0;
             }
+            
+            const baseOfferId = o.id.split('@').pop() || o.id;
 
-            logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId: o.id, formattedPrice, priceAmountMicros });
+            logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId, formattedPrice, priceAmountMicros });
 
             return {
-                id: o.id, // Return the full, original offer ID
+                id: o.id, // Return the full, original offer ID for purchasing
                 price: {
                     amount: priceAmountMicros / 1000000,
                     formatted: formattedPrice,

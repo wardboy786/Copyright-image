@@ -40,6 +40,8 @@ export default function PremiumPage() {
   const yearlyProduct = products.find(p => p.id === YEARLY_PLAN_ID);
   
   // Logic to find specific offers within products
+  // The offer ID from the plugin is the full string, e.g., "photorights_monthly@monthly-plan"
+  // We need to check if the desired offer ID is part of the full ID string.
   const monthlyOffer = monthlyProduct?.offers.find(o => o.id.includes(MONTHLY_OFFER_ID));
   const yearlyFreeTrialOffer = yearlyProduct?.offers.find(o => o.id.includes(YEARLY_OFFER_ID));
   // The paid offer is any other offer for the yearly product that isn't the free trial.
@@ -278,7 +280,7 @@ export default function PremiumPage() {
             className="w-full" 
             size="lg"
             onClick={handlePurchase}
-            disabled={isPurchasing || isLoading || !isInitialized || !products || products.length === 0}
+            disabled={isPurchasing || isLoading || !isInitialized || !isMonthlyReady && !isYearlyReady}
           >
             {isPurchasing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
             {isPurchasing ? 'Processing...' : `Subscribe ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'}`}
