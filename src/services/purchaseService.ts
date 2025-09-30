@@ -105,7 +105,7 @@ class PurchaseService {
         
         this.store.error((err: unknown) => {
             const error = err as any;
-            // User cancelled is a normal flow, not a critical error.
+            // OFFICIAL FIX: User cancelled is a normal flow, not a critical error.
             if (error.code === ErrorCode.USER_CANCELLED) {
               logger.log('✅ SVC: User cancelled purchase flow. This is not an error.');
               return;
@@ -167,23 +167,19 @@ class PurchaseService {
     if (!this.store) return;
     logger.log('👂 SVC: Setting up event listeners...');
   
-    // Add listeners to automatically update state when products or receipts change.
     this.store.when().productUpdated(() => this.forceUpdateAndNotify());
     this.store.when().receiptUpdated(() => this.forceUpdateAndNotify());
 
-    // When a purchase is approved, we must verify it.
     this.store.when().approved((transaction: any) => {
       logger.log('✅ SVC: Transaction approved, verifying...', transaction);
       transaction.verify();
     });
 
-    // When a receipt is verified, we must finish the transaction.
     this.store.when().verified((receipt: any) => {
       logger.log('✅ SVC: Receipt verified, finishing transaction...', receipt);
       receipt.finish();
     });
 
-    // When a transaction is finished, force a final state update to ensure UI consistency.
     this.store.when().finished(() => {
         logger.log('🏁 SVC: Transaction finished. Forcing final state update.');
         setTimeout(() => this.forceUpdateAndNotify(), 500);
@@ -200,7 +196,6 @@ class PurchaseService {
 
     const mappedProducts: Product[] = this.store.products.map((p: any): Product => {
         const offers: Offer[] = (p.offers || []).map((o: any): Offer => {
-            // Robust price finding logic. The plugin can be inconsistent.
             let formattedPrice = '';
             let priceAmountMicros = 0;
 
@@ -209,17 +204,15 @@ class PurchaseService {
             if (firstPhase && firstPhase.formattedPrice) {
                 formattedPrice = firstPhase.formattedPrice;
                 priceAmountMicros = firstPhase.priceAmountMicros || 0;
-            } else if (o.price) { // Fallback to a top-level price object
+            } else if (o.price) {
                 formattedPrice = o.price;
                 priceAmountMicros = o.priceAmountMicros || 0;
             }
             
-            const baseOfferId = o.id.split('@').pop() || o.id;
-
-            logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId, formattedPrice, priceAmountMicros });
+            logger.log(`SVC: Parsing offer ${o.id}`, { baseOfferId: o.id, formattedPrice, priceAmountMicros });
 
             return {
-                id: o.id, // Return the full, original offer ID for purchasing
+                id: o.id,
                 price: {
                     amount: priceAmountMicros / 1000000,
                     formatted: formattedPrice,
@@ -263,7 +256,6 @@ class PurchaseService {
         throw new Error(`Product with ID '${productId}' not found.`);
     }
 
-    // This is how to correctly get an offer from a product in cordova-plugin-purchase
     const offer = product.getOffer(offerId);
     if (!offer) {
         logger.log(`❌ SVC.order: Offer with ID '${offerId}' not found for product '${productId}'.`);
@@ -275,8 +267,7 @@ class PurchaseService {
         await offer.order();
         logger.log('✅ SVC.order: Order call completed.');
     } catch (err) {
-        // This is logged here for context but will be handled by the global store.error handler.
-        logger.log('❌ SVC.order: offer.order() threw an error.', err);
+        logger.log('❌ SVC.order: offer.order() threw an error. This will be handled by the global error handler.', err);
     }
   }
 
@@ -289,10 +280,8 @@ class PurchaseService {
                 throw new Error('Store not initialized or ready. Please try again in a moment.');
             }
 
-            // store.update() is the modern equivalent of store.refresh()
             await this.store.update();
             
-            // Allow time for the store update to process and then notify UI
             setTimeout(() => {
                 this.notifyListeners();
                 logger.log('✅ SVC: Restore complete, state updated');
