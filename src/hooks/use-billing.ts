@@ -78,7 +78,13 @@ export const useBilling = () => {
       }
       setIsLoading(false);
     } catch (e: any) {
-      // The service now handles dispatching the error event, so we just stop loading.
+      // The service now handles dispatching most error events, but we catch cancellations here.
+      // If the error isn't a USER_CANCELLED one (which is now ignored by the service), it might be something else.
+      if (!e.message?.includes('USER_CANCELLED')) {
+         toast({ title: 'Purchase Failed', description: e.message, variant: 'destructive' });
+      } else {
+         toast({ title: 'Purchase Canceled', description: 'The purchase process was not completed.' });
+      }
       setIsLoading(false);
     }
   };
