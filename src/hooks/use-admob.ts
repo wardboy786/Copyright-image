@@ -15,7 +15,6 @@ const useAdMob = () => {
     try {
       // Production configuration: No testing devices specified.
       await AdMob.initialize({
-        appId: 'ca-app-pub-8270549953677995~1801364619',
         initializeForTesting: false,
       });
       console.log('AdMob: Initialized successfully on native platform for production.');
