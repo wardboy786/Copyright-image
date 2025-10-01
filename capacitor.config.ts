@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
   appName: 'Photorights AI',
   // When 'server.url' is set, 'webDir' is not used by Capacitor for the build.
   // The 'out' directory is still used by 'npm run build' for Vercel deployment.
-  webDir: 'out', 
+  webDir: 'out',
   server: {
     // This is the Vercel URL that the native app will use to fetch the web content
     // and make API calls to the serverless functions.
@@ -21,6 +21,16 @@ const config: CapacitorConfig = {
     // iosScheme: 'http',
     cleartext: true, // Allow http for local development.
   },
+  plugins: {
+    AdMob: {
+      appId: {
+        // The AdMob App ID for your Android app.
+        android: 'ca-app-pub-8270549953677995~1801364619',
+        // The AdMob App ID for your iOS app.
+        ios: 'ca-app-pub-8270549953677995~1801364619' 
+      }
+    }
+  }
 };
 
 export default config;
