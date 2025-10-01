@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -113,6 +114,9 @@ export function useScans(): UseScansReturn {
       }
 
       const result = await response.json();
+      if (result.error) {
+        throw new Error(result.error);
+      }
       const newScan = addScan(preview, result);
       return newScan;
 

@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Next.js App Router API Route for AI Image Analysis.
  * This route handler is the standard, modern way to create API endpoints in Next.js.
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
     if (!file) {
       return new NextResponse(JSON.stringify({ error: 'Missing file in request body' }), {
         status: 400,
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
@@ -38,7 +40,8 @@ export async function POST(req: Request) {
 
     // Return the successful analysis result
     return new NextResponse(JSON.stringify(result), { 
-      status: 200, 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
@@ -46,6 +49,7 @@ export async function POST(req: Request) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
     return new NextResponse(JSON.stringify({ error: `Failed to analyze image: ${errorMessage}` }), {
       status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

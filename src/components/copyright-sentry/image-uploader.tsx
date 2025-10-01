@@ -20,6 +20,62 @@ import { MAX_REWARDED_SCANS } from '@/hooks/use-scans';
 import { useRouter } from 'next/navigation';
 import { ScanOverlay } from './scan-overlay';
 
+const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024; // 4MB
+const RESIZE_DIMENSION = 1920; // Resize to max 1920px on the longest side
+
+async function resizeImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = document.createElement('img');
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > RESIZE_DIMENSION) {
+            height = Math.round((height * RESIZE_DIMENSION) / width);
+            width = RESIZE_DIMENSION;
+          }
+        } else {
+          if (height > RESIZE_DIMENSION) {
+            width = Math.round((width * RESIZE_DIMENSION) / height);
+            height = RESIZE_DIMENSION;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return reject(new Error('Could not get canvas context'));
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              return reject(new Error('Canvas to Blob conversion failed'));
+            }
+            const newFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(newFile);
+          },
+          'image/jpeg',
+          0.9 // 90% quality
+        );
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+}
+
 
 export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanResult) => void; }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -107,8 +163,8 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   };
   
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
+    async (acceptedFiles: File[]) => {
+      let file = acceptedFiles[0];
       if (!file) return;
       
       if (isLoading) {
@@ -126,6 +182,17 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
           variant: 'destructive'
         })
         return;
+      }
+      
+      // Resize image if it's too large
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        try {
+          toast({ title: 'Image too large', description: 'Resizing for analysis...' });
+          file = await resizeImage(file);
+        } catch (error) {
+          toast({ title: 'Resize Failed', description: 'Could not resize image. Please try a smaller one.', variant: 'destructive' });
+          return;
+        }
       }
       
       setImageFile(file);
@@ -278,5 +345,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     </div>
   );
 }
+
+    
 
     
