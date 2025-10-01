@@ -5,6 +5,9 @@
 import { NextResponse } from 'next/server';
 import { analyzeImageForCopyright } from '@/ai/flows/analyze-image-for-copyright';
 
+// Increase the timeout for this specific function. Large image uploads and AI analysis can take time.
+export const maxDuration = 60; // 60 seconds
+
 /**
  * This function handles the main POST request which contains the image data.
  * CORS is handled globally in `next.config.js`.

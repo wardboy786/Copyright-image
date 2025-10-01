@@ -86,20 +86,30 @@ export function useScans(): UseScansReturn {
   }, [scans, saveScans]);
   
   const startScan = useCallback(async (file: File, isAi: boolean, isUser: boolean, preview: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('isAiGenerated', String(isAi));
+    formData.append('isUserCreated', String(isUser));
+
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('isAiGenerated', String(isAi));
-      formData.append('isUserCreated', String(isUser));
-      
       const response = await fetch('/api/analyze', {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Request failed with status ${response.status}`);
+        // The server returned an error. We need to handle both JSON and non-JSON responses.
+        const contentType = response.headers.get('content-type');
+        let errorPayload;
+
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorPayload = errorData.error || `Request failed with status ${response.status}`;
+        } else {
+            // It's not JSON, so it might be a plain text error (e.g., from a proxy or server crash).
+            errorPayload = await response.text();
+        }
+        throw new Error(errorPayload);
       }
 
       const result = await response.json();
@@ -107,8 +117,17 @@ export function useScans(): UseScansReturn {
       return newScan;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-      return { error: `Failed to analyze image: ${errorMessage}` };
+        // Catch both fetch errors and thrown errors from the response check.
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        // The error message might itself be JSON-like if it came from the catch block, so we parse it.
+        try {
+            // Attempt to clean up any weird formatting before showing to user.
+            const parsed = JSON.parse(errorMessage);
+            return { error: parsed.error || "An unexpected error occurred." };
+        } catch {
+            // It wasn't JSON, so just return the raw message.
+            return { error: `Failed to analyze image: ${errorMessage}` };
+        }
     }
   }, [addScan]);
 
