@@ -15,6 +15,7 @@ const useAdMob = () => {
     try {
       // Production configuration: No testing devices specified.
       await AdMob.initialize({
+        appId: 'ca-app-pub-8270549953677995~1801364619',
         initializeForTesting: false,
       });
       console.log('AdMob: Initialized successfully on native platform for production.');
@@ -30,7 +31,7 @@ const useAdMob = () => {
     }
     try {
       const options: BannerAdOptions = {
-        adId: 'ca-app-pub-8270549953677995/1980800386', // Production Banner Ad ID
+        adId: 'ca-app-pub-8270549953677995/1957277284', // Production Banner Ad ID
         position: BannerAdPosition.BOTTOM_CENTER,
         // This margin lifts the ad by the height of the bottom nav bar (64px)
         margin: 64, 
@@ -91,7 +92,7 @@ const useAdMob = () => {
       });
 
       const options: RewardAdOptions = {
-        adId: 'ca-app-pub-8270549953677995/9887135558', // Production Rewarded Ad ID
+        adId: 'ca-app-pub-8270549953677995/8690206592', // Production Rewarded Ad ID
         isTesting: false,
       };
       
@@ -116,7 +117,7 @@ const useAdMob = () => {
     }
     try {
         const options: AdOptions = {
-            adId: 'ca-app-pub-8270549953677995/3986929859', // Production Interstitial Ad ID
+            adId: 'ca-app-pub-8270549953677995/3847931696', // Production Interstitial Ad ID
             isTesting: false,
         };
         await AdMob.prepareInterstitial(options);
