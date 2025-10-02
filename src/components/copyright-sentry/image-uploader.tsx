@@ -17,7 +17,6 @@ import { DailyLimitIndicator } from './daily-limit-indicator';
 import Link from 'next/link';
 import useAdMob from '@/hooks/use-admob';
 import { MAX_REWARDED_SCANS } from '@/hooks/use-scans';
-import { useRouter } from 'next/navigation';
 import { ScanOverlay } from './scan-overlay';
 
 const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024; // 4MB
@@ -86,7 +85,6 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
   const [isUserCreated, setIsUserCreated] = useState(false);
   
   const { toast } = useToast();
-  const router = useRouter();
   const { isLimitReached, isPremium, grantExtraScan, isRewardedScansLimitReached, rewardedScansUsed, startScan } = useAppContext();
   const { showRewarded } = useAdMob();
   
@@ -345,6 +343,8 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     </div>
   );
 }
+
+    
 
     
 
