@@ -11,6 +11,7 @@ export const MAX_FREE_SCANS = 5;
 export const MAX_REWARDED_SCANS = 15;
 const SCANS_STORAGE_KEY = 'photorights-ai-scans';
 const EXTRA_SCANS_KEY = 'photorights-ai-extra-scans';
+const MAX_HISTORY_ITEMS = 50; // New constant to limit history size
 
 export interface UseScansReturn {
   scans: ScanResult[];
@@ -67,9 +68,21 @@ export function useScans(): UseScansReturn {
   }, []);
 
   const saveScans = useCallback((newScans: ScanResult[]) => {
-    setScans(newScans);
+    // Enforce the history limit
+    const limitedScans = newScans.slice(0, MAX_HISTORY_ITEMS);
+    setScans(limitedScans);
     if (typeof window !== 'undefined') {
-      localStorage.setItem(SCANS_STORAGE_KEY, JSON.stringify(newScans));
+        try {
+            localStorage.setItem(SCANS_STORAGE_KEY, JSON.stringify(limitedScans));
+        } catch (error: any) {
+            if (error.name === 'QuotaExceededError') {
+                 console.error("LocalStorage quota exceeded even after limiting history. This shouldn't happen unless images are huge.");
+                // As a fallback, we could try removing one more item
+                saveScans(limitedScans.slice(1));
+            } else {
+                console.error("Failed to save scans to localStorage", error);
+            }
+        }
     }
   }, []);
 
@@ -80,7 +93,8 @@ export function useScans(): UseScansReturn {
       image: imageData,
       analysis: analysisResult,
     };
-    const updatedScans = [newScan, ...scans];
+    // Add the new scan and then slice to maintain the limit
+    const updatedScans = [newScan, ...scans].slice(0, MAX_HISTORY_ITEMS);
     saveScans(updatedScans);
 
     return newScan;
@@ -99,7 +113,6 @@ export function useScans(): UseScansReturn {
       });
 
       if (!response.ok) {
-        // The server returned an error. We need to handle both JSON and non-JSON responses.
         const contentType = response.headers.get('content-type');
         let errorPayload;
 
@@ -107,7 +120,6 @@ export function useScans(): UseScansReturn {
             const errorData = await response.json();
             errorPayload = errorData.error || `Request failed with status ${response.status}`;
         } else {
-            // It's not JSON, so it might be a plain text error (e.g., from a proxy or server crash).
             errorPayload = await response.text();
         }
         throw new Error(errorPayload);
@@ -121,19 +133,22 @@ export function useScans(): UseScansReturn {
       return newScan;
 
     } catch (error) {
-        // Catch both fetch errors and thrown errors from the response check.
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        // The error message might itself be JSON-like if it came from the catch block, so we parse it.
+        let errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        // Check for the specific quota exceeded error
+        if (errorMessage.includes('exceeded the quota') || (error instanceof DOMException && error.name === 'QuotaExceededError')) {
+            errorMessage = 'Storage full. The oldest scan was removed to make space. Please try again.';
+             // Attempt to make space by removing the oldest item, then notify user to retry.
+            saveScans(scans.slice(0, scans.length - 1));
+        }
+
         try {
-            // Attempt to clean up any weird formatting before showing to user.
             const parsed = JSON.parse(errorMessage);
             return { error: parsed.error || "An unexpected error occurred." };
         } catch {
-            // It wasn't JSON, so just return the raw message.
             return { error: `Failed to analyze image: ${errorMessage}` };
         }
     }
-  }, [addScan]);
+  }, [addScan, saveScans, scans]);
 
 
   const getScanById = useCallback((id: string): ScanResult | undefined => {
