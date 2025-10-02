@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import { ImageUploader } from '@/components/copyright-sentry/image-uploader';
@@ -21,32 +22,46 @@ export function ScanPageClient() {
   const scanId = searchParams.get('id');
 
   useEffect(() => {
+    // This effect synchronizes the component's state with the URL.
+    // It runs when the scanId from the URL changes or when the app is first initialized.
     if (isInitialized) {
       if (scanId) {
+        // If there's a scan ID in the URL, find the corresponding scan.
         const foundScan = getScanById(scanId);
-        // Only update if the scanId from URL is different from the one in state
+        // Only update state if the scan found is different from the one currently displayed.
+        // This prevents re-rendering the results if the user is already viewing them.
         if (foundScan && foundScan.id !== currentScan?.id) {
           setCurrentScan(foundScan);
         } else if (!foundScan) {
-          setCurrentScan(null); // Scan from URL not found
+          // If the scan from the URL is not found (e.g., deleted), show an error state.
+          setCurrentScan(null);
         }
+      } else if (currentScan) {
+        // If there is no scanId in the URL but there is a scan in the state,
+        // it means the user has navigated away or clicked 'Scan Another'.
+        // We set the state to null to show the uploader. This handles the back button case.
+        setCurrentScan(null);
       } else if (currentScan === undefined) {
-        // Only set to null on initial load if there's no scanId and no scan in state
+        // On initial load without a scan ID, set to null to show the uploader.
         setCurrentScan(null);
       }
     }
-  }, [scanId, getScanById, isInitialized, currentScan?.id]);
+  }, [scanId, getScanById, isInitialized, currentScan]);
 
 
   const handleScanComplete = (scan: ScanResult) => {
     setCurrentScan(scan);
-    // Navigate to update URL, but the component now relies on state
+    // After a scan is complete, update the URL to reflect the new scan's ID.
+    // This allows for sharing and bookmarking of results.
     router.push(`/scan?id=${scan.id}`, { scroll: false });
   };
 
   const handleScanAnother = () => {
+    // When the user wants to scan another image, first set the state to null.
+    // This immediately triggers the UI to switch to the ImageUploader component.
     setCurrentScan(null);
-    // Navigate back to the clean URL
+    // Then, update the URL to the base '/scan' path. This happens after the state change,
+    // preventing a race condition where the useEffect might re-show the results.
     router.push('/scan', { scroll: false });
   };
 
