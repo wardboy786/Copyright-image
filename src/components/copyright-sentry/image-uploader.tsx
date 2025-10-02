@@ -19,7 +19,7 @@ import useAdMob from '@/hooks/use-admob';
 import { MAX_REWARDED_SCANS } from '@/hooks/use-scans';
 import { ScanOverlay } from './scan-overlay';
 
-const MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024; // 4MB
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // Increased to 10MB to allow larger source files
 const RESIZE_DIMENSION = 1920; // Resize to max 1920px on the longest side
 
 async function resizeImage(file: File): Promise<File> {
@@ -33,16 +33,15 @@ async function resizeImage(file: File): Promise<File> {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
 
-        if (width > height) {
-          if (width > RESIZE_DIMENSION) {
-            height = Math.round((height * RESIZE_DIMENSION) / width);
-            width = RESIZE_DIMENSION;
-          }
-        } else {
-          if (height > RESIZE_DIMENSION) {
-            width = Math.round((width * RESIZE_DIMENSION) / height);
-            height = RESIZE_DIMENSION;
-          }
+        // Only resize if the image is larger than our target dimension
+        if (width > RESIZE_DIMENSION || height > RESIZE_DIMENSION) {
+            if (width > height) {
+                height = Math.round((height * RESIZE_DIMENSION) / width);
+                width = RESIZE_DIMENSION;
+            } else {
+                width = Math.round((width * RESIZE_DIMENSION) / height);
+                height = RESIZE_DIMENSION;
+            }
         }
 
         canvas.width = width;
@@ -54,19 +53,22 @@ async function resizeImage(file: File): Promise<File> {
         }
         ctx.drawImage(img, 0, 0, width, height);
 
+        // Convert to WebP for better compression
         canvas.toBlob(
           (blob) => {
             if (!blob) {
               return reject(new Error('Canvas to Blob conversion failed'));
             }
-            const newFile = new File([blob], file.name, {
-              type: 'image/jpeg',
+            // Use a new name with .webp extension
+            const newFileName = file.name.substring(0, file.name.lastIndexOf('.')) + '.webp';
+            const newFile = new File([blob], newFileName, {
+              type: 'image/webp',
               lastModified: Date.now(),
             });
             resolve(newFile);
           },
-          'image/jpeg',
-          0.9 // 90% quality
+          'image/webp',
+          0.8 // 80% quality for WebP
         );
       };
       img.onerror = reject;
@@ -182,15 +184,13 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
         return;
       }
       
-      // Resize image if it's too large
-      if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        try {
-          toast({ title: 'Image too large', description: 'Resizing for analysis...' });
-          file = await resizeImage(file);
-        } catch (error) {
-          toast({ title: 'Resize Failed', description: 'Could not resize image. Please try a smaller one.', variant: 'destructive' });
-          return;
-        }
+      // Always compress and convert image, resize if necessary.
+      try {
+        toast({ title: 'Optimizing Image...', description: 'Compressing for analysis.' });
+        file = await resizeImage(file);
+      } catch (error) {
+        toast({ title: 'Image Optimization Failed', description: 'Could not process image. Please try another one.', variant: 'destructive' });
+        return;
       }
       
       setImageFile(file);
@@ -207,7 +207,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [] },
+    accept: { 'image/png': [], 'image/jpeg': [], 'image/gif': [], 'image/svg+xml': [], 'image/webp': [] },
     multiple: false,
     disabled: isLoading,
   });
@@ -242,7 +242,7 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
                                 {isDragActive ? 'Drop the image here' : 'Drag & drop an image'}
                             </p>
                             <p className="text-muted-foreground text-sm">or click to select a file</p>
-                            <p className="text-xs text-muted-foreground/70 mt-4">Supports: PNG, JPG, GIF, SVG</p>
+                            <p className="text-xs text-muted-foreground/70 mt-4">Supports: PNG, JPG, GIF, SVG, WebP</p>
                         </motion.div>
                     ) : (
                          <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0">
@@ -343,6 +343,8 @@ export function ImageUploader({ onScanComplete }: { onScanComplete: (scan: ScanR
     </div>
   );
 }
+
+    
 
     
 
