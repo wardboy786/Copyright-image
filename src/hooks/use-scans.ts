@@ -194,18 +194,21 @@ export function useScans(): UseScansReturn {
   }, [scans, saveScans]);
   
   const grantExtraScan = useCallback(() => {
-    if (rewardedScansUsed >= MAX_REWARDED_SCANS) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const currentCount = (extraScans && extraScans.date === todayStr) ? extraScans.count : 0;
+
+    if (currentCount >= MAX_REWARDED_SCANS) {
       console.log("Cannot grant extra scan, daily limit for rewarded scans reached.");
       return;
     }
-    const todayStr = new Date().toISOString().split('T')[0];
+
     const newExtraScans = {
-      count: rewardedScansUsed + 1,
+      count: currentCount + 1,
       date: todayStr,
     };
     setExtraScans(newExtraScans);
     localStorage.setItem(EXTRA_SCANS_KEY, JSON.stringify(newExtraScans));
-  }, [rewardedScansUsed]);
+  }, [extraScans]);
 
   return { 
     scans, 
